@@ -15,4 +15,5 @@ abstract final class AppRoutes {
   static const String notificationPreferencesSetup =
       '/notification-preferences-setup';
   static const String setupComplete = '/setup-complete';
+  static const String profile = '/profile';
 }

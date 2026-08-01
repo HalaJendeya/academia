@@ -190,4 +190,38 @@ abstract final class AppStrings {
   static const String onboardingStatusError =
       'تعذر التحقق من حالة إعداد الحساب';
   static const String authenticationRequired = 'يرجى تسجيل الدخول مرة أخرى';
+
+  static const String homeTab = 'الرئيسية';
+  static const String coursesTab = 'المقررات';
+  static const String tasksTab = 'المهام';
+  static const String studyTab = 'المذاكرة';
+  static const String profileTab = 'الملف';
+  static const String screenUnderDevelopment = 'هذه الشاشة قيد التطوير';
+  static const String retry = 'إعادة المحاولة';
+  static const String search = 'بحث';
+  static const String notifications = 'الإشعارات';
+  static const String profile = 'الملف الشخصي';
+  static const String profileTitle = 'الملف الشخصي';
+  static const String mockProfileName = 'أحمد محمود';
+  static const String mockProfileEmail = 'ahmed.m@university.edu';
+  static const String notificationSettingsTitle = 'إعدادات الإشعارات';
+  static const String notificationSettingsSubtitle =
+      'تنبيهات المحاضرات، الواجبات، والرسائل';
+  static const String studyPreferencesTitle = 'تفضيلات الدراسة';
+  static const String studyPreferencesSubtitle =
+      'طرق العرض، المؤقتات، وأهداف المذاكرة';
+  static const String analyticsDashboardTitle = 'لوحة التحليلات';
+  static const String analyticsDashboardSubtitle =
+      'إدارة الملفات المحملة والبيانات المؤقتة';
+  static const String helpSupportTitle = 'المساعدة والدعم الفني';
+  static const String helpSupportSubtitle =
+      'الحصول على المساعدة والإبلاغ عن مشاكل';
+  static const String aboutAppTitle = 'عن التطبيق';
+  static const String aboutAppSubtitle = 'الإصدار، الشروط، وسياسة الخصوصية';
+  static const String appVersionLabel = 'v2.1.0';
+  static const String logout = 'تسجيل الخروج';
+  static const String logoutConfirmation = 'هل تريد تسجيل الخروج من حسابك؟';
+  static const String logoutConfirmAction = 'خروج';
+  static const String logoutLogicComingSoon = 'سيتم ربط تسجيل الخروج لاحقًا';
+  static const String editProfileTooltip = 'تعديل الملف الشخصي';
 }

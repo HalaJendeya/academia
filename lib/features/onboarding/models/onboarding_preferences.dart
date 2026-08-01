@@ -1,4 +1,5 @@
-import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/notification_preference_keys.dart';
+import '../../../core/constants/study_day_constants.dart';
 
 class OnboardingPreferences {
   final List<String> studyDays;
@@ -21,13 +22,7 @@ class OnboardingPreferences {
 
   factory OnboardingPreferences.defaults() {
     return OnboardingPreferences(
-      studyDays: [
-        AppStrings.sunday,
-        AppStrings.monday,
-        AppStrings.tuesday,
-        AppStrings.wednesday,
-        AppStrings.thursday,
-      ],
+      studyDays: StudyDayConstants.defaultStudyDays,
       preferredSessionDuration: 45,
       taskReminders: true,
       studySessionReminders: true,
@@ -42,11 +37,11 @@ class OnboardingPreferences {
       'studyDays': studyDays,
       'preferredSessionDuration': preferredSessionDuration,
       'notificationPreferences': {
-        'taskReminders': taskReminders,
-        'studySessionReminders': studySessionReminders,
-        'deadlineReminders': deadlineReminders,
-        'dailySummary': dailySummary,
-        'courseNotifications': courseNotifications,
+        NotificationPreferenceKeys.taskReminders: taskReminders,
+        NotificationPreferenceKeys.studySessionReminders: studySessionReminders,
+        NotificationPreferenceKeys.deadlineReminders: deadlineReminders,
+        NotificationPreferenceKeys.dailySummary: dailySummary,
+        NotificationPreferenceKeys.courseNotifications: courseNotifications,
       },
     };
   }

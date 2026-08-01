@@ -16,6 +16,12 @@ import '../features/onboarding/screens/study_days_setup_screen.dart';
 import '../features/onboarding/screens/session_duration_setup_screen.dart';
 import '../features/onboarding/screens/notification_preferences_setup_screen.dart';
 import '../features/onboarding/screens/setup_complete_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
+import '../features/profile/screens/edit_profile_screen.dart';
+import '../features/notifications/screens/notification_settings_screen.dart';
+import '../features/profile/screens/study_preferences_screen.dart';
+import '../features/analytics/screens/analytics_screen.dart';
+import '../features/profile/screens/help_faq_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -58,6 +64,13 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.notificationPreferencesSetup: (context) =>
             const NotificationPreferencesSetupScreen(),
         AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
+        AppRoutes.profile: (context) => const ProfileScreen(),
+        AppRoutes.editProfile: (context) => const EditProfileScreen(),
+        AppRoutes.profileNotificationSettings: (context) =>
+            const NotificationSettingsScreen(),
+        AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
+        AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
+        AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
       },
     );
   }

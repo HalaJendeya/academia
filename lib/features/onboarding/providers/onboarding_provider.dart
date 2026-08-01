@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/study_day_constants.dart';
 import '../models/onboarding_preferences.dart';
 import '../services/onboarding_service.dart';
 
@@ -20,17 +21,6 @@ class OnboardingProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
-
-  // Centralized weekday sorting order
-  static const List<String> orderedStudyDays = [
-    AppStrings.saturday,
-    AppStrings.sunday,
-    AppStrings.monday,
-    AppStrings.tuesday,
-    AppStrings.wednesday,
-    AppStrings.thursday,
-    AppStrings.friday,
-  ];
 
   OnboardingProvider({OnboardingService? onboardingService})
     : _onboardingService = onboardingService ?? OnboardingService() {
@@ -139,7 +129,7 @@ class OnboardingProvider extends ChangeNotifier {
 
     try {
       // Build sorted list representing the Set choices
-      final sortedDays = orderedStudyDays
+      final sortedDays = StudyDayConstants.orderedDays
           .where((day) => _studyDays.contains(day))
           .toList(growable: false);
 

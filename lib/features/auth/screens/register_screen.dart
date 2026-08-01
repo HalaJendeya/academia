@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/app_routes.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -66,16 +69,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       hasValidationErrors = true;
     }
 
-    if (email.isEmpty || !email.contains('@')) {
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
       setState(() => _emailHasError = true);
       hasValidationErrors = true;
     }
 
-    if (password.isEmpty || password.length < 6) {
-      setState(() => _passwordError = 'كلمة المرور قصيرة جداً');
+    if (password.isEmpty) {
+      setState(() => _passwordError = AppStrings.errorPasswordRequired);
+      hasValidationErrors = true;
+    } else if (password.length < 6) {
+      setState(() => _passwordError = AppStrings.errorPasswordTooShort);
       hasValidationErrors = true;
     } else if (password != confirmPassword) {
-      setState(() => _confirmPasswordHasError = true);
+      setState(() {
+        _confirmPasswordHasError = true;
+        _passwordError = AppStrings.errorPasswordMismatch;
+      });
       hasValidationErrors = true;
     }
 
@@ -83,21 +93,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // Success simulation: Save account state and route to student verification
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_account', true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.register(
+      email: email,
+      password: password,
+      fullName: name,
+      studentId: id,
+    );
 
-    if (mounted) {
+    if (success && mounted) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_account', true);
+
+      if (!mounted) return;
+
       Navigator.pushReplacementNamed(
         context,
         AppRoutes.studentVerification,
         arguments: email,
       );
+    } else if (mounted) {
+      setState(() {
+        _passwordError = authProvider.errorMessage;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -115,7 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     children: [
                       const Text(
-                        'أكاديميا',
+                        AppStrings.appName,
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
                           fontSize: 28,
@@ -125,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'مرحباً بك! قم بإنشاء حسابك للبدء في رحلتك التعليمية',
+                        AppStrings.registerSubtitle,
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -157,7 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         // Full Name Label
                         const Text(
-                          'الاسم الكامل',
+                          AppStrings.fullNameLabel,
                           style: AppTextStyles.titleSmall,
                           textAlign: TextAlign.right,
                         ),
@@ -167,7 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _nameController,
                           textAlign: TextAlign.right,
                           decoration: InputDecoration(
-                            hintText: 'أدخل اسمك الثلاثي',
+                            hintText: AppStrings.fullNameHint,
                             hintStyle: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textDisabled,
                             ),
@@ -207,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
                         // Student ID Label
                         const Text(
-                          'الرقم الجامعي',
+                          AppStrings.studentIdLabel,
                           style: AppTextStyles.titleSmall,
                           textAlign: TextAlign.right,
                         ),
@@ -218,7 +242,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           textAlign: TextAlign.right,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            hintText: 'مثال: 20241234',
+                            hintText: AppStrings.studentIdHint,
                             hintStyle: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textDisabled,
                             ),
@@ -258,7 +282,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
                         // Student Email Label
                         const Text(
-                          'البريد الجامعي',
+                          AppStrings.emailLabel,
                           style: AppTextStyles.titleSmall,
                           textAlign: TextAlign.right,
                         ),
@@ -269,7 +293,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           textAlign: TextAlign.left,
                           keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
-                            hintText: 'example@university.edu',
+                            hintText: AppStrings.emailHintUniversity,
                             hintStyle: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textDisabled,
                             ),
@@ -309,7 +333,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
                         // Password Label
                         const Text(
-                          'كلمة المرور',
+                          AppStrings.passwordLabel,
                           style: AppTextStyles.titleSmall,
                           textAlign: TextAlign.right,
                         ),
@@ -320,7 +344,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           obscureText: _obscurePassword,
                           textAlign: TextAlign.right,
                           decoration: InputDecoration(
-                            hintText: 'أدخل كلمة المرور',
+                            hintText: AppStrings.passwordHint,
                             hintStyle: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textDisabled,
                             ),
@@ -393,7 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
                         // Confirm Password Label
                         const Text(
-                          'تأكيد كلمة المرور',
+                          AppStrings.confirmPasswordLabel,
                           style: AppTextStyles.titleSmall,
                           textAlign: TextAlign.right,
                         ),
@@ -404,7 +428,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           obscureText: _obscurePassword,
                           textAlign: TextAlign.right,
                           decoration: InputDecoration(
-                            hintText: 'أعد إدخال كلمة المرور',
+                            hintText: AppStrings.confirmPasswordHint,
                             hintStyle: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textDisabled,
                             ),
@@ -443,10 +467,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         const SizedBox(height: 24),
                         // Register/Submit Button
-                        ElevatedButton(
-                          onPressed: _handleRegister,
-                          child: const Text('إنشاء حساب'),
-                        ),
+                        authProvider.isLoading
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : ElevatedButton(
+                                onPressed: _handleRegister,
+                                child: const Text(AppStrings.createAccount),
+                              ),
                         const SizedBox(height: 16),
                         // Terms & Conditions Disclaimer
                         Center(
@@ -454,7 +484,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             alignment: WrapAlignment.center,
                             children: [
                               Text(
-                                'بالنقر على إنشاء حساب، أنت توافق على ',
+                                AppStrings.termsText,
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.textMuted,
                                 ),
@@ -462,7 +492,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               GestureDetector(
                                 onTap: () {},
                                 child: Text(
-                                  'شروط الخدمة',
+                                  AppStrings.termsLink,
                                   style: AppTextStyles.bodySmall.copyWith(
                                     color: AppColors.primary,
                                     decoration: TextDecoration.underline,
@@ -483,7 +513,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'لديك حساب بالفعل؟ ',
+                      AppStrings.hasAccountText,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -494,7 +524,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Navigator.pushNamed(context, AppRoutes.login);
                       },
                       child: const Text(
-                        'تسجيل الدخول',
+                        AppStrings.loginTitle,
                         style: TextStyle(
                           fontFamily: AppTextStyles.fontFamily,
                           fontSize: 14,

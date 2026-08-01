@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -43,14 +44,14 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 48),
               // Main Title
               const Text(
-                'نظّم دراستك بذكاء',
+                AppStrings.welcomeHeading,
                 style: AppTextStyles.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.medium),
               // Subtitle
               Text(
-                'تابع مساقاتك، مهامك، وجلساتك الدراسية في مكان واحد',
+                AppStrings.welcomeSubtitleText,
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.5,
@@ -62,17 +63,17 @@ class WelcomeScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: () =>
                     Navigator.pushNamed(context, AppRoutes.register),
-                child: const Text('إنشاء حساب'),
+                child: const Text(AppStrings.createAccount),
               ),
               const SizedBox(height: AppSpacing.medium),
               OutlinedButton(
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
-                child: const Text('لدي حساب بالفعل'),
+                child: const Text(AppStrings.welcomeAlreadyHaveAccount),
               ),
               const SizedBox(height: 32),
               // Footnote Caption
               Text(
-                'صُمم لمساعدتك على إدارة يومك الدراسي بسهولة',
+                AppStrings.welcomeFootnote,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: AppColors.textMuted,
                 ),

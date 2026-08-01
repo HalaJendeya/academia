@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../core/constants/app_assets.dart';
+import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../providers/auth_provider.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
+import '../../onboarding/services/onboarding_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,17 +22,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  bool _isResolvingDestination = false;
   final _formKey = GlobalKey<FormState>();
-  final _idController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
   String? _passwordError;
-  bool _idHasError = false;
+  bool _emailHasError = false;
 
   @override
   void dispose() {
-    _idController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -33,24 +41,24 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     setState(() {
       _passwordError = null;
-      _idHasError = false;
+      _emailHasError = false;
     });
 
-    final id = _idController.text.trim();
+    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     bool hasValidationErrors = false;
 
-    if (id.isEmpty) {
+    if (email.isEmpty) {
       setState(() {
-        _idHasError = true;
+        _emailHasError = true;
       });
       hasValidationErrors = true;
     }
 
-    if (password.isEmpty || password.length < 6) {
+    if (password.isEmpty) {
       setState(() {
-        _passwordError = 'كلمة المرور غير صحيحة';
+        _passwordError = AppStrings.errorPasswordRequired;
       });
       hasValidationErrors = true;
     }
@@ -59,17 +67,66 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    // Success simulation
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_account', true);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.login(email, password);
 
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+    if (success && mounted) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_account', true);
+
+      if (!mounted) return;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.emailVerified) {
+          setState(() {
+            _isResolvingDestination = true;
+          });
+          try {
+            final onboardingCompleted = await OnboardingService()
+                .isOnboardingCompleted();
+            if (mounted) {
+              // Initialize OnboardingProvider for the UID
+              Provider.of<OnboardingProvider>(
+                context,
+                listen: false,
+              ).initializeForUser(user.uid);
+
+              if (onboardingCompleted) {
+                Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+              } else {
+                Navigator.pushReplacementNamed(
+                  context,
+                  AppRoutes.onboardingWelcome,
+                );
+              }
+            }
+          } catch (_) {
+            if (mounted) {
+              setState(() {
+                _isResolvingDestination = false;
+                _passwordError = AppStrings.onboardingStatusError;
+              });
+            }
+          }
+        } else {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.studentVerification,
+            arguments: email,
+          );
+        }
+      }
+    } else if (mounted) {
+      setState(() {
+        _passwordError = authProvider.errorMessage;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -120,15 +177,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 80,
                             fit: BoxFit.contain,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacing.itemSpacing),
                           const Text(
-                            'تسجيل الدخول',
+                            AppStrings.appName,
+                            style: TextStyle(
+                              fontFamily: AppTextStyles.fontFamily,
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.medium),
+                          const Text(
+                            AppStrings.loginTitle,
                             style: AppTextStyles.headlineSmall,
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppSpacing.small),
                           Text(
-                            'مرحباً بعودتك، تابع تنظيم يومك الدراسي بسهولة',
+                            AppStrings.loginSubtitle,
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -137,13 +204,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: AppSpacing.extraLarge),
                     // Form Card
                     Container(
-                      padding: const EdgeInsets.all(24),
+                      padding: const EdgeInsets.all(AppSpacing.large),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(AppRadius.large),
                         border: Border.all(
                           color: AppColors.borderLight,
                           width: 1,
@@ -163,17 +230,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             // Student ID Label
                             const Text(
-                              'الرقم الجامعي أو البريد الجامعي',
+                              AppStrings.studentIdLabel,
                               style: AppTextStyles.titleSmall,
                               textAlign: TextAlign.right,
                             ),
-                            const SizedBox(height: 8),
-                            // Student ID Input
+                            const SizedBox(height: AppSpacing.small),
+                            // Student ID Input (Now University Email Input)
                             TextFormField(
-                              controller: _idController,
+                              controller: _emailController,
                               textAlign: TextAlign.right,
+                              keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
-                                hintText: 'أدخل رقمك الجامعي أو بريد الطالب',
+                                hintText: AppStrings.emailHint,
                                 hintStyle: AppTextStyles.bodyMedium.copyWith(
                                   color: AppColors.textDisabled,
                                 ),
@@ -186,27 +254,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: AppColors.textSecondary,
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
-                                    color: _idHasError
+                                    color: _emailHasError
                                         ? AppColors.error
                                         : AppColors.border,
                                     width: 1,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
-                                    color: _idHasError
+                                    color: _emailHasError
                                         ? AppColors.error
                                         : AppColors.borderLight,
                                     width: 1,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
-                                    color: _idHasError
+                                    color: _emailHasError
                                         ? AppColors.error
                                         : AppColors.primary,
                                     width: 1.5,
@@ -214,21 +288,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: AppSpacing.large),
                             // Password Label
                             const Text(
-                              'كلمة المرور',
+                              AppStrings.passwordLabel,
                               style: AppTextStyles.titleSmall,
                               textAlign: TextAlign.right,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: AppSpacing.small),
                             // Password Input
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               textAlign: TextAlign.right,
                               decoration: InputDecoration(
-                                hintText: '************',
+                                hintText: AppStrings.passwordHint,
                                 hintStyle: AppTextStyles.bodyMedium.copyWith(
                                   color: AppColors.textDisabled,
                                 ),
@@ -254,7 +328,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                 ),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
                                     color: _passwordError != null
                                         ? AppColors.error
@@ -263,7 +339,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
                                     color: _passwordError != null
                                         ? AppColors.error
@@ -272,7 +350,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(
+                                    AppRadius.input,
+                                  ),
                                   borderSide: BorderSide(
                                     color: _passwordError != null
                                         ? AppColors.error
@@ -282,12 +362,34 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: AppSpacing.itemSpacing),
                             // Error message and Forgot password row
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Forgot Password Link (Left)
+                                // Password Error Message on the right (first child in RTL)
+                                if (_passwordError != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.error_outline,
+                                        color: AppColors.error,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _passwordError!,
+                                        style: AppTextStyles.bodySmall.copyWith(
+                                          color: AppColors.error,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  const SizedBox.shrink(),
+                                // Forgot Password Link on the left (second child in RTL)
                                 GestureDetector(
                                   onTap: () {
                                     Navigator.pushNamed(
@@ -296,51 +398,38 @@ class _LoginScreenState extends State<LoginScreen> {
                                     );
                                   },
                                   child: Text(
-                                    'نسيت كلمة المرور؟',
+                                    AppStrings.forgotPassword,
                                     style: AppTextStyles.bodyMedium.copyWith(
                                       color: AppColors.textLink,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
-                                // Password Error Message (Right)
-                                if (_passwordError != null)
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        _passwordError!,
-                                        style: AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.error,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      const Icon(
-                                        Icons.error_outline,
-                                        color: AppColors.error,
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
                               ],
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.large),
                             // Login Button
-                            ElevatedButton(
-                              onPressed: _handleLogin,
-                              child: const Text('تسجيل الدخول'),
-                            ),
+                            (authProvider.isLoading || _isResolvingDestination)
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: AppColors.primary,
+                                    ),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: _handleLogin,
+                                    child: const Text(AppStrings.loginTitle),
+                                  ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: AppSpacing.extraLarge),
                     // Footer Link: Register Screen (Row of Texts)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'لا تملك حساباً؟ ',
+                          AppStrings.noAccount,
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -351,7 +440,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.pushNamed(context, AppRoutes.register);
                           },
                           child: const Text(
-                            'إنشاء حساب',
+                            AppStrings.createAccount,
                             style: TextStyle(
                               fontFamily: AppTextStyles.fontFamily,
                               fontSize: 14,

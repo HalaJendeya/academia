@@ -8,8 +8,14 @@ import '../features/auth/screens/welcome_screen.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/student_verification_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
+import '../features/onboarding/screens/onboarding_welcome_screen.dart';
+import '../features/onboarding/screens/study_days_setup_screen.dart';
+import '../features/onboarding/screens/session_duration_setup_screen.dart';
+import '../features/onboarding/screens/notification_preferences_setup_screen.dart';
+import '../features/onboarding/screens/setup_complete_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -43,6 +49,15 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studentVerification: (context) =>
             const StudentVerificationScreen(),
         AppRoutes.dashboard: (context) => const DashboardScreen(),
+        AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
+        AppRoutes.onboardingWelcome: (context) =>
+            const OnboardingWelcomeScreen(),
+        AppRoutes.studyDaysSetup: (context) => const StudyDaysSetupScreen(),
+        AppRoutes.sessionDurationSetup: (context) =>
+            const SessionDurationSetupScreen(),
+        AppRoutes.notificationPreferencesSetup: (context) =>
+            const NotificationPreferencesSetupScreen(),
+        AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
       },
     );
   }

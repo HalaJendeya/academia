@@ -8,4 +8,11 @@ abstract final class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String studentVerification = '/student-verification';
   static const String dashboard = '/dashboard';
+  static const String resetPassword = '/reset-password';
+  static const String onboardingWelcome = '/onboarding-welcome';
+  static const String studyDaysSetup = '/study-days-setup';
+  static const String sessionDurationSetup = '/session-duration-setup';
+  static const String notificationPreferencesSetup =
+      '/notification-preferences-setup';
+  static const String setupComplete = '/setup-complete';
 }

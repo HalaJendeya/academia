@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../app/app_routes.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -9,6 +9,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_sizes.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   final FirebaseAuth? auth;
@@ -23,31 +24,64 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _startRoutingTimer();
+    _startRouting();
   }
 
-  Future<void> _startRoutingTimer() async {
+  Future<void> _startRouting() async {
     // Show splash screen for 2 seconds
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+    await _resolveInitialRoute();
+  }
 
+  Future<void> _resolveInitialRoute() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final hasAccount = prefs.getBool('has_account') ?? false;
-
       final auth = widget.auth ?? FirebaseAuth.instance;
-      final isLoggedIn = auth.currentUser != null;
+      final user = auth.currentUser;
+      if (user == null) {
+        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        return;
+      }
+
+      try {
+        await user.reload();
+      } catch (_) {
+        // Fallback silently if offline
+      }
 
       if (!mounted) return;
 
-      if (hasAccount) {
-        if (isLoggedIn) {
-          Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
-        } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.login);
-        }
-      } else {
+      final refreshedUser = auth.currentUser;
+      if (refreshedUser == null) {
         Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        return;
+      }
+
+      if (!refreshedUser.emailVerified) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.studentVerification,
+          arguments: refreshedUser.email,
+        );
+        return;
+      }
+
+      // Initialize OnboardingProvider for the UID
+      final onboardingProvider = Provider.of<OnboardingProvider>(
+        context,
+        listen: false,
+      );
+      onboardingProvider.initializeForUser(refreshedUser.uid);
+
+      final onboardingCompleted = await onboardingProvider
+          .checkOnboardingCompleted();
+
+      if (!mounted) return;
+
+      if (onboardingCompleted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.onboardingWelcome);
       }
     } catch (e) {
       if (mounted) {

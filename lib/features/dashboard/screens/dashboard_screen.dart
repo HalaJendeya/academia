@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_strings.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('شاشة الرئيسية (Dashboard)')),
-    );
+    return const Scaffold(body: Center(child: Text(AppStrings.dashboardTitle)));
   }
 }

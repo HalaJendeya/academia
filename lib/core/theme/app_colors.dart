@@ -83,10 +83,7 @@ abstract final class AppColors {
   static const LinearGradient welcomeCardGradient = LinearGradient(
     begin: Alignment.topRight,
     end: Alignment.bottomLeft,
-    colors: [
-      welcomeCardStart,
-      welcomeCardEnd,
-    ],
+    colors: [welcomeCardStart, welcomeCardEnd],
   );
 
   static const Color welcomeTitle = Color(0xFFFFFFFF);
@@ -161,11 +158,7 @@ abstract final class AppColors {
   static const LinearGradient splashGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      splashGradientTop,
-      splashGradientMiddle,
-      splashGradientBottom,
-    ],
+    colors: [splashGradientTop, splashGradientMiddle, splashGradientBottom],
   );
 
   // ---------------------------------------------------------------------------

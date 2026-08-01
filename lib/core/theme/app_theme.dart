@@ -38,12 +38,8 @@ abstract final class AppTheme {
         elevation: 0,
         centerTitle: true,
         surfaceTintColor: Colors.transparent,
-        iconTheme: IconThemeData(
-          color: AppColors.appBarIcon,
-        ),
-        actionsIconTheme: IconThemeData(
-          color: AppColors.appBarIcon,
-        ),
+        iconTheme: IconThemeData(color: AppColors.appBarIcon),
+        actionsIconTheme: IconThemeData(color: AppColors.appBarIcon),
         titleTextStyle: AppTextStyles.appBarTitle,
       ),
 
@@ -60,13 +56,9 @@ abstract final class AppTheme {
         space: 1,
       ),
 
-      iconTheme: const IconThemeData(
-        color: AppColors.textSecondary,
-      ),
+      iconTheme: const IconThemeData(color: AppColors.textSecondary),
 
-      primaryIconTheme: const IconThemeData(
-        color: AppColors.textOnPrimary,
-      ),
+      primaryIconTheme: const IconThemeData(color: AppColors.textOnPrimary),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -77,10 +69,7 @@ abstract final class AppTheme {
           elevation: 0,
           shadowColor: Colors.transparent,
           minimumSize: const Size(double.infinity, 52),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -91,14 +80,9 @@ abstract final class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          side: const BorderSide(
-            color: AppColors.primary,
-          ),
+          side: const BorderSide(color: AppColors.primary),
           minimumSize: const Size(double.infinity, 52),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -109,10 +93,7 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           textStyle: AppTextStyles.textButton,
         ),
       ),
@@ -125,9 +106,7 @@ abstract final class AppTheme {
         hoverElevation: 0,
         highlightElevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(12),
-          ),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
 
@@ -148,28 +127,24 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         indicatorColor: AppColors.bottomNavigationSelectedBackground,
-        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
-              (states) {
-            if (states.contains(WidgetState.selected)) {
-              return const IconThemeData(
-                color: AppColors.bottomNavigationSelectedIcon,
-              );
-            }
-
+        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+          if (states.contains(WidgetState.selected)) {
             return const IconThemeData(
-              color: AppColors.bottomNavigationUnselected,
+              color: AppColors.bottomNavigationSelectedIcon,
             );
-          },
-        ),
-        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-              (states) {
-            if (states.contains(WidgetState.selected)) {
-              return AppTextStyles.bottomNavigationSelected;
-            }
+          }
 
-            return AppTextStyles.bottomNavigationUnselected;
-          },
-        ),
+          return const IconThemeData(
+            color: AppColors.bottomNavigationUnselected,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppTextStyles.bottomNavigationSelected;
+          }
+
+          return AppTextStyles.bottomNavigationUnselected;
+        }),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -185,48 +160,32 @@ abstract final class AppTheme {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.border,
-          ),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.primary,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.error,
-          ),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(
-            color: AppColors.error,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
       ),
 
       checkboxTheme: CheckboxThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
-        side: const BorderSide(
-          color: AppColors.taskCheckboxBorder,
-        ),
-        fillColor: WidgetStateProperty.resolveWith<Color>(
-              (states) {
-            if (states.contains(WidgetState.selected)) {
-              return AppColors.primary;
-            }
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        side: const BorderSide(color: AppColors.taskCheckboxBorder),
+        fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
 
-            return Colors.transparent;
-          },
-        ),
+          return Colors.transparent;
+        }),
         checkColor: const WidgetStatePropertyAll<Color>(
           AppColors.textOnPrimary,
         ),

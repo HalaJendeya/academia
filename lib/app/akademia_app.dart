@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/theme/app_theme.dart';
+import 'app_routes.dart';
 import '../features/auth/screens/splash_screen.dart';
+import '../features/auth/screens/welcome_screen.dart';
+import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/register_screen.dart';
+import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/auth/screens/reset_password_screen.dart';
+import '../features/auth/screens/student_verification_screen.dart';
+import '../features/dashboard/screens/dashboard_screen.dart';
+import '../features/onboarding/screens/onboarding_welcome_screen.dart';
+import '../features/onboarding/screens/study_days_setup_screen.dart';
+import '../features/onboarding/screens/session_duration_setup_screen.dart';
+import '../features/onboarding/screens/notification_preferences_setup_screen.dart';
+import '../features/onboarding/screens/setup_complete_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -13,16 +27,38 @@ class AkademiaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       locale: const Locale('ar'),
-      supportedLocales: const [
-        Locale('ar'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
+      supportedLocales: const [Locale('ar'), Locale('en')],
       builder: (context, child) {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const SplashScreen(),
+      initialRoute: AppRoutes.splash,
+      routes: {
+        AppRoutes.splash: (context) => const SplashScreen(),
+        AppRoutes.welcome: (context) => const WelcomeScreen(),
+        AppRoutes.login: (context) => const LoginScreen(),
+        AppRoutes.register: (context) => const RegisterScreen(),
+        AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
+        AppRoutes.studentVerification: (context) =>
+            const StudentVerificationScreen(),
+        AppRoutes.dashboard: (context) => const DashboardScreen(),
+        AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
+        AppRoutes.onboardingWelcome: (context) =>
+            const OnboardingWelcomeScreen(),
+        AppRoutes.studyDaysSetup: (context) => const StudyDaysSetupScreen(),
+        AppRoutes.sessionDurationSetup: (context) =>
+            const SessionDurationSetupScreen(),
+        AppRoutes.notificationPreferencesSetup: (context) =>
+            const NotificationPreferencesSetupScreen(),
+        AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
+      },
     );
   }
 }

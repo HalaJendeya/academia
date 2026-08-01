@@ -1,14 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
+import '../../../../app/app_routes.dart';
 import '../../../../core/constants/app_assets.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_sizes.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+class SplashScreen extends StatefulWidget {
+  final FirebaseAuth? auth;
+
+  const SplashScreen({super.key, this.auth});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _startRouting();
+  }
+
+  Future<void> _startRouting() async {
+    // Show splash screen for 2 seconds
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    await _resolveInitialRoute();
+  }
+
+  Future<void> _resolveInitialRoute() async {
+    try {
+      final auth = widget.auth ?? FirebaseAuth.instance;
+      final user = auth.currentUser;
+      if (user == null) {
+        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        return;
+      }
+
+      try {
+        await user.reload();
+      } catch (_) {
+        // Fallback silently if offline
+      }
+
+      if (!mounted) return;
+
+      final refreshedUser = auth.currentUser;
+      if (refreshedUser == null) {
+        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        return;
+      }
+
+      if (!refreshedUser.emailVerified) {
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.studentVerification,
+          arguments: refreshedUser.email,
+        );
+        return;
+      }
+
+      // Initialize OnboardingProvider for the UID
+      final onboardingProvider = Provider.of<OnboardingProvider>(
+        context,
+        listen: false,
+      );
+      onboardingProvider.initializeForUser(refreshedUser.uid);
+
+      final onboardingCompleted = await onboardingProvider
+          .checkOnboardingCompleted();
+
+      if (!mounted) return;
+
+      if (onboardingCompleted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+      } else {
+        Navigator.pushReplacementNamed(context, AppRoutes.onboardingWelcome);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,29 +97,20 @@ class SplashScreen extends StatelessWidget {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: AppColors.splashGradient,
-        ),
+        decoration: const BoxDecoration(gradient: AppColors.splashGradient),
         child: SafeArea(
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  AppAssets.logo,
-                  width: AppSizes.splashLogoWidth,
-                ),
-                const SizedBox(
-                  height: AppSpacing.large,
-                ),
+                Image.asset(AppAssets.logo, width: AppSizes.splashLogoWidth),
+                const SizedBox(height: AppSpacing.large),
                 const Text(
                   AppStrings.appName,
                   textAlign: TextAlign.center,
                   style: AppTextStyles.splashTitle,
                 ),
-                const SizedBox(
-                  height: AppSpacing.small,
-                ),
+                const SizedBox(height: AppSpacing.small),
                 const Text(
                   AppStrings.splashSubtitle,
                   textAlign: TextAlign.center,

@@ -16,4 +16,10 @@ abstract final class AppRoutes {
       '/notification-preferences-setup';
   static const String setupComplete = '/setup-complete';
   static const String profile = '/profile';
+  static const String editProfile = '/profile/edit';
+  static const String profileNotificationSettings =
+      '/profile/notification-settings';
+  static const String studyPreferences = '/profile/study-preferences';
+  static const String profileAnalytics = '/profile/analytics';
+  static const String helpSupport = '/profile/help-support';
 }

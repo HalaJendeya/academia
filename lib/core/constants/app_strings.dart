@@ -224,4 +224,164 @@ abstract final class AppStrings {
   static const String logoutConfirmAction = 'خروج';
   static const String logoutLogicComingSoon = 'سيتم ربط تسجيل الخروج لاحقًا';
   static const String editProfileTooltip = 'تعديل الملف الشخصي';
+
+  static const String editProfileTitle = 'تعديل الملف الشخصي';
+  static const String universityEmailLabel = 'البريد الجامعي';
+  static const String majorLabel = 'التخصص';
+  static const String academicLevelLabel = 'المستوى الأكاديمي';
+  static const String studentIdReadOnlyHint =
+      'لا يمكن تعديل الرقم الجامعي من هنا';
+  static const String emailReadOnlyHint = 'لا يمكن تغيير البريد الجامعي من هنا';
+  static const String changeProfilePicture = 'تغيير الصورة الشخصية';
+  static const String profileImageComingSoon =
+      'سيتم إضافة اختيار الصورة لاحقًا';
+  static const String saveChanges = 'حفظ التغييرات';
+  static const String profileUpdatedSuccessfully =
+      'تم تحديث الملف الشخصي بنجاح';
+  static const String profileLoadError = 'تعذر تحميل بيانات الملف الشخصي';
+  static const String profileUpdateError =
+      'تعذر تحديث الملف الشخصي، حاول مرة أخرى';
+  static const String profileNotFound = 'لم يتم العثور على بيانات الملف الشخصي';
+  static const String fullNameRequired = 'يرجى إدخال الاسم الكامل';
+  static const String fullNameTooShort =
+      'يجب أن يتكون الاسم من حرفين على الأقل';
+  static const String profileNameUnavailable = 'الاسم غير متوفر';
+  static const String profileEmailUnavailable = 'البريد غير متوفر';
+
+  static const String uploadingProfileImage = 'جاري رفع الصورة الشخصية...';
+  static const String profileImageUpdatedSuccessfully =
+      'تم تحديث الصورة الشخصية بنجاح';
+  static const String profileImageUploadError = 'تعذر رفع الصورة الشخصية';
+  static const String profileImageUploadErrorDetails =
+      'تعذر رفع الصورة الشخصية، حاول مرة أخرى';
+  static const String profileImagePickOrUploadError =
+      'تعذر اختيار أو رفع الصورة الشخصية';
+  static const String loadingProfileData = 'جاري تحميل بيانات الملف الشخصي...';
+  static const String studentAvatarSemantics = 'الصورة الشخصية للطالب';
+  static const String invalidFileType = 'نوع ملف غير صالح';
+
+  static const List<String> majorsList = [
+    'هندسة البرمجيات',
+    'علوم الحاسوب',
+    'نظم المعلومات',
+    'الأمن السيبراني',
+    'هندسة الحاسوب',
+  ];
+
+  static const List<String> academicLevelsList = [
+    'المستوى ١',
+    'المستوى ٢',
+    'المستوى ٣',
+    'المستوى ٤',
+    'المستوى ٥',
+  ];
+
+  static const String profileImageUpdatedLocally =
+      'تم تحديث الصورة مؤقتًا على هذا الجهاز';
+  static const String profileImageTemporaryNote =
+      '* تم حفظ الصورة مؤقتًا على هذا الجهاز ولن تستمر بعد إعادة تشغيل التطبيق';
+
+  static const String notificationSettingsHeroTitle =
+      'تحكم في تنبيهاتك الدراسية';
+  static const String generalNotificationsTitle = 'التنبيهات العامة';
+  static const String assignmentRemindersTitle = 'تذكير الواجبات';
+  static const String assignmentRemindersDescription =
+      'تذكيرك بالواجبات قبل موعد التسليم';
+  static const String lectureRemindersTitle = 'تذكير قبل المحاضرة';
+  static const String lectureRemindersDescription = 'إشعار قبل بدء المحاضرة';
+  static const String studySessionRemindersSettingsTitle =
+      'تذكير جلسات الدراسة';
+  static const String studySessionRemindersSettingsDescription =
+      'تنبيهك بموعد جلسات المذاكرة';
+  static const String fileNotificationsTitle = 'تنبيهات الملفات';
+  static const String fileNotificationsDescription =
+      'إشعارات عند توفر ملفات جديدة';
+  static const String sharedSpaceNotificationsTitle =
+      'تنبيهات المساحة المشتركة';
+  static const String sharedSpaceNotificationsDescription =
+      'تنبيهات المنشورات والتحديثات المشتركة';
+  static const String dailySummarySettingsTitle = 'الملخص اليومي';
+  static const String dailySummarySettingsDescription =
+      'ملخص يومي لأهم مهامك ونشاطك';
+  static const String quietHoursTitle = 'أوقات الهدوء';
+  static const String quietHoursDescription =
+      'سيتم كتم صوت الإشعارات خلال هذه الفترة لضمان تركيزك أو راحتك';
+  static const String fromLabel = 'من';
+  static const String toLabel = 'إلى';
+  static const String saveNotificationSettings = 'حفظ الإعدادات';
+  static const String notificationSettingsSavedTemporarily =
+      'تم حفظ إعدادات الإشعارات مؤقتًا';
+
+  static const String notificationSettingsLoadError =
+      'تعذر تحميل إعدادات الإشعارات';
+  static const String notificationSettingsSaveError =
+      'تعذر حفظ إعدادات الإشعارات، حاول مرة أخرى';
+  static const String notificationSettingsSavedSuccessfully =
+      'تم حفظ إعدادات الإشعارات بنجاح';
+  static const String notificationSettingsNotAvailable =
+      'إعدادات الإشعارات غير متوفرة';
+
+  static const String studyDaysSectionDescription =
+      'حدد الأيام التي تدرس فيها عادة';
+  static const String studySessionDurationSectionTitle = 'مدة جلسة الدراسة';
+  static const String studySessionDurationSectionDescription =
+      'اختر المدة الافتراضية لجلسات المذاكرة';
+  static const String studyPreferencesInfo =
+      'سيتم استخدام هذه الإعدادات كتفضيلات افتراضية داخل مؤقت الدراسة والجدول الدراسي.';
+  static const String saveStudyPreferences = 'حفظ التفضيلات';
+
+  static const String studyPreferencesLoadError = 'تعذر تحميل تفضيلات الدراسة';
+  static const String studyPreferencesSaveError =
+      'تعذر حفظ تفضيلات الدراسة، حاول مرة أخرى';
+  static const String studyPreferencesSavedSuccessfully =
+      'تم حفظ تفضيلات الدراسة بنجاح';
+  static const String studyPreferencesNotAvailable =
+      'تفضيلات الدراسة غير متوفرة';
+
+  static const String analyticsDashboardDescription =
+      'نظرة عامة على تقدمك الدراسي وأدائك';
+  static const String completedTasksTitle = 'المهام المكتملة';
+  static const String weeklyTasksIncrease = '+3 هذا الأسبوع';
+  static const String studyHoursTitle = 'ساعات الدراسة';
+  static const String studyHoursGoal = 'الهدف: 30 س';
+  static const String commitmentRateTitle = 'نسبة الالتزام';
+  static const String mostStudiedCourseTitle = 'أكثر مساق تمت دراسته';
+  static const String mostStudiedCourseMockName = 'هندسة البرمجيات';
+
+  static const String helpSupportScreenTitle = 'الدعم والمساعدة';
+  static const String helpSupportHeroTitle = 'كيف يمكننا مساعدتك اليوم؟';
+  static const String faqTitle = 'الأسئلة الشائعة';
+  static const String contactSupportTitle = 'تواصل مباشرة مع الدعم';
+  static const String contactSupportDescription =
+      'فريقنا متاح لمساعدتك على مدار الساعة';
+  static const String feedbackSubject = 'موضوع الملاحظة';
+  static const String feedbackSubjectHint = 'مثال: مشكلة في تسجيل الدخول';
+  static const String feedbackDetails = 'التفاصيل';
+  static const String feedbackDetailsHint = 'اشرح لنا ما تواجهه...';
+  static const String sendFeedback = 'إرسال الملاحظة';
+
+  static const String supportRequestSuccess = 'تم إرسال ملاحظتك بنجاح';
+  static const String supportRequestError = 'تعذر إرسال ملاحظتك، حاول مرة أخرى';
+  static const String supportRequestSubjectRequired =
+      'يرجى إدخال موضوع الملاحظة';
+  static const String supportRequestSubjectTooShort =
+      'يجب أن يتكون الموضوع من 3 أحرف على الأقل';
+  static const String supportRequestSubjectTooLong =
+      'يجب ألا يتجاوز الموضوع 120 حرفًا';
+  static const String supportRequestMessageRequired =
+      'يرجى إدخال تفاصيل الملاحظة';
+  static const String supportRequestMessageTooShort =
+      'يجب أن تتكون التفاصيل من 10 أحرف على الأقل';
+  static const String supportRequestMessageTooLong =
+      'يجب ألا تتجاوز التفاصيل 2000 حرف';
+
+  static const String faqQuestion1 = 'كيف أضيف مهمة جديدة؟';
+  static const String faqAnswer1 =
+      'يمكنك إضافة مهمة جديدة من شاشة المهام عبر الضغط على زر الإضافة ثم تعبئة بيانات المهمة.';
+  static const String faqQuestion2 = 'كيف أحمل ملفًا بدون إنترنت؟';
+  static const String faqAnswer2 =
+      'الملفات التي تم تنزيلها مسبقًا يمكن الوصول إليها بدون اتصال بالإنترنت.';
+  static const String faqQuestion3 = 'هل يمكنني تغيير لغة التطبيق؟';
+  static const String faqAnswer3 =
+      'سيتم دعم تغيير اللغة في إصدار مستقبلي من التطبيق.';
 }

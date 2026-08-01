@@ -19,7 +19,7 @@ class AppDestructiveButton extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
-  final IconData? icon;
+  final dynamic icon;
   final bool isLoading;
   final bool isEnabled;
   final bool fullWidth;
@@ -45,7 +45,9 @@ class AppDestructiveButton extends StatelessWidget {
           )
         else ...[
           if (icon != null) ...[
-            Icon(icon, size: 20, color: iconColor),
+            icon is IconData
+                ? Icon(icon as IconData, size: 20, color: iconColor)
+                : icon as Widget,
             const SizedBox(width: AppSpacing.small),
           ],
           Text(

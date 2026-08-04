@@ -17,6 +17,9 @@ import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../models/student_profile.dart';
 import '../providers/profile_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../auth/providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -328,50 +331,125 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    bool isLoggingOut = false;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(AppStrings.logout, textAlign: TextAlign.right),
-          content: const Text(
-            AppStrings.logoutConfirmation,
-            textAlign: TextAlign.right,
-          ),
-          actionsAlignment: MainAxisAlignment.start,
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                AppStrings.logout,
+                textAlign: TextAlign.right,
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(AppStrings.logoutLogicComingSoon),
-                    backgroundColor: AppColors.primary,
+              content: const Text(
+                AppStrings.logoutConfirmation,
+                textAlign: TextAlign.right,
+              ),
+              actionsAlignment: MainAxisAlignment.start,
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppRadius.button,
+                      ),
+                    ),
                   ),
-                );
-              },
-              child: const Text(AppStrings.logoutConfirmAction),
-            ),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  onPressed: isLoggingOut
+                      ? null
+                      : () async {
+                    setDialogState(() {
+                      isLoggingOut = true;
+                    });
+
+                    final authProvider =
+                    context.read<AuthProvider>();
+
+                    final navigator =
+                    Navigator.of(context);
+
+                    final success =
+                    await authProvider.logout();
+
+                    if (!success) {
+                      if (!context.mounted) {
+                        return;
+                      }
+
+                      setDialogState(() {
+                        isLoggingOut = false;
+                      });
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            authProvider.errorMessage ??
+                                AppStrings.errorUnknown,
+                          ),
+                          backgroundColor: AppColors.danger,
+                        ),
+                      );
+
+                      return;
+                    }
+
+                    final preferences =
+                    await SharedPreferences.getInstance();
+
+                    await preferences.setBool(
+                      'has_account',
+                      false,
+                    );
+
+                    if (!context.mounted) {
+                      return;
+                    }
+
+                    navigator.pushNamedAndRemoveUntil(
+                      AppRoutes.login,
+                          (route) => false,
+                    );
+                  },
+                  child: isLoggingOut
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                      : const Text(
+                    AppStrings.logoutConfirmAction,
+                  ),
                 ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(AppStrings.cancel),
-            ),
-          ],
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(
+                      color: AppColors.primary,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppRadius.button,
+                      ),
+                    ),
+                  ),
+                  onPressed: isLoggingOut
+                      ? null
+                      : () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text(AppStrings.cancel),
+                ),
+              ],
+            );
+          },
         );
       },
     );

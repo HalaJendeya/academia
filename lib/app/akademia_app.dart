@@ -22,6 +22,7 @@ import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/profile/screens/study_preferences_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/profile/screens/help_faq_screen.dart';
+import '../features/admin/screens/admin_dashboard_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -55,6 +56,8 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studentVerification: (context) =>
             const StudentVerificationScreen(),
         AppRoutes.dashboard: (context) => const DashboardScreen(),
+
+        AppRoutes.adminDashboard: (context) => const AdminDashboardScreen(),
         AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
         AppRoutes.onboardingWelcome: (context) =>
             const OnboardingWelcomeScreen(),

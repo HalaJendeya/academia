@@ -384,4 +384,43 @@ abstract final class AppStrings {
   static const String faqQuestion3 = 'هل يمكنني تغيير لغة التطبيق؟';
   static const String faqAnswer3 =
       'سيتم دعم تغيير اللغة في إصدار مستقبلي من التطبيق.';
+
+  // Course Management
+  static const String adminCoursesTitle = 'إدارة المساقات';
+  static const String addCourseLabel = 'إضافة مساق';
+  static const String editCourseLabel = 'تعديل مساق';
+  static const String saveChangesLabel = 'حفظ التغييرات';
+  static const String courseCodeLabel = 'رمز المساق';
+  static const String courseTitleLabel = 'اسم المساق';
+  static const String courseDescriptionLabel = 'الوصف';
+  static const String instructorNameLabel = 'اسم المدرس';
+  static const String departmentLabel = 'التخصص';
+  static const String semesterLabel = 'الفصل الدراسي';
+  static const String academicYearLabel = 'العام الأكاديمي';
+  static const String creditHoursLabel = 'عدد الساعات';
+  static const String statusLabel = 'الحالة';
+  static const String activeStatus = 'نشط';
+  static const String archivedStatus = 'مؤرشف';
+  static const String deleteCourseConfirm =
+      'هل أنت متأكد من حذف هذا المساق نهائياً؟';
+  static const String archiveCourseConfirm =
+      'هل أنت متأكد من أرشفة هذا المساق؟';
+  static const String confirmAction = 'تأكيد';
+  static const String cancelAction = 'إلغاء';
+  static const String courseTitleRequired = 'يرجى إدخال اسم المساق';
+  static const String courseCodeRequired = 'يرجى إدخال رمز المساق';
+  static const String instructorRequired = 'يرجى إدخال اسم المدرس';
+  static const String departmentRequired = 'يرجى إدخال التخصص';
+  static const String semesterInvalid = 'يجب أن يكون الفصل الدراسي أكبر من 0';
+  static const String creditHoursInvalid = 'يجب أن يكون عدد الساعات أكبر من 0';
+  static const String academicYearRequired = 'يرجى إدخال العام الأكاديمي';
+  static const String courseAddedSuccess = 'تم إضافة المساق بنجاح';
+  static const String courseUpdatedSuccess = 'تم تحديث المساق بنجاح';
+  static const String courseArchivedSuccess = 'تم أرشفة المساق بنجاح';
+  static const String courseDeletedSuccess = 'تم حذف المساق بنجاح';
+  static const String courseLoadError = 'حدث خطأ أثناء تحميل المساقات';
+  static const String courseSaveError = 'حدث خطأ أثناء حفظ المساق';
+  static const String noCoursesFound = 'لا توجد مساقات مضافة حالياً';
+  static const String retryLabel = 'إعادة المحاولة';
+  static const String unauthorizedAccess = 'غير مصرح لك بالوصول إلى هذه الصفحة';
 }

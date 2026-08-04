@@ -340,10 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text(
-                AppStrings.logout,
-                textAlign: TextAlign.right,
-              ),
+              title: const Text(AppStrings.logout, textAlign: TextAlign.right),
               content: const Text(
                 AppStrings.logoutConfirmation,
                 textAlign: TextAlign.right,
@@ -355,96 +352,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     backgroundColor: AppColors.danger,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppRadius.button,
-                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
                   ),
                   onPressed: isLoggingOut
                       ? null
                       : () async {
-                    setDialogState(() {
-                      isLoggingOut = true;
-                    });
+                          setDialogState(() {
+                            isLoggingOut = true;
+                          });
 
-                    final authProvider =
-                    context.read<AuthProvider>();
+                          final authProvider = context.read<AuthProvider>();
 
-                    final navigator =
-                    Navigator.of(context);
+                          final navigator = Navigator.of(context);
 
-                    final success =
-                    await authProvider.logout();
+                          final success = await authProvider.logout();
 
-                    if (!success) {
-                      if (!context.mounted) {
-                        return;
-                      }
+                          if (!success) {
+                            if (!context.mounted) {
+                              return;
+                            }
 
-                      setDialogState(() {
-                        isLoggingOut = false;
-                      });
+                            setDialogState(() {
+                              isLoggingOut = false;
+                            });
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            authProvider.errorMessage ??
-                                AppStrings.errorUnknown,
-                          ),
-                          backgroundColor: AppColors.danger,
-                        ),
-                      );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  authProvider.errorMessage ??
+                                      AppStrings.errorUnknown,
+                                ),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
 
-                      return;
-                    }
+                            return;
+                          }
 
-                    final preferences =
-                    await SharedPreferences.getInstance();
+                          final preferences =
+                              await SharedPreferences.getInstance();
 
-                    await preferences.setBool(
-                      'has_account',
-                      false,
-                    );
+                          await preferences.setBool('has_account', false);
 
-                    if (!context.mounted) {
-                      return;
-                    }
+                          if (!context.mounted) {
+                            return;
+                          }
 
-                    navigator.pushNamedAndRemoveUntil(
-                      AppRoutes.login,
-                          (route) => false,
-                    );
-                  },
+                          navigator.pushNamedAndRemoveUntil(
+                            AppRoutes.login,
+                            (route) => false,
+                          );
+                        },
                   child: isLoggingOut
                       ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                      : const Text(
-                    AppStrings.logoutConfirmAction,
-                  ),
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(AppStrings.logoutConfirmAction),
                 ),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
-                    side: const BorderSide(
-                      color: AppColors.primary,
-                    ),
+                    side: const BorderSide(color: AppColors.primary),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppRadius.button,
-                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.button),
                     ),
                   ),
                   onPressed: isLoggingOut
                       ? null
                       : () {
-                    Navigator.of(dialogContext).pop();
-                  },
+                          Navigator.of(dialogContext).pop();
+                        },
                   child: const Text(AppStrings.cancel),
                 ),
               ],

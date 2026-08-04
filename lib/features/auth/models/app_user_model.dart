@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserRole {
-  student,
-  admin,
-}
+enum UserRole { student, admin }
 
 class AppUserModel {
   const AppUserModel({
@@ -45,14 +42,12 @@ class AppUserModel {
   bool get isActive => status == 'active';
 
   factory AppUserModel.fromFirestore(
-      DocumentSnapshot<Map<String, dynamic>> document,
-      ) {
+    DocumentSnapshot<Map<String, dynamic>> document,
+  ) {
     final data = document.data();
 
     if (data == null) {
-      throw StateError(
-        'User document ${document.id} does not contain data.',
-      );
+      throw StateError('User document ${document.id} does not contain data.');
     }
 
     return AppUserModel(
@@ -60,35 +55,18 @@ class AppUserModel {
       fullName: _readString(data['fullName']),
       email: _readString(data['email']),
       role: _roleFromString(data['role']),
-      status: _readString(
-        data['status'],
-        fallback: 'active',
-      ),
-      emailVerified: _readBool(
-        data['emailVerified'],
-      ),
-      onboardingCompleted: _readBool(
-        data['onboardingCompleted'],
-      ),
+      status: _readString(data['status'], fallback: 'active'),
+      emailVerified: _readBool(data['emailVerified']),
+      onboardingCompleted: _readBool(data['onboardingCompleted']),
       onboardingStatus: _readString(
         data['onboardingStatus'],
         fallback: 'pending',
       ),
-      studentId: _readNullableString(
-        data['studentId'],
-      ),
-      major: _readNullableString(
-        data['major'],
-      ),
-      semester: _readNullableInt(
-        data['semester'],
-      ),
-      createdAt: _readDateTime(
-        data['createdAt'],
-      ),
-      updatedAt: _readDateTime(
-        data['updatedAt'],
-      ),
+      studentId: _readNullableString(data['studentId']),
+      major: _readNullableString(data['major']),
+      semester: _readNullableInt(data['semester']),
+      createdAt: _readDateTime(data['createdAt']),
+      updatedAt: _readDateTime(data['updatedAt']),
     );
   }
 
@@ -104,10 +82,8 @@ class AppUserModel {
       if (studentId != null) 'studentId': studentId,
       if (major != null) 'major': major,
       if (semester != null) 'semester': semester,
-      if (createdAt != null)
-        'createdAt': Timestamp.fromDate(createdAt!),
-      if (updatedAt != null)
-        'updatedAt': Timestamp.fromDate(updatedAt!),
+      if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
+      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
   }
 
@@ -133,10 +109,8 @@ class AppUserModel {
       role: role ?? this.role,
       status: status ?? this.status,
       emailVerified: emailVerified ?? this.emailVerified,
-      onboardingCompleted:
-      onboardingCompleted ?? this.onboardingCompleted,
-      onboardingStatus:
-      onboardingStatus ?? this.onboardingStatus,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      onboardingStatus: onboardingStatus ?? this.onboardingStatus,
       studentId: studentId ?? this.studentId,
       major: major ?? this.major,
       semester: semester ?? this.semester,
@@ -158,10 +132,7 @@ class AppUserModel {
     }
   }
 
-  static String _readString(
-      dynamic value, {
-        String fallback = '',
-      }) {
+  static String _readString(dynamic value, {String fallback = ''}) {
     if (value == null) {
       return fallback;
     }

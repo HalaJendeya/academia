@@ -4,16 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'app/akademia_app.dart';
-import 'features/auth/providers/auth_provider.dart';
-import 'features/onboarding/providers/onboarding_provider.dart';
-import 'features/profile/providers/profile_provider.dart';
-import 'features/profile/services/profile_service.dart';
-import 'features/profile/providers/study_preferences_provider.dart';
-import 'features/profile/services/study_preferences_service.dart';
-import 'features/profile/providers/support_provider.dart';
-import 'features/profile/services/support_service.dart';
-import 'features/notifications/providers/notification_settings_provider.dart';
-import 'features/notifications/services/notification_settings_service.dart';
+import 'app/app_providers.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -36,26 +27,5 @@ Future<void> main() async {
     ),
   );
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => OnboardingProvider()),
-        ChangeNotifierProvider(
-          create: (_) => ProfileProvider(ProfileService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => SupportProvider(SupportService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) =>
-              NotificationSettingsProvider(NotificationSettingsService()),
-        ),
-      ],
-      child: const AkademiaApp(),
-    ),
-  );
+  runApp(MultiProvider(providers: appProviders, child: const AkademiaApp()));
 }

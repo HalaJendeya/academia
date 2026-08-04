@@ -4,11 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../features/auth/models/app_user_model.dart';
 
 class AuthService {
-  AuthService({
-    FirebaseAuth? firebaseAuth,
-    FirebaseFirestore? firestore,
-  })  : _auth = firebaseAuth ?? FirebaseAuth.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  AuthService({FirebaseAuth? firebaseAuth, FirebaseFirestore? firestore})
+    : _auth = firebaseAuth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
@@ -24,9 +22,9 @@ class AuthService {
 
   /// تسجيل الدخول بالبريد الإلكتروني وكلمة المرور.
   Future<UserCredential> signInWithEmailAndPassword(
-      String email,
-      String password,
-      ) async {
+    String email,
+    String password,
+  ) async {
     return _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -35,9 +33,9 @@ class AuthService {
 
   /// إنشاء حساب جديد في Firebase Authentication.
   Future<UserCredential> createUserWithEmailAndPassword(
-      String email,
-      String password,
-      ) async {
+    String email,
+    String password,
+  ) async {
     return _auth.createUserWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -62,10 +60,7 @@ class AuthService {
   /// المسار المستخدم:
   /// users/{uid}
   Future<AppUserModel> getUserProfile(String uid) async {
-    final document = await _firestore
-        .collection('users')
-        .doc(uid)
-        .get();
+    final document = await _firestore.collection('users').doc(uid).get();
 
     if (!document.exists) {
       throw StateError(
@@ -78,10 +73,7 @@ class AuthService {
 
   /// التحقق من وجود مستند للمستخدم داخل Firestore.
   Future<bool> userProfileExists(String uid) async {
-    final document = await _firestore
-        .collection('users')
-        .doc(uid)
-        .get();
+    final document = await _firestore.collection('users').doc(uid).get();
 
     return document.exists;
   }
@@ -158,9 +150,7 @@ class AuthService {
 
     // نحافظ على تطابق حالة التحقق بين Authentication وFirestore.
     if (updatedUser != null) {
-      await updateEmailVerificationStatus(
-        emailVerified: isVerified,
-      );
+      await updateEmailVerificationStatus(emailVerified: isVerified);
     }
 
     return isVerified;
@@ -168,9 +158,7 @@ class AuthService {
 
   /// إرسال رابط استعادة كلمة المرور.
   Future<void> sendPasswordResetEmail(String email) async {
-    await _auth.sendPasswordResetEmail(
-      email: email.trim(),
-    );
+    await _auth.sendPasswordResetEmail(email: email.trim());
   }
 
   /// تسجيل الخروج.

@@ -23,6 +23,8 @@ import '../features/profile/screens/study_preferences_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/profile/screens/help_faq_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
+import '../features/admin/screens/admin_course_list_screen.dart';
+import '../features/admin/screens/admin_course_form_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -74,6 +76,9 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
+        AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),
+        AppRoutes.adminAddCourse: (context) => const AdminCourseFormScreen(),
+        AppRoutes.adminEditCourse: (context) => const AdminCourseFormScreen(),
       },
     );
   }

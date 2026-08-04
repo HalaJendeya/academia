@@ -23,4 +23,8 @@ abstract final class AppRoutes {
   static const String studyPreferences = '/profile/study-preferences';
   static const String profileAnalytics = '/profile/analytics';
   static const String helpSupport = '/profile/help-support';
+
+  static const String adminCourses = '/admin/courses';
+  static const String adminAddCourse = '/admin/courses/add';
+  static const String adminEditCourse = '/admin/courses/edit';
 }

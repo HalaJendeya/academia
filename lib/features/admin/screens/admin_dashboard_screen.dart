@@ -39,14 +39,26 @@ class AdminDashboardScreen extends StatelessWidget {
                 style: const TextStyle(fontSize: 20),
               ),
 
-              const SizedBox(height: 30),
-
-              const Text(
-                'هذه لوحة المدير المؤقتة.\nسنبدأ ببنائها في المرحلة القادمة.',
-                textAlign: TextAlign.center,
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pushNamed(AppRoutes.adminCourses);
+                },
+                icon: const Icon(Icons.menu_book_rounded),
+                label: const Text(
+                  'إدارة المساقات',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
-
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
 
               ElevatedButton(
                 onPressed: auth.isLoading

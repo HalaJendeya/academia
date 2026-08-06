@@ -13,6 +13,8 @@ import '../features/notifications/providers/notification_settings_provider.dart'
 import '../features/notifications/services/notification_settings_service.dart';
 import '../features/courses/providers/course_provider.dart';
 import '../features/courses/services/course_service.dart';
+import '../features/enrollments/providers/enrollment_provider.dart';
+import '../features/enrollments/services/enrollment_service.dart';
 
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -26,4 +28,7 @@ final List<SingleChildWidget> appProviders = [
     create: (_) => NotificationSettingsProvider(NotificationSettingsService()),
   ),
   ChangeNotifierProvider(create: (_) => CourseProvider(CourseService())),
+  ChangeNotifierProvider(
+    create: (_) => EnrollmentProvider(EnrollmentService()),
+  ),
 ];

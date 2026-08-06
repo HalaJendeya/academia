@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (authProvider.isAdmin) {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            AppRoutes.adminDashboard,
+            AppRoutes.adminShell,
             (route) => false,
           );
           return;

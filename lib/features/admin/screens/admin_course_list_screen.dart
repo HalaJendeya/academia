@@ -12,7 +12,6 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/providers/course_provider.dart';
 
@@ -24,24 +23,16 @@ class AdminCourseListScreen extends StatefulWidget {
 }
 
 class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
+  String _searchQuery = '';
+  String _statusFilter = 'all'; // 'all', 'active', 'archived'
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = context.read<AuthProvider>();
-      if (!auth.isLoggedIn || !auth.isAdmin) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-      } else {
-        context.read<CourseProvider>().listenToCourses();
-      }
+      if (!mounted) return;
+      context.read<CourseProvider>().listenToCourses();
     });
-  }
-
-  @override
-  void dispose() {
-    // Stop listening before super.dispose
-    context.read<CourseProvider>().stopListening();
-    super.dispose();
   }
 
   void _showArchiveDialog(BuildContext context, CourseModel course) {
@@ -49,7 +40,7 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(
-          'أرشفة المساق',
+          AppStrings.archiveCourseTitle,
           style: TextStyle(fontWeight: FontWeight.bold),
           textAlign: TextAlign.right,
         ),
@@ -57,30 +48,27 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
           AppStrings.archiveCourseConfirm,
           textAlign: TextAlign.right,
         ),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppStrings.cancelAction),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final provider = context.read<CourseProvider>();
-              final success = await provider.archiveCourse(course.id);
-              if (context.mounted) {
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final provider = context.read<CourseProvider>();
+                final success = await provider.archiveCourse(course.id);
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text(AppStrings.courseArchivedSuccess),
                     ),
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
                         provider.errorMessage ?? AppStrings.courseSaveError,
@@ -89,9 +77,13 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
                     ),
                   );
                 }
-              }
-            },
-            child: const Text(AppStrings.confirmAction),
+              },
+              child: const Text(AppStrings.confirmAction),
+            ),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(AppStrings.cancelAction),
           ),
         ],
       ),
@@ -103,7 +95,7 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text(
-          'حذف المساق نهائياً',
+          AppStrings.deleteAction,
           style: TextStyle(fontWeight: FontWeight.bold),
           textAlign: TextAlign.right,
         ),
@@ -119,25 +111,24 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
               filled: true,
               onPressed: () async {
                 Navigator.of(ctx).pop();
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 final provider = context.read<CourseProvider>();
                 final success = await provider.deleteCourse(course.id);
-                if (context.mounted) {
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(AppStrings.courseDeletedSuccess),
+                if (success) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text(AppStrings.courseDeletedSuccess),
+                    ),
+                  );
+                } else {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ?? AppStrings.courseSaveError,
                       ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          provider.errorMessage ?? AppStrings.courseSaveError,
-                        ),
-                        backgroundColor: AppColors.error,
-                      ),
-                    );
-                  }
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
                 }
               },
             ),
@@ -153,23 +144,13 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-
-    // Guard: Render loading indicator and avoid building admin UI if not admin
-    if (!auth.isLoggedIn || !auth.isAdmin) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
-    }
-
     final provider = context.watch<CourseProvider>();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.adminCoursesTitle),
         centerTitle: true,
+        automaticallyImplyLeading: false,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -181,7 +162,61 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      body: _buildBody(provider),
+      body: Column(
+        children: [
+          // Search & Filter header
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.medium),
+            child: Column(
+              children: [
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: AppStrings.searchCourseHint,
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: AppSpacing.medium),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    _buildFilterChip('all', AppStrings.filterAll),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('active', AppStrings.filterActive),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('archived', AppStrings.filterArchived),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _buildBody(provider)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String filterVal, String label) {
+    final isSelected = _statusFilter == filterVal;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _statusFilter = filterVal;
+          });
+        }
+      },
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+      labelStyle: TextStyle(
+        color: isSelected ? AppColors.primaryDark : AppColors.textSecondary,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
     );
   }
 
@@ -197,7 +232,18 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
       );
     }
 
-    if (provider.courses.isEmpty) {
+    final filtered = provider.courses.where((course) {
+      final matchesSearch =
+          course.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          course.courseCode.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesStatus =
+          _statusFilter == 'all' ||
+          (_statusFilter == 'active' && course.isActive) ||
+          (_statusFilter == 'archived' && course.isArchived);
+      return matchesSearch && matchesStatus;
+    }).toList();
+
+    if (filtered.isEmpty) {
       return AppEmptyState(
         title: AppStrings.noCoursesFound,
         icon: Icons.menu_book_rounded,
@@ -210,17 +256,19 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.medium),
-      itemCount: provider.courses.length,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.medium),
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        final course = provider.courses[index];
+        final course = filtered[index];
         return _buildCourseCard(course, provider);
       },
     );
   }
 
   Widget _buildCourseCard(CourseModel course, CourseProvider provider) {
-    final statusColor = course.isActive ? Colors.green : AppColors.textMuted;
+    final statusColor = course.isActive
+        ? AppColors.activeStatus
+        : AppColors.textMuted;
     final statusBgColor = statusColor.withValues(alpha: 0.08);
 
     return AppCard(
@@ -307,9 +355,19 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(
+                    context,
+                  ).pushNamed(AppRoutes.adminCourseDetails, arguments: course);
+                },
+                icon: const Icon(Icons.visibility_rounded, size: 18),
+                label: const Text(AppStrings.viewAction),
+              ),
+              const Spacer(),
               IconButton(
                 icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
-                tooltip: 'تعديل',
+                tooltip: AppStrings.editAction,
                 onPressed: () {
                   provider.selectCourse(course);
                   Navigator.of(
@@ -317,7 +375,7 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
                   ).pushNamed(AppRoutes.adminEditCourse, arguments: course);
                 },
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               IconButton(
                 icon: Icon(
                   Icons.archive_rounded,
@@ -325,18 +383,18 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
                       ? AppColors.textDisabled
                       : AppColors.secondary,
                 ),
-                tooltip: 'أرشفة',
+                tooltip: AppStrings.archiveAction,
                 onPressed: course.isArchived
                     ? null
                     : () => _showArchiveDialog(context, course),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(
                   Icons.delete_forever_rounded,
                   color: AppColors.danger,
                 ),
-                tooltip: 'حذف',
+                tooltip: AppStrings.deleteAction,
                 onPressed: () => _showDeleteDialog(context, course),
               ),
             ],

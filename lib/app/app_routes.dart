@@ -27,4 +27,22 @@ abstract final class AppRoutes {
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';
+
+  static const String adminStudents = '/admin/students';
+  static const String adminStudentDetails = '/admin/students/details';
+  static const String adminAssignCourses = '/admin/students/assign-courses';
+
+  static const String adminShell = '/admin/shell';
+  static const String adminCourseDetails = '/admin/courses/details';
+  static const String adminAssignments = '/admin/assignments';
+  static const String adminAddAssignment = '/admin/assignments/add';
+  static const String adminAssignmentDetails = '/admin/assignments/details';
+  static const String adminCourseFiles = '/admin/files';
+  static const String adminUploadFile = '/admin/files/upload';
+  static const String adminContent = '/admin/content';
+  static const String adminAnnouncements = '/admin/announcements';
+  static const String adminAddAnnouncement = '/admin/announcements/add';
+  static const String adminReportedPosts = '/admin/reported-posts';
+  static const String adminSettings = '/admin/settings';
+  static const String adminProfile = '/admin/profile';
 }

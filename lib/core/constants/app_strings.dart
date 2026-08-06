@@ -423,4 +423,200 @@ abstract final class AppStrings {
   static const String noCoursesFound = 'لا توجد مساقات مضافة حالياً';
   static const String retryLabel = 'إعادة المحاولة';
   static const String unauthorizedAccess = 'غير مصرح لك بالوصول إلى هذه الصفحة';
+
+  // Enrollment Management
+  static const String adminStudentsTitle = 'إدارة الطلاب';
+  static const String studentEmailLabel = 'البريد الإلكتروني';
+  static const String onboardingCompletedLabel = 'حالة التهيئة';
+  static const String completedOnboarding = 'مكتمل';
+  static const String pendingOnboarding = 'معلق';
+  static const String assignedCoursesLabel = 'المساقات المسجلة';
+  static const String activeEnrollmentStatus = 'مسجل';
+  static const String removedEnrollmentStatus = 'تمت إزالته';
+  static const String notEnrolledStatus = 'غير مسجل';
+  static const String manageCoursesLabel = 'إدارة المساقات';
+  static const String assignCourseLabel = 'تسجيل مساق';
+  static const String removeCourseConfirm =
+      'هل أنت متأكد من إلغاء تسجيل هذا المساق؟';
+  static const String restoreCourseConfirm =
+      'هل أنت متأكد من إعادة تسجيل هذا المساق؟';
+  static const String courseAssignedSuccess = 'تم تسجيل المساق بنجاح';
+  static const String courseRestoredSuccess = 'تم إعادة تسجيل المساق بنجاح';
+  static const String courseRemovedSuccess = 'تم إلغاء تسجيل المساق بنجاح';
+  static const String noStudentsFound = 'لا يوجد طلاب مسجلون حالياً';
+
+  // Admin UI Constants & Placeholders
+  static const String adminDashboardTitle = 'لوحة التحكم للمشرف';
+  static const String adminRoleLabel = 'مدير النظام';
+  static const String welcomeAdminPrefix = 'مرحباً بك، ';
+  static const String quickActionsLabel = 'الإجراءات السريعة';
+  static const String addCourseQuickAction = 'إضافة مساق جديد';
+  static const String manageStudentsQuickAction = 'إدارة شؤون الطلاب';
+  static const String addAssignmentQuickAction = 'إضافة واجب دراسي';
+  static const String uploadFileQuickAction = 'رفع ملف مساق';
+  static const String courseStatusSummary = 'ملخص حالة المساقات';
+  static const String activeCoursesLabel = 'مساقات نشطة';
+  static const String archivedCoursesLabel = 'مساقات مؤرشفة';
+  static const String recentActivitiesLabel = 'النشاطات الأخيرة';
+  static const String noRecentActivities = 'لا توجد نشاطات مؤخراً';
+  static const String courseNotFound = 'تعذر العثور على المساق المحدد.';
+  static const String courseBasicInfoSection = 'معلومات المساق الأساسية';
+  static const String courseSemesterInfoSection = 'معلومات الفصل الدراسي';
+  static const String courseAcademicStatusSection = 'حالة المساق الدراسية';
+
+  static const String courseTitleHintValue = 'مثال: إدارة قواعد البيانات';
+  static const String courseCodeHintValue = 'مثال: MIS4310';
+  static const String instructorHintValue = 'مثال: د. أحمد محمد';
+  static const String departmentHintValue = 'مثال: نظم المعلومات الإدارية';
+  static const String courseDescriptionHint = 'اكتب وصفاً مختصراً للمساق...';
+  static const String semesterHintValue = 'مثال: 7';
+  static const String academicYearHintValue = 'مثال: 2025-2026';
+  static const String creditHoursSuffix = 'ساعات معتمدة';
+
+  static const String viewAction = 'عرض';
+  static const String editAction = 'تعديل';
+  static const String archiveAction = 'أرشفة';
+  static const String deleteAction = 'حذف';
+  static const String archiveCourseTitle = 'أرشفة المساق';
+  static const String removeCourseTitle = 'إلغاء تسجيل المساق';
+  static const String restoreCourseTitle = 'إعادة تسجيل المساق';
+  static const String noCoursesEnrolledForStudent =
+      'لا يوجد مساقات مسجلة حالياً لهذا الطالب.';
+  static const String unknownCourse = 'مساق غير معروف';
+  static const String cancelEnrollmentAction = 'إلغاء التسجيل';
+  static const String restoreEnrollmentAction = 'إعادة التسجيل';
+  static const String coursePrefix = 'المساق:';
+  static const String deadlinePrefix = 'تاريخ التسليم:';
+  static const String demoFeatureAlertTitle = 'تنبيه ميزة تجريبية';
+  static const String attachmentsUnavailable = 'تحميل المرفقات غير متاح';
+  static const String assignmentTitleRequired = 'حقل العنوان مطلوب';
+  static const String assignmentCourseRequired = 'الرجاء اختيار المساق';
+  static const String assignmentDeadlineRequired =
+      'الرجاء اختيار تاريخ التسليم';
+  static const String fileSizePrefix = 'حجم الملف:';
+  static const String uploadedAtPrefix = 'تاريخ الرفع:';
+  static const String fileTitleRequired = 'اسم الملف مطلوب';
+  static const String attachedFileLabel = 'الملف المرفق';
+  static const String fileRequiredAlert = 'الرجاء اختيار ملف لرفعه';
+  static const String contentManagementDesc =
+      'مرحباً بك في مركز إدارة المحتوى للمشرف، هنا يمكنك إدارة الإعلانات ومتابعة بلاغات الطلاب.';
+  static const String announcementsTileDesc =
+      'نشر وتعديل الإعلانات الموجهة لجميع الطلاب أو لطلاب مساقات محددة.';
+  static const String reportedPostsTileDesc =
+      'مراجعة وإجراءات المنشورات والتعليقات التي تم الإبلاغ عنها من قبل الطلاب.';
+  static const String announcementTargetAllValue = 'عام';
+  static const String courseLabelPrefix = 'مساق: ';
+  static const String publishedAtPrefix = 'تاريخ النشر: ';
+  static const String targetCourseLabel = 'المساق المستهدف';
+  static const String targetCourseSelectHint = 'اختر المساق المستهدف...';
+  static const String announcementBodyRequired = 'حقل نص الإعلان مطلوب';
+  static const String logoutFailed = 'فشل تسجيل الخروج';
+  static const String appInformationTitle = 'معلومات التطبيق';
+  static const String appVersionValue = 'الإصدار 1.0.0';
+  static const String adminPersonalInfoTitle = 'معلومات المشرف الشخصية';
+  static const String platformRoleLabel = 'الدور بالمنصة';
+  static const String platformRoleAdminValue = 'مدير نظام';
+  static const String adminDashboardTab = 'لوحة التحكم';
+  static const String adminCoursesTab = 'المساقات';
+  static const String adminStudentsTab = 'الطلاب';
+  static const String adminContentTab = 'المحتوى';
+  static const String adminSettingsTab = 'الإعدادات';
+  static const String enrolledStudentsTab = 'الطلاب';
+  static const String assignmentsTab = 'الواجبات';
+  static const String filesTab = 'الملفات';
+  static const String announcementsTab = 'الإعلانات';
+  static const String enrolledStudentsNotConnectedTitle =
+      'قائمة الطلاب غير متصلة';
+  static const String enrolledStudentsNotConnectedDesc =
+      'سيتم تفعيل ميزة عرض الطلاب المسجلين بالمساق لاحقاً.';
+  static const String noAssignmentsTitle = 'لا توجد واجبات للمساق';
+  static const String noAssignmentsDesc =
+      'لم يتم تعيين أي واجبات دراسية لهذا المساق بعد.';
+  static const String noFilesTitle = 'لا توجد ملفات للمساق';
+  static const String noFilesDesc =
+      'لم يتم رفع أي ملفات أو محاضرات لهذا المساق بعد.';
+  static const String noAnnouncementsTitle = 'لا توجد إعلانات للمساق';
+  static const String noAnnouncementsDesc =
+      'لم يتم نشر أي إعلانات موجهة لطلاب هذا المساق بعد.';
+
+  static const String filterAll = 'الكل';
+  static const String filterActive = 'نشط';
+  static const String filterArchived = 'مؤرشف';
+  static const String filterDisabled = 'معطل';
+  static const String filterOnboarded = 'مكتمل الإعداد';
+  static const String filterPendingOnboard = 'غير مكتمل';
+
+  static const String searchCourseHint = 'ابحث باسم أو رمز المساق...';
+  static const String searchStudentHint = 'ابحث باسم أو رقم الطالب...';
+  static const String searchCourseToAssignHint = 'ابحث عن مساق لتسجيله...';
+
+  static const String accountActionsTitle = 'إجراءات الحساب (قريباً)';
+  static const String accountActionsDesc =
+      'هذه الخيارات معطلة حالياً وسيتم ربطها بآلية التحكم بالدخول لاحقاً.';
+  static const String disableAccountAction = 'تعطيل الحساب';
+  static const String activateAccountAction = 'تنشيط الحساب';
+  static const String studentNotFound = 'تعذر تحميل بيانات الطالب.';
+  static const String studentDetailsTitle = 'تفاصيل الطالب';
+
+  static const String assignmentsManagementTitle = 'الواجبات الدراسية';
+  static const String noAssignmentsAddedTitle = 'لا توجد واجبات دراسية مضافة';
+  static const String noAssignmentsAddedDesc =
+      'لم تقم بإضافة أي واجبات دراسية للمساقات حتى الآن.';
+  static const String addNewAssignmentAction = 'إضافة واجب جديد';
+  static const String assignmentDetailsTitle = 'تفاصيل الواجب الدراسي';
+  static const String assignmentFeatureNotConnected =
+      'ميزة الواجبات قيد التطوير حالياً وغير متصلة بقاعدة البيانات.';
+  static const String assignmentTitleLabel = 'عنوان الواجب';
+  static const String assignmentTitleHint = 'أدخل عنوان الواجب...';
+  static const String assignmentCourseLabel = 'المساق الدراسي';
+  static const String assignmentCourseSelectHint = 'اختر المساق الدراسي...';
+  static const String assignmentDeadlineLabel = 'تاريخ التسليم الأقصى';
+  static const String assignmentDeadlineHint = 'اختر تاريخ التسليم...';
+  static const String assignmentInstructionsLabel = 'الوصف والتعليمات';
+  static const String assignmentInstructionsHint =
+      'أدخل تفاصيل الواجب والتعليمات...';
+  static const String assignmentSaveAction = 'حفظ الواجب (قريباً)';
+  static const String assignmentMockTitle = 'واجب تجريبي غير متاح';
+
+  static const String filesManagementTitle = 'ملفات المساقات';
+  static const String noFilesUploadedTitle = 'لا توجد ملفات مرفوعة';
+  static const String noFilesUploadedDesc =
+      'لم يتم رفع أي ملفات أو محاضرات دراسية حتى الآن.';
+  static const String uploadNewFileAction = 'رفع ملف جديد';
+  static const String uploadFeatureNotConnected =
+      'خدمة الرفع غير متصلة حالياً. سيتم ربط ميزة رفع الملفات بخدمة Cloudinary لاحقاً.';
+  static const String fileTitleLabel = 'اسم الملف';
+  static const String fileTitleHint = 'أدخل عنوان أو اسم الملف...';
+  static const String filePickerPrompt = 'اختر ملفاً لرفعه (معطل حالياً)';
+  static const String uploadFileAction = 'بدء الرفع (معطل)';
+
+  static const String contentManagementTitle = 'إدارة المحتوى';
+  static const String contentManagementCenter = 'مركز إدارة المحتوى';
+  static const String announcementsManagementTitle = 'الإعلانات';
+  static const String noAnnouncementsPublishedTitle = 'لا توجد إعلانات منشورة';
+  static const String noAnnouncementsPublishedDesc =
+      'لم يتم نشر أي إعلانات عامة أو موجهة للمساقات بعد.';
+  static const String createNewAnnouncementAction = 'إنشاء إعلان جديد';
+  static const String announcementFeatureNotConnected =
+      'ميزة الإعلانات قيد التطوير حالياً وغير متصلة بقاعدة البيانات.';
+  static const String announcementTitleLabel = 'عنوان الإعلان';
+  static const String announcementTitleHint = 'أدخل عنوان الإعلان...';
+  static const String announcementTargetLabel = 'الفئة المستهدفة';
+  static const String announcementTargetAll = 'جميع الطلاب';
+  static const String announcementTargetCourses = 'طلاب مساقات محددة';
+  static const String announcementBodyLabel = 'نص الإعلان';
+  static const String announcementBodyHint = 'اكتب نص الإعلان هنا...';
+  static const String announcementPublishAction = 'نشر الإعلان (قريباً)';
+
+  static const String reportedPostsTitle = 'المنشورات المبلغ عنها';
+  static const String noReportsTitle = 'لا توجد بلاغات معلقة';
+  static const String noReportsDesc =
+      'جميع منشورات الطلاب سليمة ولم يتم تقديم أي بلاغات حالياً.';
+
+  static const String settingsTitle = 'الإعدادات';
+  static const String accountInformation = 'معلومات الحساب';
+  static const String profileTitleAdmin = 'الملف الشخصي للمشرف';
+  static const String adminRoleValue = 'مدير النظام';
+  static const String accountStatusLabel = 'حالة الحساب';
+  static const String accountStatusValue = 'نشط';
 }

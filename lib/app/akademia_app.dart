@@ -25,6 +25,23 @@ import '../features/profile/screens/help_faq_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/admin/screens/admin_course_list_screen.dart';
 import '../features/admin/screens/admin_course_form_screen.dart';
+import '../features/admin/screens/admin_student_list_screen.dart';
+import '../features/admin/screens/admin_student_details_screen.dart';
+import '../features/admin/screens/admin_assign_courses_screen.dart';
+import '../features/admin/screens/admin_shell_screen.dart';
+import '../features/admin/screens/admin_course_details_screen.dart';
+import '../features/admin/screens/admin_assignment_list_screen.dart';
+import '../features/admin/screens/admin_assignment_form_screen.dart';
+import '../features/admin/screens/admin_assignment_details_screen.dart';
+import '../features/admin/screens/admin_course_files_screen.dart';
+import '../features/admin/screens/admin_upload_file_screen.dart';
+import '../features/admin/screens/admin_content_screen.dart';
+import '../features/admin/screens/admin_announcements_screen.dart';
+import '../features/admin/screens/admin_announcement_form_screen.dart';
+import '../features/admin/screens/admin_reported_posts_screen.dart';
+import '../features/admin/screens/admin_settings_screen.dart';
+import '../features/admin/screens/admin_profile_screen.dart';
+import '../features/admin/models/admin_student_model.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -79,6 +96,41 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),
         AppRoutes.adminAddCourse: (context) => const AdminCourseFormScreen(),
         AppRoutes.adminEditCourse: (context) => const AdminCourseFormScreen(),
+        AppRoutes.adminStudents: (context) => const AdminStudentListScreen(),
+        AppRoutes.adminStudentDetails: (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+
+          if (arguments is! AdminStudentModel) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('تفاصيل الطالب')),
+              body: const Center(child: Text('تعذر تحميل بيانات الطالب.')),
+            );
+          }
+
+          return AdminStudentDetailsScreen(student: arguments);
+        },
+        AppRoutes.adminAssignCourses: (context) =>
+            const AdminAssignCoursesScreen(),
+        AppRoutes.adminShell: (context) => const AdminShellScreen(),
+        AppRoutes.adminCourseDetails: (context) =>
+            const AdminCourseDetailsScreen(),
+        AppRoutes.adminAssignments: (context) =>
+            const AdminAssignmentListScreen(),
+        AppRoutes.adminAddAssignment: (context) =>
+            const AdminAssignmentFormScreen(),
+        AppRoutes.adminAssignmentDetails: (context) =>
+            const AdminAssignmentDetailsScreen(),
+        AppRoutes.adminCourseFiles: (context) => const AdminCourseFilesScreen(),
+        AppRoutes.adminUploadFile: (context) => const AdminUploadFileScreen(),
+        AppRoutes.adminContent: (context) => const AdminContentScreen(),
+        AppRoutes.adminAnnouncements: (context) =>
+            const AdminAnnouncementsScreen(),
+        AppRoutes.adminAddAnnouncement: (context) =>
+            const AdminAnnouncementFormScreen(),
+        AppRoutes.adminReportedPosts: (context) =>
+            const AdminReportedPostsScreen(),
+        AppRoutes.adminSettings: (context) => const AdminSettingsScreen(),
+        AppRoutes.adminProfile: (context) => const AdminProfileScreen(),
       },
     );
   }

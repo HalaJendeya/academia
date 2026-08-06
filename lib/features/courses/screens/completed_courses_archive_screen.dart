@@ -13,7 +13,7 @@ import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../providers/course_provider.dart';
-import '../widgets/archived_course_card.dart';
+import '../widgets/student_archived_course_card.dart';
 
 class CompletedCoursesArchiveScreen extends StatefulWidget {
   const CompletedCoursesArchiveScreen({super.key});

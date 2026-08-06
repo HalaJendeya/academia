@@ -1,3 +1,5 @@
+// lib/app/akademia_app.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -22,6 +24,9 @@ import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/profile/screens/study_preferences_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/profile/screens/help_faq_screen.dart';
+import '../features/courses/screens/courses_screen.dart';
+import '../features/courses/screens/course_detail_screen.dart';
+import '../features/courses/screens/completed_courses_archive_screen.dart';
 
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
@@ -53,24 +58,28 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.register: (context) => const RegisterScreen(),
         AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
         AppRoutes.studentVerification: (context) =>
-            const StudentVerificationScreen(),
+        const StudentVerificationScreen(),
         AppRoutes.dashboard: (context) => const DashboardScreen(),
         AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
         AppRoutes.onboardingWelcome: (context) =>
-            const OnboardingWelcomeScreen(),
+        const OnboardingWelcomeScreen(),
         AppRoutes.studyDaysSetup: (context) => const StudyDaysSetupScreen(),
         AppRoutes.sessionDurationSetup: (context) =>
-            const SessionDurationSetupScreen(),
+        const SessionDurationSetupScreen(),
         AppRoutes.notificationPreferencesSetup: (context) =>
-            const NotificationPreferencesSetupScreen(),
+        const NotificationPreferencesSetupScreen(),
         AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
         AppRoutes.profile: (context) => const ProfileScreen(),
         AppRoutes.editProfile: (context) => const EditProfileScreen(),
         AppRoutes.profileNotificationSettings: (context) =>
-            const NotificationSettingsScreen(),
+        const NotificationSettingsScreen(),
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
+        AppRoutes.courses: (context) => const CoursesScreen(),
+        AppRoutes.courseDetail: (context) => const CourseDetailScreen(),
+        AppRoutes.coursesArchive: (context) =>
+        const CompletedCoursesArchiveScreen(),
       },
     );
   }

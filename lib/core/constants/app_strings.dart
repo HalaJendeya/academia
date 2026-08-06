@@ -384,4 +384,43 @@ abstract final class AppStrings {
   static const String faqQuestion3 = 'هل يمكنني تغيير لغة التطبيق؟';
   static const String faqAnswer3 =
       'سيتم دعم تغيير اللغة في إصدار مستقبلي من التطبيق.';
+
+
+  // lib/core/constants/app_strings.dart
+
+// lib/core/constants/app_strings.dart
+
+// lib/core/constants/app_strings.dart
+
+  // lib/core/constants/app_strings.dart
+
+  // Courses feature
+  static const String courseProgressLabel = 'نسبة الإنجاز';
+  static const String continueCourseAction = 'متابعة المساق';
+  static const String activeCoursesFilter = 'نشط';
+  static const String archivedCoursesFilter = 'مؤرشف';
+  static const String myCoursesTitle = 'مقرراتي الدراسية';
+  static const String courseSearchHint = 'ابحث عن مساق...';
+  static const String coursesFilesButtonLabel = 'الملفات';
+  static const String noCoursesFoundMessage = 'لا توجد مقررات لعرضها';
+  static const String coursesLoadError = 'تعذر تحميل المقررات الدراسية';
+  static const String courseDetailLoadError = 'تعذر تحميل بيانات المقرر';
+  static const String courseAssignmentsLoadError = 'تعذر تحميل واجبات المقرر';
+  static const String courseFilesLoadError = 'تعذر تحميل ملفات المقرر';
+  static const String viewDetailsAction = 'عرض التفاصيل';
+  static const String newFileBadgeLabel = 'جديد';
+  static const String courseDetailAppBarTitle = 'المساقات';
+  static const String courseOverviewTab = 'نظرة عامة';
+  static const String courseAssignmentsTab = 'الواجبات';
+  static const String courseFilesTab = 'الملفات';
+  static const String courseSharedSpaceTab = 'المساحة';
+  static const String noAssignmentsFoundMessage = 'لا توجد واجبات لعرضها';
+  static const String noFilesFoundMessage = 'لا توجد ملفات لعرضها';
+  static const String fileSearchHint = 'ابحث عن ملف...';
+  static const String reactivateCourseAction = 'إعادة تنشيط';
+  static const String coursesArchiveTitle = 'أرشيف المساقات';
+  static const String coursesArchiveFilterLabel = 'تصفية';
+  static const String coursesArchiveCompletedPrefix = 'تم إنجاز';
+  static const String coursesArchiveCompletedSuffix = 'مساقات';
+  static const String noArchivedCoursesMessage = 'لا توجد مقررات مؤرشفة';
 }

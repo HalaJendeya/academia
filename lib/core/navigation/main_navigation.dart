@@ -1,3 +1,5 @@
+// lib/core/navigation/main_navigation.dart
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_routes.dart';
@@ -6,10 +8,10 @@ import '../theme/app_colors.dart';
 import '../widgets/app_bottom_navigation.dart';
 
 void handleMainNavigation(
-  BuildContext context,
-  int index, {
-  required int currentIndex,
-}) {
+    BuildContext context,
+    int index, {
+      required int currentIndex,
+    }) {
   if (index == currentIndex) return;
 
   switch (index) {
@@ -18,7 +20,7 @@ void handleMainNavigation(
       break;
 
     case AcademiaBottomNavigation.coursesIndex:
-      _navigateOrShowUnderDevelopment(context, '/courses');
+      Navigator.pushReplacementNamed(context, AppRoutes.courses);
       break;
 
     case AcademiaBottomNavigation.tasksIndex:

@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +16,10 @@ import 'features/profile/providers/support_provider.dart';
 import 'features/profile/services/support_service.dart';
 import 'features/notifications/providers/notification_settings_provider.dart';
 import 'features/notifications/services/notification_settings_service.dart';
+import 'features/courses/providers/course_provider.dart';
+import 'features/courses/services/course_service.dart';
+import 'features/courses/providers/course_file_provider.dart';
+import 'features/courses/services/course_file_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {
@@ -53,6 +59,12 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (_) =>
               NotificationSettingsProvider(NotificationSettingsService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CourseProvider(CourseService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CourseFileProvider(CourseFileService()),
         ),
       ],
       child: const AkademiaApp(),

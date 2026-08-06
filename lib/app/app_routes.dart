@@ -22,4 +22,9 @@ abstract final class AppRoutes {
   static const String studyPreferences = '/profile/study-preferences';
   static const String profileAnalytics = '/profile/analytics';
   static const String helpSupport = '/profile/help-support';
+
+  // Courses feature
+  static const String courses = '/courses';
+  static const String courseDetail = '/courses/detail';
+  static const String coursesArchive = '/courses/archive';
 }

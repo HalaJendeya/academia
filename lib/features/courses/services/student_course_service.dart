@@ -1,7 +1,7 @@
 // lib/features/courses/services/student_course_service.dart
 
-import '../models/course.dart';
-import '../models/course_assignment_preview.dart';
+import '../models/student_course.dart';
+import '../models/student_course_assignment_preview.dart';
 
 class CourseException implements Exception {
   final String message;

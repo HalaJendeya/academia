@@ -1,9 +1,9 @@
-// lib/features/courses/providers/course_file_provider.dart
+// lib/features/courses/providers/student_course_file_provider.dart
 
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../models/course_file.dart';
+import '../models/student_course_file.dart';
 import '../services/student_course_file_service.dart';
 
 class CourseFileProvider extends ChangeNotifier {

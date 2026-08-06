@@ -12,7 +12,7 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
-import '../providers/course_provider.dart';
+import '../providers/student_course_provider.dart';
 import '../widgets/student_archived_course_card.dart';
 
 class CompletedCoursesArchiveScreen extends StatefulWidget {

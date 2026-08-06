@@ -1,6 +1,6 @@
 // lib/features/courses/services/student_course_file_service.dart
 
-import '../models/course_file.dart';
+import '../models/student_course_file.dart';
 
 class CourseFileException implements Exception {
   final String message;

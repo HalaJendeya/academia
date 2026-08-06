@@ -10,7 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_status_badge.dart';
-import '../models/course_assignment_preview.dart';
+import '../models/student_course_assignment_preview.dart';
 
 class AssignmentPreviewCard extends StatelessWidget {
   const AssignmentPreviewCard({

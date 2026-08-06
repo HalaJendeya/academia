@@ -1,4 +1,4 @@
-// lib/features/courses/models/course_assignment_preview.dart
+// lib/features/courses/models/student_course_assignment_preview.dart
 
 class CourseAssignmentPreview {
   final String id;

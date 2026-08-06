@@ -1,4 +1,4 @@
-// lib/features/courses/models/course.dart
+// lib/features/courses/models/student_course.dart
 
 /// Represents a single academic course (synced or mock).
 class Course {

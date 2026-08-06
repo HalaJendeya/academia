@@ -10,7 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_status_badge.dart';
-import '../models/course.dart';
+import '../models/student_course.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({super.key, required this.course, this.onTap});

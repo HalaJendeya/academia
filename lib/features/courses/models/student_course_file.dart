@@ -1,4 +1,4 @@
-// lib/features/courses/models/course_file.dart
+// lib/features/courses/models/student_course_file.dart
 
 class CourseFile {
   final String id;

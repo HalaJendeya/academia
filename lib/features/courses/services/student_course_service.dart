@@ -1,4 +1,4 @@
-// lib/features/courses/services/course_service.dart
+// lib/features/courses/services/student_course_service.dart
 
 import '../models/course.dart';
 import '../models/course_assignment_preview.dart';

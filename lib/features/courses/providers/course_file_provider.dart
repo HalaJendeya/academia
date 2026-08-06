@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../models/course_file.dart';
-import '../services/course_file_service.dart';
+import '../services/student_course_file_service.dart';
 
 class CourseFileProvider extends ChangeNotifier {
   final CourseFileService _courseFileService;

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_strings.dart';
 import '../models/course.dart';
 import '../models/course_assignment_preview.dart';
-import '../services/course_service.dart';
+import '../services/student_course_service.dart';
 
 class CourseProvider extends ChangeNotifier {
   final CourseService _courseService;

@@ -17,9 +17,9 @@ import 'features/profile/services/support_service.dart';
 import 'features/notifications/providers/notification_settings_provider.dart';
 import 'features/notifications/services/notification_settings_service.dart';
 import 'features/courses/providers/course_provider.dart';
-import 'features/courses/services/course_service.dart';
+import 'features/courses/services/student_course_service.dart';
 import 'features/courses/providers/course_file_provider.dart';
-import 'features/courses/services/course_file_service.dart';
+import 'features/courses/services/student_course_file_service.dart';
 import 'firebase_options.dart';
 
 Future<void> main() async {

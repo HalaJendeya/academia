@@ -1,4 +1,4 @@
-// lib/features/courses/widgets/assignment_preview_card.dart
+// lib/features/courses/widgets/student_assignment_preview_card.dart
 
 import 'package:flutter/material.dart';
 

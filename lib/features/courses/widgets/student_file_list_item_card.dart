@@ -1,4 +1,4 @@
-// lib/features/courses/widgets/file_list_item_card.dart
+// lib/features/courses/widgets/student_file_list_item_card.dart
 
 import 'package:flutter/material.dart';
 

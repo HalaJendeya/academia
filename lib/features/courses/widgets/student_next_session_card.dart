@@ -1,4 +1,4 @@
-// lib/features/courses/widgets/next_session_card.dart
+// lib/features/courses/widgets/student_next_session_card.dart
 
 import 'package:flutter/material.dart';
 

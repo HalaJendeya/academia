@@ -15,10 +15,10 @@ import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../providers/course_file_provider.dart';
 import '../providers/course_provider.dart';
-import '../widgets/assignment_preview_card.dart';
-import '../widgets/course_header_card.dart';
-import '../widgets/file_list_item_card.dart';
-import '../widgets/next_session_card.dart';
+import '../widgets/student_assignment_preview_card.dart';
+import '../widgets/student_course_header_card.dart';
+import '../widgets/student_file_list_item_card.dart';
+import '../widgets/student_next_session_card.dart';
 
 class CourseDetailScreen extends StatefulWidget {
   const CourseDetailScreen({super.key});

@@ -16,8 +16,8 @@ import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../models/course.dart';
 import '../providers/course_provider.dart';
-import '../widgets/course_card.dart';
-import '../widgets/course_status_tabs.dart';
+import '../widgets/student_course_card.dart';
+import '../widgets/student_course_status_tabs.dart';
 
 class CoursesScreen extends StatefulWidget {
   const CoursesScreen({super.key});

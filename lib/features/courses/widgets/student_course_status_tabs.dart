@@ -1,4 +1,4 @@
-// lib/features/courses/widgets/course_status_tabs.dart
+// lib/features/courses/widgets/student_course_status_tabs.dart
 
 import 'package:flutter/material.dart';
 

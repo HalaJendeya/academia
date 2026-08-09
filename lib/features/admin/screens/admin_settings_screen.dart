@@ -194,6 +194,18 @@ class AdminSettingsScreen extends StatelessWidget {
                         ).pushNamed(AppRoutes.adminCurriculum);
                       },
                     ),
+                    // الطروحات هي ما يجعل التسجيل ممكنًا: الطالب يُسجَّل في
+                    // طرح لا في مساق دائم.
+                    AppMenuTile(
+                      icon: Icons.event_repeat_rounded,
+                      title: AppStrings.offeringsManagementTitle,
+                      subtitle: AppStrings.offeringsTileDesc,
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.adminOfferings);
+                      },
+                    ),
                     // إعداد أكاديمي على مستوى النظام: إنشاء الفصول الدراسية
                     // وتحديد الفصل الحالي الذي تعتمد عليه شاشات الطروحات.
                     AppMenuTile(

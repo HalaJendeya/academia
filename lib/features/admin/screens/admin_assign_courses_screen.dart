@@ -32,6 +32,7 @@ class AdminAssignCoursesScreen extends StatefulWidget {
 class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
   bool _hasInitialized = false;
   String _searchQuery = '';
+  AdminStudentModel? _student;
 
   @override
   void didChangeDependencies() {
@@ -42,9 +43,12 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
     }
 
     final arguments = ModalRoute.of(context)?.settings.arguments;
+
     final student = arguments is AdminStudentModel
         ? arguments
         : context.read<EnrollmentProvider>().selectedStudent;
+
+    _student = student;
 
     if (student != null) {
       _hasInitialized = true;
@@ -56,11 +60,7 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
         context.read<SemesterProvider>().listenToSemesters();
         final enrollmentProvider = context.read<EnrollmentProvider>();
 
-        if (enrollmentProvider.selectedStudent?.uid != student.uid) {
-          enrollmentProvider.selectStudent(student);
-        } else {
-          enrollmentProvider.loadStudentEnrollments(student.uid);
-        }
+        enrollmentProvider.selectStudent(student);
       });
     } else {
       _hasInitialized = true;
@@ -84,6 +84,19 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
         currentSemesterId,
       );
     });
+  }
+
+  /// رقم المحاولة المتوقَّع، للعرض فقط.
+  ///
+  /// الرقم النهائي تحسبه الخدمة عند الكتابة (أكبر رقم موجود + 1، شاملًا
+  /// المُزالة)؛ هذا مجرد معاينة للمشرف قبل الضغط.
+  int _nextAttemptNumber(List<EnrollmentModel> previousAttempts) {
+    var maxAttempt = 0;
+    for (final attempt in previousAttempts) {
+      if (attempt.attemptNumber > maxAttempt)
+        maxAttempt = attempt.attemptNumber;
+    }
+    return maxAttempt + 1;
   }
 
   void _showRemoveDialog(
@@ -149,7 +162,8 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<EnrollmentProvider>();
-    final student = provider.selectedStudent;
+
+    final student = _student;
 
     if (student == null) {
       return const AdminAccessGuard(child: Scaffold(body: AppLoadingState()));
@@ -228,10 +242,18 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
                             ? null
                             : provider.enrollmentForOffering(offering.id);
 
+                        // محاولات الطالب السابقة في هذا المساق الدائم، أيًّا
+                        // كان الفصل: هي ما يحدّد رقم المحاولة القادمة.
+                        final previousAttempts = provider
+                            .attemptsForCourse(course.id)
+                            .where((a) => a.offeringId != offering?.id)
+                            .toList();
+
                         return _buildCourseRow(
                           course,
                           offering,
                           enrollment,
+                          previousAttempts,
                           provider,
                         );
                       },
@@ -247,6 +269,7 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
     CourseModel course,
     CourseOfferingModel? offering,
     EnrollmentModel? enrollment,
+    List<EnrollmentModel> previousAttempts,
     EnrollmentProvider provider,
   ) {
     String statusText;
@@ -333,121 +356,184 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
                   : AppColors.textSecondary,
             ),
           ),
-          const Divider(height: 24, color: AppColors.divider),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (offering == null)
-                const SizedBox.shrink()
-              else if (enrollment == null)
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: provider.isSaving
-                      ? null
-                      : () async {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          final success = await provider.assignToOffering(
-                            offering.id,
-                          );
-                          if (mounted) {
-                            if (success) {
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    AppStrings.courseAssignedSuccess,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    provider.errorMessage ??
-                                        AppStrings.courseSaveError,
-                                  ),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text(AppStrings.assignCourseLabel),
-                )
-              else if (enrollment.isActive)
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: provider.isSaving
-                      ? null
-                      : () => _showRemoveDialog(
-                          context,
-                          enrollment,
-                          course.title,
-                        ),
-                  icon: const Icon(
-                    Icons.remove_circle_outline_rounded,
-                    size: 18,
-                  ),
-                  label: const Text('إلغاء التسجيل'),
-                )
-              else
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.button),
-                    ),
-                  ),
-                  onPressed: provider.isSaving
-                      ? null
-                      : () async {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          final success = await provider.restoreEnrollment(
-                            offering.id,
-                          );
-                          if (mounted) {
-                            if (success) {
-                              scaffoldMessenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    AppStrings.courseRestoredSuccess,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              scaffoldMessenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    provider.errorMessage ??
-                                        AppStrings.courseSaveError,
-                                  ),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  icon: const Icon(Icons.restore_rounded, size: 18),
-                  label: const Text('إعادة التسجيل'),
+          /*
+           * إعادة الدراسة جزء معتمد من النظام: كل محاولة مستند مستقل يشير
+           * إلى طرح مختلف. عرض المحاولات السابقة هنا يمنع المشرف من الظن
+           * أنه يسجّل الطالب للمرة الأولى، ويُظهر رقم المحاولة القادمة.
+           */
+          if (previousAttempts.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.small),
+            Wrap(
+              spacing: AppSpacing.small,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                AppStatusBadge(
+                  label: AppStrings.retakeBadgeLabel,
+                  backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                  foregroundColor: AppColors.warningDark,
                 ),
+                for (final attempt in previousAttempts)
+                  AppStatusBadge(
+                    label:
+                        '${AppStrings.attemptLabel} ${attempt.attemptNumber}'
+                        '${attempt.completionStatus != null ? ': ${AppStrings.completionStatusDisplay(attempt.completionStatus)}' : ''}',
+                    backgroundColor: AppColors.surfaceSecondary,
+                    foregroundColor: AppColors.textSecondary,
+                  ),
+              ],
+            ),
+            if (enrollment == null && offering != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${AppStrings.willBeAttemptPrefix} '
+                '${_nextAttemptNumber(previousAttempts)}',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.warningDark,
+                ),
+              ),
             ],
+          ],
+          if (enrollment != null && enrollment.isRetake) ...[
+            const SizedBox(height: AppSpacing.small),
+            Text(
+              '${AppStrings.attemptLabel} ${enrollment.attemptNumber}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.warningDark,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+          const Divider(height: 24, color: AppColors.divider),
+
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: offering == null
+                ? const SizedBox.shrink()
+                : enrollment == null
+                ? ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+
+                      // IMPORTANT:
+                      // Override any global button theme that requests full width.
+                      minimumSize: const Size(0, 52),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.button),
+                      ),
+                    ),
+                    onPressed: provider.isSaving
+                        ? null
+                        : () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+
+                            final success = await provider.assignToOffering(
+                              offering.id,
+                            );
+
+                            if (mounted) {
+                              if (success) {
+                                scaffoldMessenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      AppStrings.courseAssignedSuccess,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      provider.errorMessage ??
+                                          AppStrings.courseSaveError,
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: const Text(AppStrings.assignCourseLabel),
+                  )
+                : enrollment.isActive
+                ? OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.danger,
+                      side: const BorderSide(color: AppColors.danger),
+
+                      // Same protection for the outlined button.
+                      minimumSize: const Size(0, 52),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.button),
+                      ),
+                    ),
+                    onPressed: provider.isSaving
+                        ? null
+                        : () => _showRemoveDialog(
+                            context,
+                            enrollment,
+                            course.title,
+                          ),
+                    icon: const Icon(
+                      Icons.remove_circle_outline_rounded,
+                      size: 18,
+                    ),
+                    label: const Text('إلغاء التسجيل'),
+                  )
+                : ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+
+                      // Same override here too.
+                      minimumSize: const Size(0, 52),
+
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.button),
+                      ),
+                    ),
+                    onPressed: provider.isSaving
+                        ? null
+                        : () async {
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+
+                            final success = await provider.restoreEnrollment(
+                              offering.id,
+                            );
+
+                            if (mounted) {
+                              if (success) {
+                                scaffoldMessenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      AppStrings.courseRestoredSuccess,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      provider.errorMessage ??
+                                          AppStrings.courseSaveError,
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.restore_rounded, size: 18),
+                    label: const Text('إعادة التسجيل'),
+                  ),
           ),
         ],
       ),

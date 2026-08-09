@@ -52,6 +52,9 @@ import '../features/admin/screens/admin_major_list_screen.dart';
 import '../features/admin/screens/admin_major_form_screen.dart';
 import '../features/admin/screens/admin_curriculum_screen.dart';
 import '../features/admin/screens/admin_curriculum_entry_form_screen.dart';
+import '../features/admin/screens/admin_offering_list_screen.dart';
+import '../features/admin/screens/admin_offering_form_screen.dart';
+import '../features/admin/screens/admin_offering_roster_screen.dart';
 import '../features/admin/models/admin_student_model.dart';
 
 class AkademiaApp extends StatelessWidget {
@@ -78,6 +81,7 @@ class AkademiaApp extends StatelessWidget {
       },
       initialRoute: AppRoutes.splash,
       routes: {
+        // auth Routes
         AppRoutes.splash: (context) => const SplashScreen(),
         AppRoutes.welcome: (context) => const WelcomeScreen(),
         AppRoutes.login: (context) => const LoginScreen(),
@@ -86,9 +90,10 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studentVerification: (context) =>
             const StudentVerificationScreen(),
         AppRoutes.dashboard: (context) => const DashboardScreen(),
-
         AppRoutes.adminDashboard: (context) => const AdminDashboardScreen(),
         AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
+
+        // Onboarding Routes
         AppRoutes.onboardingWelcome: (context) =>
             const OnboardingWelcomeScreen(),
         AppRoutes.studyDaysSetup: (context) => const StudyDaysSetupScreen(),
@@ -97,6 +102,8 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.notificationPreferencesSetup: (context) =>
             const NotificationPreferencesSetupScreen(),
         AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
+
+        //Profile Routes
         AppRoutes.profile: (context) => const ProfileScreen(),
         AppRoutes.editProfile: (context) => const EditProfileScreen(),
         AppRoutes.profileNotificationSettings: (context) =>
@@ -104,10 +111,14 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
+
+        //Courses Routes
         AppRoutes.courses: (context) => const StudentCoursesScreen(),
         AppRoutes.courseDetail: (context) => const StudentCourseDetailScreen(),
         AppRoutes.coursesArchive: (context) =>
             const StudentCoursesArchiveScreen(),
+
+        //admin Routes
         AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),
         AppRoutes.adminAddCourse: (context) => const AdminCourseFormScreen(),
         AppRoutes.adminEditCourse: (context) => const AdminCourseFormScreen(),
@@ -158,6 +169,11 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.adminCurriculum: (context) => const AdminCurriculumScreen(),
         AppRoutes.adminCurriculumEntry: (context) =>
             const AdminCurriculumEntryFormScreen(),
+        AppRoutes.adminOfferings: (context) => const AdminOfferingListScreen(),
+        AppRoutes.adminAddOffering: (context) =>
+            const AdminOfferingFormScreen(),
+        AppRoutes.adminOfferingRoster: (context) =>
+            const AdminOfferingRosterScreen(),
       },
     );
   }

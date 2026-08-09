@@ -1035,6 +1035,90 @@ abstract final class AppStrings {
   static const String dashboardActionStudyPreferences = 'تفضيلات الدراسة';
   static const String dashboardActionNotifications = 'إعدادات الإشعارات';
 
+  // ===== Phase 7E: offerings, attempts and retakes =====
+
+  static const String offeringsTileDesc =
+      'طرح المساقات في الفصول الدراسية وتسجيل الطلاب فيها';
+  static const String addOfferingLabel = 'إضافة طرح';
+  static const String editOfferingLabel = 'تعديل الطرح';
+  static const String offeringCourseLabel = 'المساق';
+  static const String offeringInstructorLabel = 'اسم المدرّس';
+  static const String offeringInstructorHint = 'مثال: م. حمزة السويركي';
+  static const String offeringSectionHint = 'مثال: 1';
+  static const String offeringSectionRequired = 'رقم الشعبة مطلوب';
+  static const String offeringAddedSuccess = 'تمت إضافة الطرح بنجاح';
+  static const String offeringUpdatedSuccess = 'تم تحديث الطرح بنجاح';
+  static const String offeringArchivedSuccess = 'تمت أرشفة الطرح';
+  static const String archiveOfferingTitle = 'أرشفة الطرح';
+  static const String archiveOfferingConfirm =
+      'سيُخفى الطرح من قوائم التسجيل مع بقاء تسجيلات الطلاب الحالية كما هي. '
+      'هل تريد المتابعة؟';
+  static const String noOfferingsForSemester = 'لا توجد طروحات في هذا الفصل';
+  static const String noOfferingsForSemesterDesc =
+      'أضيفي طرحًا واحدًا على الأقل ليتمكّن المشرف من تسجيل الطلاب.';
+  static const String offeringIdentityLockedNote =
+      'لا يمكن تعديل المساق أو الفصل أو الشعبة لأنها تشكّل معرّف المستند. '
+      'لتغييرها أنشئي طرحًا جديدًا.';
+  static const String offeringStatusCancelled = 'ملغى';
+  static const String selectSemesterFirst = 'اختاري فصلًا دراسيًا لعرض طروحه.';
+
+  // نسخ الطروحات
+  static const String duplicateOfferingsTitle = 'نسخ طروحات فصل سابق';
+  static const String duplicateOfferingsSourceLabel = 'الفصل المصدر';
+  static const String duplicateOfferingsDesc =
+      'تُنسخ طروحات الفصل المصدر إلى الفصل الحالي مع أسماء المدرّسين والشعب. '
+      'الطروحات الملغاة لا تُنسخ، وإعادة التنفيذ لا تُنشئ نسخًا مكررة.';
+  static const String duplicateOfferingsConfirm = 'نسخ';
+  static const String duplicateOfferingsSuccessPrefix = 'تم نسخ';
+  static const String duplicateOfferingsSuccessSuffix = 'طرحًا';
+  static const String duplicateOfferingsNone =
+      'لا توجد طروحات قابلة للنسخ في الفصل المصدر';
+  static const String duplicateOfferingsSameSemester =
+      'اختاري فصلًا مصدرًا مختلفًا عن الفصل الحالي';
+
+  // قائمة المسجَّلين في الطرح
+  static const String offeringRosterTitle = 'الطلاب المسجّلون';
+  static const String offeringRosterEmpty = 'لا يوجد طلاب مسجّلون في هذا الطرح';
+  static const String offeringRosterEmptyDesc =
+      'سيظهر الطلاب هنا بعد تسجيلهم في هذا الطرح من شاشة الطالب.';
+  static const String offeringRosterCountLabel = 'عدد المسجّلين';
+  static const String viewRosterAction = 'المسجّلون';
+
+  // نتيجة المحاولة
+  static const String recordResultAction = 'تسجيل النتيجة';
+  static const String recordResultTitle = 'تسجيل نتيجة المساق';
+  static const String recordResultDesc =
+      'تُسجَّل النتيجة على هذه المحاولة وتُنهيها. التقدير نص للعرض فقط ولا '
+      'يُحتسب منه معدل.';
+  static const String completionStatusLabel = 'النتيجة';
+  static const String gradeOptionalLabel = 'التقدير (اختياري)';
+  static const String gradeHint = 'مثال: ممتاز';
+  static const String resultRecordedSuccess = 'تم تسجيل النتيجة بنجاح';
+  static const String completionStatusRequired = 'يرجى اختيار النتيجة';
+
+  // المحاولات وإعادة الدراسة
+  static const String previousAttemptsLabel = 'محاولات سابقة';
+  static const String retakeBadgeLabel = 'إعادة دراسة';
+  static const String willBeAttemptPrefix = 'سيُسجَّل كالمحاولة';
+  static const String noPreviousAttempts = 'لا توجد محاولات سابقة';
+
+  // ===== Admin student details (rebuilt) =====
+
+  static const String academicProgramTitle = 'البرنامج الأكاديمي';
+  static const String majorNotAssigned = 'لم يتم تحديد التخصص';
+  static const String legacyMajorTextNote =
+      'نص قديم أدخله الطالب عند التسجيل، وليس مرتبطًا ببرنامج أكاديمي.';
+  static const String notProvidedValue = 'غير محدد';
+  static const String disabledStatus = 'معطل';
+  static const String currentEnrollmentsTitle = 'المساقات الحالية';
+  static const String enrollmentHistoryTitle = 'السجل الدراسي';
+  static const String noCurrentEnrollmentsForStudent =
+      'لا توجد مساقات مسجّلة حاليًا لهذا الطالب.';
+  static const String noEnrollmentHistoryForStudent =
+      'لا توجد محاولات سابقة في سجل هذا الطالب.';
+  static const String assignOfferingDesc =
+      'التسجيل يتم في طرح المساق ضمن الفصل الدراسي الحالي.';
+
   // Catalog / course details
   static const String courseOfferingsTileTitle = 'العروض الفصلية';
   static const String courseOfferingsTileDesc =

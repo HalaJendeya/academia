@@ -21,6 +21,7 @@ import '../features/courses/services/course_service.dart';
 import '../features/courses/services/course_offering_service.dart';
 import '../features/curriculum/providers/curriculum_provider.dart';
 import '../features/curriculum/services/curriculum_service.dart';
+import '../features/enrollments/providers/admin_student_record_provider.dart';
 import '../features/enrollments/providers/enrollment_provider.dart';
 import '../features/enrollments/services/enrollment_service.dart';
 import '../features/semesters/providers/semester_provider.dart';
@@ -55,6 +56,20 @@ final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => CurriculumProvider(CurriculumService())),
   ChangeNotifierProvider(
     create: (_) => EnrollmentProvider(EnrollmentService()),
+  ),
+  /*
+   * السجل الأكاديمي لطالب واحد في شاشة المشرف، منفصل عن EnrollmentProvider:
+   * ذاك يشارك errorMessage بين القراءة والكتابة، فيكفي فشل إسناد مساق حتى
+   * تعرض قائمة السجل خطأً رغم نجاح تحميلها.
+   */
+  ChangeNotifierProvider(
+    create: (_) => AdminStudentRecordProvider(
+      EnrollmentService(),
+      CourseOfferingService(),
+      CourseService(),
+      SemesterService(),
+      MajorService(),
+    ),
   ),
   /*
    * واجهة مساقات الطالب تتبع الحساب المسجَّل تلقائيًا.

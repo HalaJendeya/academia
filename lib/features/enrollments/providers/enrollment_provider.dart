@@ -90,17 +90,75 @@ class EnrollmentProvider extends ChangeNotifier {
         );
   }
 
+  /// قائمة المسجَّلين في طرح معيّن.
+  ///
+  /// منفصلة عن تسجيلات الطالب المحدَّد: الشاشتان تسألان سؤالين مختلفين —
+  /// "ما مساقات هذا الطالب؟" مقابل "من في هذا الطرح؟" — ودمجهما في قائمة
+  /// واحدة يجعل إحداهما تمسح الأخرى.
+  List<EnrollmentModel> _roster = [];
+  bool _isLoadingRoster = false;
+  String? _rosterOfferingId;
+  StreamSubscription<List<EnrollmentModel>>? _rosterSubscription;
+
+  List<EnrollmentModel> get roster => _roster;
+  bool get isLoadingRoster => _isLoadingRoster;
+  String? get rosterOfferingId => _rosterOfferingId;
+
+  void listenToOfferingRoster(String offeringId) {
+    if (_rosterOfferingId == offeringId && _rosterSubscription != null) return;
+
+    stopListeningToRoster();
+    _rosterOfferingId = offeringId;
+    _isLoadingRoster = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    _rosterSubscription = _service
+        .watchOfferingRoster(offeringId)
+        .listen(
+          (data) {
+            _roster = data;
+            _isLoadingRoster = false;
+            _errorMessage = null;
+            notifyListeners();
+          },
+          onError: (err) {
+            _isLoadingRoster = false;
+            _errorMessage = AppStrings.courseLoadError;
+            notifyListeners();
+          },
+        );
+  }
+
+  void stopListeningToRoster() {
+    _rosterSubscription?.cancel();
+    _rosterSubscription = null;
+    _roster = const <EnrollmentModel>[];
+    _rosterOfferingId = null;
+  }
+
   /// تنفيذ عملية كتابة واحدة مع إدارة حالة الحفظ ورسالة الخطأ.
   Future<bool> _runWrite(Future<void> Function(String userId) action) async {
     final student = _selectedStudent;
-    if (student == null || _isSaving) return false;
+    if (student == null) return false;
+    return _runWriteFor(student.uid, action);
+  }
+
+  /// نفس الغلاف لكن لطالب محدَّد بمعرّفه.
+  ///
+  /// شاشة قائمة الطرح تكتب لطلاب متعدّدين ولا يوجد فيها "طالب محدَّد".
+  Future<bool> _runWriteFor(
+    String userId,
+    Future<void> Function(String userId) action,
+  ) async {
+    if (_isSaving) return false;
 
     _isSaving = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await action(student.uid);
+      await action(userId);
       return true;
     } on EnrollmentException catch (e) {
       _errorMessage = e.message;
@@ -112,6 +170,35 @@ class EnrollmentProvider extends ChangeNotifier {
       _isSaving = false;
       notifyListeners();
     }
+  }
+
+  /// تسجيل نتيجة محاولة لطالب محدَّد، من شاشة قائمة الطرح.
+  Future<bool> setCompletionStatusFor({
+    required String userId,
+    required String offeringId,
+    required String completionStatus,
+    String? grade,
+  }) {
+    return _runWriteFor(
+      userId,
+      (uid) => _service.setCompletionStatus(
+        userId: uid,
+        offeringId: offeringId,
+        completionStatus: completionStatus,
+        grade: grade,
+      ),
+    );
+  }
+
+  /// إزالة تسجيل طالب محدَّد من طرح، من شاشة قائمة الطرح.
+  Future<bool> removeEnrollmentFor({
+    required String userId,
+    required String offeringId,
+  }) {
+    return _runWriteFor(
+      userId,
+      (uid) => _service.removeEnrollment(userId: uid, offeringId: offeringId),
+    );
   }
 
   Future<bool> assignToOffering(String offeringId) {
@@ -182,6 +269,18 @@ class EnrollmentProvider extends ChangeNotifier {
     return null;
   }
 
+  /// كل محاولات الطالب في مساق دائم، مرتبة برقم المحاولة.
+  ///
+  /// تشمل المُزالة: الإزالة لا تلغي أن المحاولة حدثت، وهي تدخل في احتساب
+  /// رقم المحاولة التالية تمامًا كما في الخدمة.
+  List<EnrollmentModel> attemptsForCourse(String courseId) {
+    final attempts = _selectedStudentEnrollments
+        .where((enrollment) => enrollment.courseId == courseId)
+        .toList();
+    attempts.sort((a, b) => a.attemptNumber.compareTo(b.attemptNumber));
+    return attempts;
+  }
+
   /// أحدث محاولة للطالب في مساق دائم، أي صاحبة أكبر رقم محاولة.
   EnrollmentModel? latestAttemptForCourse(String courseId) {
     EnrollmentModel? latest;
@@ -216,6 +315,7 @@ class EnrollmentProvider extends ChangeNotifier {
   @override
   void dispose() {
     stopListeningToStudents();
+    stopListeningToRoster();
     _enrollmentsSubscription?.cancel();
     _enrollmentsSubscription = null;
     super.dispose();

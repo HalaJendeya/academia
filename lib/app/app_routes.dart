@@ -68,4 +68,9 @@ abstract final class AppRoutes {
   static const String adminAddMajor = '/admin/majors/add';
   static const String adminCurriculum = '/admin/curriculum';
   static const String adminCurriculumEntry = '/admin/curriculum/entry';
+
+  // Course offerings (Phase 7E): مساق × فصل × شعبة.
+  static const String adminOfferings = '/admin/offerings';
+  static const String adminAddOffering = '/admin/offerings/add';
+  static const String adminOfferingRoster = '/admin/offerings/roster';
 }

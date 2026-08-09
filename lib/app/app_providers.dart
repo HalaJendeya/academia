@@ -26,6 +26,8 @@ import '../features/enrollments/providers/enrollment_provider.dart';
 import '../features/enrollments/services/enrollment_service.dart';
 import '../features/semesters/providers/semester_provider.dart';
 import '../features/semesters/services/semester_service.dart';
+import '../features/tasks/providers/task_provider.dart';
+import '../features/tasks/services/task_service.dart';
 
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -94,6 +96,17 @@ final List<SingleChildWidget> appProviders = [
         isLoggedIn: auth.isLoggedIn,
       );
       return studentCourses;
+    },
+  ),
+  ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider, TaskProvider>(
+    create: (_) => TaskProvider(TaskService()),
+    update: (_, auth, studentCourses, taskProvider) {
+      taskProvider!.syncWithUserAndCourses(
+        userId: auth.currentUser?.uid,
+        isLoggedIn: auth.isLoggedIn,
+        currentCourses: studentCourses.currentCourses,
+      );
+      return taskProvider;
     },
   ),
 ];

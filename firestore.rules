@@ -564,6 +564,49 @@ service cloud.firestore {
     }
 
     // ===================================================================
+    //  tasks/{taskId}
+    //  Personal tasks for students.
+    // ===================================================================
+    match /tasks/{taskId} {
+
+      function isActiveStudent() {
+        return hasValidAccount() && userData().role == 'student';
+      }
+
+      function validTask() {
+        return isNonEmptyString(request.resource.data.userId)
+          && isNonEmptyString(request.resource.data.title)
+          && request.resource.data.priority in ['high', 'medium', 'low']
+          && request.resource.data.status in ['pending', 'completed']
+          && request.resource.data.type in ['assignment', 'lecture', 'study', 'exam']
+          && validCourseLink();
+      }
+
+      function validCourseLink() {
+        return (isAbsent(request.resource.data, 'enrollmentId')
+                 && isAbsent(request.resource.data, 'offeringId')
+                 && isAbsent(request.resource.data, 'courseId'))
+          || (isNonEmptyString(request.resource.data.enrollmentId)
+               && isNonEmptyString(request.resource.data.offeringId)
+               && isNonEmptyString(request.resource.data.courseId)
+               && exists(/databases/$(database)/documents/enrollments/$(request.resource.data.enrollmentId))
+               && get(/databases/$(database)/documents/enrollments/$(request.resource.data.enrollmentId)).data.userId == request.auth.uid);
+      }
+
+      allow read, delete: if isActiveStudent() && isOwner(resource.data.userId);
+
+      allow create: if isActiveStudent()
+        && isOwner(request.resource.data.userId)
+        && validTask()
+        && request.resource.data.keys().hasAll(['userId', 'title', 'priority', 'status', 'type', 'createdAt', 'updatedAt']);
+
+      allow update: if isActiveStudent()
+        && isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId // userId immutable
+        && validTask();
+    }
+
+    // ===================================================================
     //  Explicit default deny for every unmatched path.
     //  Firestore already denies by default; this documents the intent and
     //  covers any collection created before its rules are written.

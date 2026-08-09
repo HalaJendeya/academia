@@ -93,8 +93,9 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
   int _nextAttemptNumber(List<EnrollmentModel> previousAttempts) {
     var maxAttempt = 0;
     for (final attempt in previousAttempts) {
-      if (attempt.attemptNumber > maxAttempt)
+      if (maxAttempt < attempt.attemptNumber) {
         maxAttempt = attempt.attemptNumber;
+      }
     }
     return maxAttempt + 1;
   }

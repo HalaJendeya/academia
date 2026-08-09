@@ -53,6 +53,8 @@ const WORLD = {
   },
   [`semesters/${SEM}`]: { status: 'current', semesterNumber: 1 },
   [`courseOfferings/${OFFERING}`]: OFFERING_DOC,
+  [`enrollments/student1_${OFFERING}`]: { userId: 'student1', offeringId: OFFERING, courseId: COURSE, semesterId: SEM, attemptNumber: 1, status: 'active', assignedBy: 'admin1' },
+  [`enrollments/student2_${OFFERING}`]: { userId: 'student2', offeringId: OFFERING, courseId: COURSE, semesterId: SEM, attemptNumber: 1, status: 'active', assignedBy: 'admin1' },
 };
 
 // Valid document bodies, cloned and mutated per test.
@@ -105,6 +107,16 @@ const VALID = {
     attemptNumber: 1,
     status: 'active',
     assignedBy: 'admin1',
+  },
+  task: {
+    userId: 'student1',
+    title: 'تسليم واجب',
+    description: 'تفاصيل الواجب',
+    priority: 'medium',
+    status: 'pending',
+    type: 'study',
+    createdAt: TIME,
+    updatedAt: TIME,
   },
 };
 
@@ -881,6 +893,158 @@ t('23d. unmatched collection denied for admin', {
   uid: 'admin1',
   path: 'randomCollection/doc1',
   method: 'get',
+});
+
+// --- 24. student tasks (Phase 7T1A) --------------------
+t('24a. active student reads own task allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'get',
+  existing: VALID.task,
+});
+
+t('24b. student reads another student task denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'tasks/task1',
+  method: 'get',
+  existing: VALID.task,
+});
+
+t('24c. admin reads student task denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'tasks/task1',
+  method: 'get',
+  existing: VALID.task,
+});
+
+t('24d. disabled student reads own task denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'tasks/task1',
+  method: 'get',
+  existing: { ...VALID.task, userId: 'disabled1' },
+});
+
+t('24e. active student creates valid task (no course) allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: VALID.task,
+});
+
+t('24f. student creating task for other student denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: { ...VALID.task, userId: 'student2' },
+});
+
+t('24g. student creates task with valid course linkage allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: {
+    ...VALID.task,
+    enrollmentId: `student1_${OFFERING}`,
+    offeringId: OFFERING,
+    courseId: COURSE,
+  },
+});
+
+t('24h. student creates task with another student enrollment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: {
+    ...VALID.task,
+    enrollmentId: `student2_${OFFERING}`,
+    offeringId: OFFERING,
+    courseId: COURSE,
+  },
+});
+
+t('24i. student creates task with incomplete course linkage denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: {
+    ...VALID.task,
+    enrollmentId: `student1_${OFFERING}`,
+  },
+});
+
+t('24j. student creates task with invalid priority denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: { ...VALID.task, priority: 'super-urgent' },
+});
+
+t('24k. student creates task with invalid status denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: { ...VALID.task, status: 'started' },
+});
+
+t('24l. student creates task with invalid type denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'create',
+  data: { ...VALID.task, type: 'leisure' },
+});
+
+t('24m. student updates own task (valid) allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'update',
+  data: { ...VALID.task, title: 'عنوان جديد' },
+  existing: VALID.task,
+});
+
+t('24n. student updates own task mutating userId denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'update',
+  data: { ...VALID.task, userId: 'student2' },
+  existing: VALID.task,
+});
+
+t('24o. student deletes own task allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'tasks/task1',
+  method: 'delete',
+  existing: VALID.task,
+});
+
+t('24p. student deletes another student task denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'tasks/task1',
+  method: 'delete',
+  existing: VALID.task,
+});
+
+t('24q. admin deletes student task denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'tasks/task1',
+  method: 'delete',
+  existing: VALID.task,
 });
 
 // ------------------------------------------------------------------- runner

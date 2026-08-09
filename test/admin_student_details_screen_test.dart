@@ -44,10 +44,7 @@ class FakeCourseProvider extends ChangeNotifier implements CourseProvider {
       courseCode: 'CS101',
       title: 'Introduction to CS',
       description: 'Basic CS concepts',
-      instructorName: 'Dr. Ahmad',
-      department: 'CS',
-      semester: 1,
-      academicYear: '2026',
+      departmentId: 'department1',
       creditHours: 3,
       status: 'active',
       createdBy: 'admin123',
@@ -72,9 +69,11 @@ class FakeEnrollmentProvider extends ChangeNotifier
   @override
   List<EnrollmentModel> get selectedStudentEnrollments => [
     EnrollmentModel(
-      id: 'student1_course1',
+      id: 'student1_course1_semester_2026_1_1',
       userId: 'student1',
+      offeringId: 'course1_semester_2026_1_1',
       courseId: 'course1',
+      semesterId: 'semester_2026_1',
       status: 'active',
       assignedBy: 'admin123',
       assignedAt: DateTime.now(),
@@ -88,7 +87,7 @@ class FakeEnrollmentProvider extends ChangeNotifier
     email: 'hala@university.edu.sa',
     studentId: '123456789',
     major: 'Computer Science',
-    semester: 2,
+    academicLevel: 4,
     status: 'active',
     onboardingCompleted: true,
   );
@@ -113,7 +112,7 @@ void main() {
       email: 'hala@university.edu.sa',
       studentId: '123456789',
       major: 'Computer Science',
-      semester: 2,
+      academicLevel: 4,
       status: 'active',
       onboardingCompleted: true,
     );

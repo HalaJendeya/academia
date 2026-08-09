@@ -7,11 +7,11 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../../core/widgets/app_destructive_button.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../academics/providers/academic_structure_provider.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/providers/course_provider.dart';
 
@@ -26,12 +26,19 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
   String _searchQuery = '';
   String _statusFilter = 'all'; // 'all', 'active', 'archived'
 
+  /*
+   * الفلترة صارت حسب القسم لا حسب الفصل الدراسي: المساق كيان دائم لا ينتمي
+   * إلى فصل، وفلترة الفصول تخص شاشة الطروحات.
+   */
+  String _departmentFilter = 'all'; // 'all' أو معرّف قسم
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<CourseProvider>().listenToCourses();
+      context.read<AcademicStructureProvider>().listenToDepartments();
     });
   }
 
@@ -90,61 +97,15 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, CourseModel course) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          AppStrings.deleteAction,
-          style: TextStyle(fontWeight: FontWeight.bold),
-          textAlign: TextAlign.right,
-        ),
-        content: const Text(
-          AppStrings.deleteCourseConfirm,
-          textAlign: TextAlign.right,
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: AppDestructiveButton(
-              label: AppStrings.confirmAction,
-              filled: true,
-              onPressed: () async {
-                Navigator.of(ctx).pop();
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final provider = context.read<CourseProvider>();
-                final success = await provider.deleteCourse(course.id);
-                if (success) {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text(AppStrings.courseDeletedSuccess),
-                    ),
-                  );
-                } else {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        provider.errorMessage ?? AppStrings.courseSaveError,
-                      ),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
-              },
-            ),
-          ),
-          OutlinedButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(AppStrings.cancelAction),
-          ),
-        ],
-      ),
-    );
-  }
+  /*
+   * أُزيل إجراء الحذف النهائي في المرحلة 6C. الإزالة المعتمدة هي الأرشفة،
+   * لأن الحذف يترك سجلات التسجيل بلا مساق وتمنعه قواعد Firestore.
+   */
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CourseProvider>();
+    final structureProvider = context.watch<AcademicStructureProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -191,10 +152,40 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
                     _buildFilterChip('archived', AppStrings.filterArchived),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.medium),
+                // فلترة حسب القسم، تتم محليًا حتى لا نحتاج فهرسًا مركبًا.
+                DropdownButtonFormField<String>(
+                  initialValue: _departmentFilter,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.account_tree_rounded),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: 'all',
+                      child: Text(AppStrings.allDepartmentsFilter),
+                    ),
+                    ...structureProvider.departments.map(
+                      (department) => DropdownMenuItem(
+                        value: department.id,
+                        child: Text(
+                          department.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _departmentFilter = value;
+                    });
+                  },
+                ),
               ],
             ),
           ),
-          Expanded(child: _buildBody(provider)),
+          Expanded(child: _buildBody(provider, structureProvider)),
         ],
       ),
     );
@@ -220,7 +211,10 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
     );
   }
 
-  Widget _buildBody(CourseProvider provider) {
+  Widget _buildBody(
+    CourseProvider provider,
+    AcademicStructureProvider structureProvider,
+  ) {
     if (provider.isLoading) {
       return const AppLoadingState();
     }
@@ -240,7 +234,10 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
           _statusFilter == 'all' ||
           (_statusFilter == 'active' && course.isActive) ||
           (_statusFilter == 'archived' && course.isArchived);
-      return matchesSearch && matchesStatus;
+      final matchesDepartment =
+          _departmentFilter == 'all' ||
+          course.departmentId == _departmentFilter;
+      return matchesSearch && matchesStatus && matchesDepartment;
     }).toList();
 
     if (filtered.isEmpty) {
@@ -260,12 +257,16 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final course = filtered[index];
-        return _buildCourseCard(course, provider);
+        return _buildCourseCard(course, provider, structureProvider);
       },
     );
   }
 
-  Widget _buildCourseCard(CourseModel course, CourseProvider provider) {
+  Widget _buildCourseCard(
+    CourseModel course,
+    CourseProvider provider,
+    AcademicStructureProvider structureProvider,
+  ) {
     final statusColor = course.isActive
         ? AppColors.activeStatus
         : AppColors.textMuted;
@@ -321,15 +322,21 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
           Row(
             children: [
               const Icon(
-                Icons.person_rounded,
+                Icons.account_tree_rounded,
                 size: 16,
                 color: AppColors.textSecondary,
               ),
               const SizedBox(width: 6),
-              Text(
-                '${AppStrings.instructorNameLabel}: ${course.instructorName}',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  structureProvider.departmentNameFor(course.departmentId),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: course.hasDepartment
+                        ? AppColors.textSecondary
+                        : AppColors.warningDark,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -338,13 +345,13 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
           Row(
             children: [
               const Icon(
-                Icons.calendar_today_rounded,
+                Icons.hourglass_bottom_rounded,
                 size: 16,
                 color: AppColors.textSecondary,
               ),
               const SizedBox(width: 6),
               Text(
-                '${AppStrings.semesterLabel} ${course.semester} - ${course.academicYear}',
+                '${course.creditHours} ${AppStrings.creditHoursSuffix}',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -387,15 +394,6 @@ class _AdminCourseListScreenState extends State<AdminCourseListScreen> {
                 onPressed: course.isArchived
                     ? null
                     : () => _showArchiveDialog(context, course),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(
-                  Icons.delete_forever_rounded,
-                  color: AppColors.danger,
-                ),
-                tooltip: AppStrings.deleteAction,
-                onPressed: () => _showDeleteDialog(context, course),
               ),
             ],
           ),

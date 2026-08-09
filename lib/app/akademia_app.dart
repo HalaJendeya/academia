@@ -22,6 +22,9 @@ import '../features/notifications/screens/notification_settings_screen.dart';
 import '../features/profile/screens/study_preferences_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/profile/screens/help_faq_screen.dart';
+import '../features/courses/screens/student_courses_screen.dart';
+import '../features/courses/screens/student_course_detail_screen.dart';
+import '../features/courses/screens/student_courses_archive_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
 import '../features/admin/screens/admin_course_list_screen.dart';
 import '../features/admin/screens/admin_course_form_screen.dart';
@@ -41,6 +44,14 @@ import '../features/admin/screens/admin_announcement_form_screen.dart';
 import '../features/admin/screens/admin_reported_posts_screen.dart';
 import '../features/admin/screens/admin_settings_screen.dart';
 import '../features/admin/screens/admin_profile_screen.dart';
+import '../features/admin/screens/admin_semester_list_screen.dart';
+import '../features/admin/screens/admin_semester_form_screen.dart';
+import '../features/admin/screens/admin_department_list_screen.dart';
+import '../features/admin/screens/admin_department_form_screen.dart';
+import '../features/admin/screens/admin_major_list_screen.dart';
+import '../features/admin/screens/admin_major_form_screen.dart';
+import '../features/admin/screens/admin_curriculum_screen.dart';
+import '../features/admin/screens/admin_curriculum_entry_form_screen.dart';
 import '../features/admin/models/admin_student_model.dart';
 
 class AkademiaApp extends StatelessWidget {
@@ -93,6 +104,10 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
+        AppRoutes.courses: (context) => const StudentCoursesScreen(),
+        AppRoutes.courseDetail: (context) => const StudentCourseDetailScreen(),
+        AppRoutes.coursesArchive: (context) =>
+            const StudentCoursesArchiveScreen(),
         AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),
         AppRoutes.adminAddCourse: (context) => const AdminCourseFormScreen(),
         AppRoutes.adminEditCourse: (context) => const AdminCourseFormScreen(),
@@ -131,6 +146,18 @@ class AkademiaApp extends StatelessWidget {
             const AdminReportedPostsScreen(),
         AppRoutes.adminSettings: (context) => const AdminSettingsScreen(),
         AppRoutes.adminProfile: (context) => const AdminProfileScreen(),
+        AppRoutes.adminSemesters: (context) => const AdminSemesterListScreen(),
+        AppRoutes.adminAddSemester: (context) =>
+            const AdminSemesterFormScreen(),
+        AppRoutes.adminDepartments: (context) =>
+            const AdminDepartmentListScreen(),
+        AppRoutes.adminAddDepartment: (context) =>
+            const AdminDepartmentFormScreen(),
+        AppRoutes.adminMajors: (context) => const AdminMajorListScreen(),
+        AppRoutes.adminAddMajor: (context) => const AdminMajorFormScreen(),
+        AppRoutes.adminCurriculum: (context) => const AdminCurriculumScreen(),
+        AppRoutes.adminCurriculumEntry: (context) =>
+            const AdminCurriculumEntryFormScreen(),
       },
     );
   }

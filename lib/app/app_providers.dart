@@ -11,10 +11,20 @@ import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
+import '../features/academics/providers/academic_structure_provider.dart';
+import '../features/academics/services/department_service.dart';
+import '../features/academics/services/major_service.dart';
 import '../features/courses/providers/course_provider.dart';
+import '../features/courses/providers/course_offering_provider.dart';
+import '../features/courses/providers/student_courses_provider.dart';
 import '../features/courses/services/course_service.dart';
+import '../features/courses/services/course_offering_service.dart';
+import '../features/curriculum/providers/curriculum_provider.dart';
+import '../features/curriculum/services/curriculum_service.dart';
 import '../features/enrollments/providers/enrollment_provider.dart';
 import '../features/enrollments/services/enrollment_service.dart';
+import '../features/semesters/providers/semester_provider.dart';
+import '../features/semesters/services/semester_service.dart';
 
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -27,8 +37,48 @@ final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(
     create: (_) => NotificationSettingsProvider(NotificationSettingsService()),
   ),
+  /*
+   * ترتيب مزوّدات المجال الأكاديمي يتبع اتجاه الاعتماد في العرض:
+   * الفصول الدراسية ثم الهيكل الأكاديمي (الأقسام والتخصصات) ثم كتالوج
+   * المساقات، فالطروحات التي تربط مساقًا بفصل، فالخطة الدراسية، ثم
+   * التسجيلات التي تشير إلى طرح.
+   */
+  ChangeNotifierProvider(create: (_) => SemesterProvider(SemesterService())),
+  ChangeNotifierProvider(
+    create: (_) =>
+        AcademicStructureProvider(DepartmentService(), MajorService()),
+  ),
   ChangeNotifierProvider(create: (_) => CourseProvider(CourseService())),
   ChangeNotifierProvider(
+    create: (_) => CourseOfferingProvider(CourseOfferingService()),
+  ),
+  ChangeNotifierProvider(create: (_) => CurriculumProvider(CurriculumService())),
+  ChangeNotifierProvider(
     create: (_) => EnrollmentProvider(EnrollmentService()),
+  ),
+  /*
+   * واجهة مساقات الطالب تتبع الحساب المسجَّل تلقائيًا.
+   *
+   * ProxyProvider لا مجرد ChangeNotifierProvider: majorId و academicLevel
+   * يخصان الطالب لا الشاشة، فلو انتظرنا أن تمرّرهما الشاشة لأمكن أن تعرض
+   * شاشةٌ خطةَ تخصص لا ينتمي إليه الطالب. الربط هنا يجعل تسجيل الخروج
+   * وتبديل الحساب يمسحان البيانات دون أن تتذكّر أي شاشة ذلك.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, StudentCoursesProvider>(
+    create: (_) => StudentCoursesProvider(
+      SemesterService(),
+      CurriculumService(),
+      CourseService(),
+      CourseOfferingService(),
+      EnrollmentService(),
+      MajorService(),
+    ),
+    update: (_, auth, studentCourses) {
+      studentCourses!.syncWithUser(
+        auth.currentUserProfile,
+        isLoggedIn: auth.isLoggedIn,
+      );
+      return studentCourses;
+    },
   ),
 ];

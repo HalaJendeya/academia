@@ -18,7 +18,7 @@ void handleMainNavigation(
       break;
 
     case AcademiaBottomNavigation.coursesIndex:
-      _navigateOrShowUnderDevelopment(context, '/courses');
+      Navigator.pushReplacementNamed(context, AppRoutes.courses);
       break;
 
     case AcademiaBottomNavigation.tasksIndex:

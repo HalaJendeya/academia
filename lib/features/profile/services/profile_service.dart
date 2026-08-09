@@ -51,7 +51,7 @@ class ProfileService {
   Future<void> updateProfile({
     required String fullName,
     String? major,
-    String? academicLevel,
+    int? academicLevel,
   }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -75,8 +75,9 @@ class ProfileService {
       if (major != null && major.trim().isNotEmpty) {
         updateData['major'] = major.trim();
       }
-      if (academicLevel != null && academicLevel.trim().isNotEmpty) {
-        updateData['academicLevel'] = academicLevel.trim();
+      // يُكتب كرقم صحيح؛ لا تُخزَّن النصوص المعروضة في قاعدة البيانات.
+      if (academicLevel != null && academicLevel > 0) {
+        updateData['academicLevel'] = academicLevel;
       }
 
       await _firestore

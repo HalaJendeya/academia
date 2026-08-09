@@ -70,8 +70,8 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
                   Navigator.of(dialogContext).pop();
 
                   final provider = context.read<EnrollmentProvider>();
-                  final success = await provider.removeCourse(
-                    enrollment.courseId,
+                  final success = await provider.removeEnrollment(
+                    enrollment.offeringId,
                   );
 
                   if (!mounted) return;
@@ -144,8 +144,8 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
                 Navigator.of(dialogContext).pop();
 
                 final provider = context.read<EnrollmentProvider>();
-                final success = await provider.restoreCourse(
-                  enrollment.courseId,
+                final success = await provider.restoreEnrollment(
+                  enrollment.offeringId,
                 );
 
                 if (!mounted) return;
@@ -168,6 +168,74 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
                 }
               },
               child: const Text(AppStrings.confirmAction),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showMarkCompletedDialog(
+    BuildContext context,
+    EnrollmentModel enrollment,
+    String courseTitle,
+  ) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            AppStrings.markCompletedTitle,
+            style: TextStyle(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.right,
+          ),
+          content: Text(
+            '${AppStrings.markCompletedConfirm}\n($courseTitle)',
+            textAlign: TextAlign.right,
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.secondary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+
+                  final provider = context.read<EnrollmentProvider>();
+                  final success = await provider.markEnrollmentCompleted(
+                    enrollment.offeringId,
+                  );
+
+                  if (!mounted) return;
+
+                  if (success) {
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text(AppStrings.enrollmentCompletedSuccess),
+                      ),
+                    );
+                  } else {
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          provider.errorMessage ?? AppStrings.courseSaveError,
+                        ),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                },
+                child: const Text(AppStrings.confirmAction),
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text(AppStrings.cancelAction),
             ),
           ],
         );
@@ -304,9 +372,10 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
               ),
               const SizedBox(width: 8),
               AppStatusBadge(
-                label: student.status == 'active'
+                // حساب المستخدم يكون نشطًا أو معطّلًا، وليس "مؤرشفًا".
+                label: student.isActive
                     ? AppStrings.activeStatus
-                    : AppStrings.archivedStatus,
+                    : AppStrings.filterDisabled,
                 backgroundColor: statusBackground,
                 foregroundColor: statusColor,
               ),
@@ -329,11 +398,11 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
               AppStrings.majorLabel,
               student.major,
             ),
-          if (student.semester != null)
+          if (student.academicLevel != null)
             _buildInfoRow(
-              Icons.calendar_today_rounded,
-              AppStrings.semesterLabel,
-              student.semester.toString(),
+              Icons.school_outlined,
+              AppStrings.academicLevelLabel,
+              AppStrings.academicLevelDisplay(student.academicLevel!),
             ),
           _buildInfoRow(
             Icons.task_alt_rounded,
@@ -454,11 +523,19 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
         final course = coursesById[enrollment.courseId];
         final courseTitle = course?.title ?? AppStrings.unknownCourse;
         final courseCode = course?.courseCode ?? '';
-        final instructorName = course?.instructorName ?? '';
 
-        final statusColor = enrollment.isActive
-            ? AppColors.activeStatus
-            : AppColors.danger;
+        final String statusLabel;
+        final Color statusColor;
+        if (enrollment.isActive) {
+          statusLabel = AppStrings.activeEnrollmentStatus;
+          statusColor = AppColors.activeStatus;
+        } else if (enrollment.isCompleted) {
+          statusLabel = AppStrings.completedEnrollmentStatus;
+          statusColor = AppColors.secondary;
+        } else {
+          statusLabel = AppStrings.removedEnrollmentStatus;
+          statusColor = AppColors.danger;
+        }
         final statusBackground = statusColor.withValues(alpha: 0.08);
 
         return AppCard(
@@ -481,9 +558,7 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
                   ),
                   const SizedBox(width: 8),
                   AppStatusBadge(
-                    label: enrollment.isActive
-                        ? AppStrings.activeEnrollmentStatus
-                        : AppStrings.removedEnrollmentStatus,
+                    label: statusLabel,
                     backgroundColor: statusBackground,
                     foregroundColor: statusColor,
                   ),
@@ -496,16 +571,49 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
                   AppStrings.courseCodeLabel,
                   courseCode,
                 ),
-              if (instructorName.isNotEmpty)
+              /*
+               * اسم المدرّس صار من بيانات الطرح لا المساق، ولا تُحمَّل
+               * الطروحات في هذه الشاشة. نعرض بدلًا منه رقم المحاولة، وهو ما
+               * يميّز إعادة دراسة المساق عن دراسته أول مرة.
+               */
+              if (enrollment.isRetake)
                 _buildInfoRow(
-                  Icons.person_rounded,
-                  AppStrings.instructorNameLabel,
-                  instructorName,
+                  Icons.repeat_rounded,
+                  AppStrings.attemptLabel,
+                  '${enrollment.attemptNumber}',
+                ),
+              if (!enrollment.hasOffering)
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.small),
+                  child: Text(
+                    AppStrings.legacyEnrollmentNote,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.warningDark,
+                    ),
+                  ),
                 ),
               const Divider(height: 20, color: AppColors.divider),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.small,
+                runSpacing: AppSpacing.small,
                 children: [
+                  if (enrollment.isActive)
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.secondary,
+                        side: const BorderSide(color: AppColors.secondary),
+                      ),
+                      onPressed: () {
+                        _showMarkCompletedDialog(
+                          context,
+                          enrollment,
+                          courseTitle,
+                        );
+                      },
+                      icon: const Icon(Icons.task_alt_rounded, size: 18),
+                      label: const Text(AppStrings.markCompletedAction),
+                    ),
                   if (enrollment.isActive)
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(

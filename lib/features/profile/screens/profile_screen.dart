@@ -293,8 +293,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  Directionality.of(context) == TextDirection.rtl
-                      ? Icons.chevron_right_rounded
+                  Directionality.of(context) == TextDirection.ltr
+                      ? Icons.chevron_left_rounded
                       : Icons.chevron_right_rounded,
                   color: AppColors.textSecondary,
                   size: 24,

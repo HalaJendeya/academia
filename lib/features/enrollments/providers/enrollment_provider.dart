@@ -90,18 +90,17 @@ class EnrollmentProvider extends ChangeNotifier {
         );
   }
 
-  Future<bool> assignCourse(String courseId) async {
-    if (_selectedStudent == null || _isSaving) return false;
+  /// تنفيذ عملية كتابة واحدة مع إدارة حالة الحفظ ورسالة الخطأ.
+  Future<bool> _runWrite(Future<void> Function(String userId) action) async {
+    final student = _selectedStudent;
+    if (student == null || _isSaving) return false;
 
     _isSaving = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _service.assignCourse(
-        userId: _selectedStudent!.uid,
-        courseId: courseId,
-      );
+      await action(student.uid);
       return true;
     } on EnrollmentException catch (e) {
       _errorMessage = e.message;
@@ -115,54 +114,84 @@ class EnrollmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> removeCourse(String courseId) async {
-    if (_selectedStudent == null || _isSaving) return false;
-
-    _isSaving = true;
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      await _service.removeCourse(
-        userId: _selectedStudent!.uid,
-        courseId: courseId,
-      );
-      return true;
-    } on EnrollmentException catch (e) {
-      _errorMessage = e.message;
-      return false;
-    } catch (e) {
-      _errorMessage = AppStrings.courseSaveError;
-      return false;
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
+  Future<bool> assignToOffering(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.assignToOffering(userId: userId, offeringId: offeringId),
+    );
   }
 
-  Future<bool> restoreCourse(String courseId) async {
-    if (_selectedStudent == null || _isSaving) return false;
+  Future<bool> removeEnrollment(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.removeEnrollment(userId: userId, offeringId: offeringId),
+    );
+  }
 
-    _isSaving = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<bool> restoreEnrollment(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.restoreEnrollment(userId: userId, offeringId: offeringId),
+    );
+  }
 
-    try {
-      await _service.restoreCourse(
-        userId: _selectedStudent!.uid,
-        courseId: courseId,
-      );
-      return true;
-    } on EnrollmentException catch (e) {
-      _errorMessage = e.message;
-      return false;
-    } catch (e) {
-      _errorMessage = AppStrings.courseSaveError;
-      return false;
-    } finally {
-      _isSaving = false;
-      notifyListeners();
+  /// إنهاء المحاولة إداريًا دون تسجيل نتيجة أكاديمية.
+  ///
+  /// completionStatus يبقى null لأن نتيجة الطالب لا تُستنتج من كون المساق
+  /// منتهيًا؛ تُسجَّل صراحةً عبر [setCompletionStatus].
+  Future<bool> markEnrollmentCompleted(String offeringId) {
+    return setEnrollmentStatus(
+      offeringId: offeringId,
+      status: EnrollmentModel.statusCompleted,
+    );
+  }
+
+  Future<bool> setEnrollmentStatus({
+    required String offeringId,
+    required String status,
+  }) {
+    return _runWrite(
+      (userId) => _service.setEnrollmentStatus(
+        userId: userId,
+        offeringId: offeringId,
+        status: status,
+      ),
+    );
+  }
+
+  Future<bool> setCompletionStatus({
+    required String offeringId,
+    required String completionStatus,
+    String? grade,
+  }) {
+    return _runWrite(
+      (userId) => _service.setCompletionStatus(
+        userId: userId,
+        offeringId: offeringId,
+        completionStatus: completionStatus,
+        grade: grade,
+      ),
+    );
+  }
+
+  /// سجل تسجيل الطالب في طرح معيّن، أو null إن لم يكن مسجلًا فيه.
+  EnrollmentModel? enrollmentForOffering(String offeringId) {
+    for (final enrollment in _selectedStudentEnrollments) {
+      if (enrollment.offeringId == offeringId) return enrollment;
     }
+    return null;
+  }
+
+  /// أحدث محاولة للطالب في مساق دائم، أي صاحبة أكبر رقم محاولة.
+  EnrollmentModel? latestAttemptForCourse(String courseId) {
+    EnrollmentModel? latest;
+    for (final enrollment in _selectedStudentEnrollments) {
+      if (enrollment.courseId != courseId) continue;
+      if (latest == null || enrollment.attemptNumber > latest.attemptNumber) {
+        latest = enrollment;
+      }
+    }
+    return latest;
   }
 
   void stopListeningToSelectedStudentEnrollments() {

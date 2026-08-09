@@ -190,9 +190,10 @@ class _AdminStudentListScreenState extends State<AdminStudentListScreen> {
               ),
               const SizedBox(width: 8),
               AppStatusBadge(
-                label: student.status == 'active'
+                // حساب المستخدم يكون نشطًا أو معطّلًا، وليس "مؤرشفًا".
+                label: student.isActive
                     ? AppStrings.activeStatus
-                    : AppStrings.archivedStatus,
+                    : AppStrings.filterDisabled,
                 backgroundColor: statusBgColor,
                 foregroundColor: statusColor,
               ),
@@ -251,18 +252,19 @@ class _AdminStudentListScreenState extends State<AdminStudentListScreen> {
               ],
             ),
           ],
-          if (student.semester != null) ...[
+          if (student.academicLevel != null) ...[
             const SizedBox(height: AppSpacing.small),
             Row(
               children: [
                 const Icon(
-                  Icons.calendar_today_rounded,
+                  Icons.school_outlined,
                   size: 16,
                   color: AppColors.textSecondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '${AppStrings.semesterLabel}: ${student.semester}',
+                  '${AppStrings.academicLevelLabel}: '
+                  '${AppStrings.academicLevelDisplay(student.academicLevel!)}',
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),

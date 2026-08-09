@@ -274,7 +274,24 @@ abstract final class AppStrings {
     'المستوى ٣',
     'المستوى ٤',
     'المستوى ٥',
+    'المستوى ٦',
+    'المستوى ٧',
+    'المستوى ٨',
   ];
+
+  /// المستوى الأكاديمي يُخزَّن في Firestore كرقم صحيح، والنص العربي
+  /// يُبنى في طبقة العرض فقط ولا يُحفظ في قاعدة البيانات.
+  ///
+  /// الخطة الدراسية الرسمية موزَّعة على ثمانية مستويات، لذلك تنتهي القائمة
+  /// عند 8 لا عند 5 كما كانت قبل ترحيل المرحلة 7C.
+  static const List<int> academicLevelValues = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  static String academicLevelDisplay(int level) {
+    if (level >= 1 && level <= academicLevelsList.length) {
+      return academicLevelsList[level - 1];
+    }
+    return 'المستوى $level';
+  }
 
   static const String profileImageUpdatedLocally =
       'تم تحديث الصورة مؤقتًا على هذا الجهاز';
@@ -462,6 +479,7 @@ abstract final class AppStrings {
   static const String courseNotFound = 'تعذر العثور على المساق المحدد.';
   static const String courseBasicInfoSection = 'معلومات المساق الأساسية';
   static const String courseSemesterInfoSection = 'معلومات الفصل الدراسي';
+  static const String courseAcademicInfoSection = 'المعلومات الأكاديمية';
   static const String courseAcademicStatusSection = 'حالة المساق الدراسية';
 
   static const String courseTitleHintValue = 'مثال: إدارة قواعد البيانات';
@@ -619,4 +637,429 @@ abstract final class AppStrings {
   static const String adminRoleValue = 'مدير النظام';
   static const String accountStatusLabel = 'حالة الحساب';
   static const String accountStatusValue = 'نشط';
+
+  // Semesters (Phase 6B)
+  static const String semestersManagementTitle = 'إدارة الفصول الدراسية';
+  static const String semestersTileDesc =
+      'إنشاء الفصول الدراسية وتحديد الفصل الحالي';
+  static const String addSemesterLabel = 'إضافة فصل دراسي';
+  static const String editSemesterLabel = 'تعديل الفصل الدراسي';
+  static const String semesterNameLabel = 'اسم الفصل الدراسي';
+  static const String semesterNameHintValue = 'مثال: الفصل الأول 2026';
+  static const String academicYearOnlyLabel = 'السنة الأكاديمية';
+  static const String academicYearHintOnlyValue = 'مثال: 2026';
+  static const String semesterNumberLabel = 'رقم الفصل الدراسي';
+  static const String semesterNumberHintValue = 'مثال: 1';
+  static const String semesterStatusLabel = 'حالة الفصل الدراسي';
+  static const String semesterStartDateLabel = 'تاريخ البداية (اختياري)';
+  static const String semesterEndDateLabel = 'تاريخ النهاية (اختياري)';
+  static const String selectDatePrompt = 'اختر التاريخ';
+  static const String generatedIdLabel = 'معرّف المستند';
+
+  static const String semesterStatusUpcoming = 'قادم';
+  static const String semesterStatusCurrent = 'الفصل الحالي';
+  static const String semesterStatusCompleted = 'منتهٍ';
+
+  static const String setAsCurrentAction = 'تعيين كفصل حالي';
+  static const String setCurrentSemesterTitle = 'تعيين الفصل الدراسي الحالي';
+  static const String setCurrentSemesterConfirm =
+      'سيتم تحويل الفصل الدراسي الحالي السابق إلى "منتهٍ" وتعيين هذا الفصل '
+      'كفصل حالي. هل تريد المتابعة؟';
+  static const String semesterSetAsCurrentSuccess =
+      'تم تعيين الفصل الدراسي الحالي بنجاح';
+  static const String semesterAddedSuccess = 'تمت إضافة الفصل الدراسي بنجاح';
+  static const String semesterUpdatedSuccess = 'تم تحديث الفصل الدراسي بنجاح';
+
+  static const String noSemestersFound = 'لا توجد فصول دراسية';
+  static const String noSemestersDesc =
+      'أضيفي فصلًا دراسيًا واحدًا على الأقل قبل إنشاء المساقات.';
+
+  static const String semesterLoadError = 'تعذر تحميل الفصول الدراسية';
+  static const String semesterSaveError = 'تعذر حفظ الفصل الدراسي';
+  static const String semesterNotFound = 'الفصل الدراسي غير موجود';
+  static const String semesterAlreadyExists = 'هذا الفصل الدراسي موجود بالفعل';
+  static const String semesterNameRequired = 'اسم الفصل الدراسي مطلوب';
+  static const String semesterNumberInvalid =
+      'يجب أن يكون رقم الفصل الدراسي أكبر من 0';
+  static const String semesterStatusInvalid = 'حالة الفصل الدراسي غير صحيحة';
+  static const String semesterIdentityLockedNote =
+      'لا يمكن تعديل السنة الأكاديمية أو رقم الفصل لأنهما يشكّلان معرّف المستند.';
+
+  // Course <-> semester (Phase 6C)
+  static const String unknownSemester = 'فصل غير محدد';
+  static const String allSemestersFilter = 'كل الفصول';
+  static const String courseSemesterLabel = 'الفصل الدراسي';
+  static const String courseSemesterSelectHint = 'اختر الفصل الدراسي';
+  static const String courseSemesterRequired = 'يرجى اختيار الفصل الدراسي';
+  static const String courseStatusInvalid = 'حالة المساق غير صحيحة';
+  static const String courseSemesterMissingForUpdate =
+      'هذا المساق غير مرتبط بفصل دراسي. يرجى تعديله وتحديد الفصل الدراسي أولًا.';
+  static const String noSemestersForCourseTitle =
+      'لا يمكن إنشاء مساق بدون فصل دراسي';
+  static const String noSemestersForCourseDesc =
+      'يجب إنشاء فصل دراسي واحد على الأقل قبل إضافة المساقات.';
+  static const String goToSemestersAction = 'الانتقال إلى الفصول الدراسية';
+
+  // Enrollments (Phase 6D)
+  static const String alreadyEnrolledError =
+      'الطالب مسجل بالفعل في هذا المساق';
+  static const String enrollmentNotFoundError =
+      'سجل التسجيل غير موجود. قد يكون قد حُذف بالفعل.';
+  static const String enrollmentStatusInvalid = 'حالة التسجيل غير صحيحة';
+  static const String courseSemesterMissingForEnrollment =
+      'لا يمكن تسجيل الطالب في مساق غير مرتبط بفصل دراسي. يرجى تعديل المساق '
+      'وتحديد الفصل الدراسي أولًا.';
+  static const String completedEnrollmentStatus = 'مكتمل';
+  static const String markCompletedAction = 'تعليم كمكتمل';
+  static const String markCompletedTitle = 'تعليم المساق كمكتمل';
+  static const String markCompletedConfirm =
+      'سيتم تسجيل أن الطالب أنهى هذا المساق. هل تريد المتابعة؟';
+  static const String enrollmentCompletedSuccess = 'تم تعليم المساق كمكتمل';
+  static const String legacyEnrollmentNote =
+      'سجل تسجيل قديم غير مرتبط بطرح مساق. يلزم إعادة تسجيل الطالب في طرح '
+      'الفصل الدراسي المناسب.';
+
+  // ===== Phase 7A: academic structure =====
+
+  // Departments
+  static const String departmentsManagementTitle = 'إدارة الأقسام';
+  static const String departmentNameLabel = 'اسم القسم';
+  static const String departmentNameRequired = 'اسم القسم مطلوب';
+  static const String departmentNotFound = 'القسم غير موجود';
+  static const String departmentLoadError = 'تعذر تحميل الأقسام';
+  static const String departmentSaveError = 'تعذر حفظ القسم';
+  static const String departmentStatusInvalid = 'حالة القسم غير صحيحة';
+  static const String courseDepartmentRequired = 'يرجى اختيار القسم';
+  static const String unknownDepartment = 'قسم غير محدد';
+  static const String allDepartmentsFilter = 'كل الأقسام';
+  static const String courseDepartmentLabel = 'القسم';
+  static const String courseDepartmentSelectHint = 'اختر القسم';
+  static const String noDepartmentsForCourseTitle =
+      'لا يمكن إنشاء مساق بدون قسم';
+  static const String noDepartmentsForCourseDesc =
+      'يجب إنشاء قسم أكاديمي واحد على الأقل قبل إضافة المساقات.';
+
+  // Majors
+  static const String majorsManagementTitle = 'إدارة التخصصات';
+  static const String majorNameLabel = 'اسم التخصص';
+  static const String majorNameRequired = 'اسم التخصص مطلوب';
+  static const String majorCodeRequired = 'رمز التخصص مطلوب';
+  static const String majorNotFound = 'التخصص غير موجود';
+  static const String majorLoadError = 'تعذر تحميل التخصصات';
+  static const String majorSaveError = 'تعذر حفظ التخصص';
+  static const String majorStatusInvalid = 'حالة التخصص غير صحيحة';
+  static const String majorTotalLevelsInvalid =
+      'يجب أن يكون عدد المستويات أكبر من 0';
+  static const String noMajorAssigned =
+      'لم يتم تحديد برنامجك الأكاديمي. يرجى مراجعة المشرف.';
+  static const String unknownMajor = 'تخصص غير محدد';
+
+  // Course catalog
+  static const String courseCodeAlreadyExists =
+      'رمز المساق مستخدم بالفعل في مساق آخر';
+
+  // Course offerings
+  static const String offeringsManagementTitle = 'طروحات المساقات';
+  static const String offeringSectionLabel = 'الشعبة';
+  static const String offeringNotFound = 'طرح المساق غير موجود';
+  static const String offeringAlreadyExists =
+      'يوجد طرح لهذا المساق في هذا الفصل الدراسي بنفس الشعبة';
+  static const String offeringLoadError = 'تعذر تحميل طروحات المساقات';
+  static const String offeringSaveError = 'تعذر حفظ طرح المساق';
+  static const String offeringStatusInvalid = 'حالة الطرح غير صحيحة';
+  static const String offeringCourseRequired = 'يرجى اختيار المساق';
+  static const String offeringSemesterRequired = 'يرجى اختيار الفصل الدراسي';
+  static const String offeringInstructorRequired = 'اسم المدرّس مطلوب';
+  static const String offeringCancelledCannotEnroll =
+      'لا يمكن التسجيل في طرح ملغى';
+  static const String duplicateOfferingsAction = 'نسخ من فصل سابق';
+  static const String courseNotOfferedThisSemester =
+      'هذا المساق غير مطروح في الفصل الدراسي الحالي';
+  static const String noCurrentSemesterForAssignment =
+      'لا يوجد فصل دراسي حالي. يرجى تعيين الفصل الحالي قبل تسجيل المساقات.';
+
+  // Curriculum
+  static const String curriculumManagementTitle = 'الخطة الدراسية';
+  static const String curriculumLoadError = 'تعذر تحميل الخطة الدراسية';
+  static const String curriculumSaveError = 'تعذر حفظ الخطة الدراسية';
+  static const String curriculumEntryNotFound = 'عنصر الخطة الدراسية غير موجود';
+  static const String curriculumEntryTypeInvalid = 'نوع عنصر الخطة غير صحيح';
+  static const String requirementTypeInvalid = 'نوع المتطلب غير صحيح';
+  static const String academicLevelInvalid =
+      'يجب أن يكون المستوى الأكاديمي بين 1 و 8';
+  static const String curriculumSlotLabelRequired = 'اسم خانة المتطلب مطلوب';
+  static const String curriculumSlotHoursRequired =
+      'عدد ساعات خانة المتطلب مطلوب';
+  static const String curriculumCourseRequired = 'يرجى اختيار المساق';
+  static const String curriculumEntryAlreadyExists =
+      'هذا المساق مضاف بالفعل إلى الخطة الدراسية';
+
+  // Requirement type labels
+  static const String requirementMajorRequired = 'متطلب تخصص إجباري';
+  static const String requirementMajorElective = 'متطلب تخصص اختياري';
+  static const String requirementCollegeRequired = 'متطلب كلية إجباري';
+  static const String requirementUniversityRequired = 'متطلب جامعة إجباري';
+  static const String requirementUniversityElective = 'متطلب جامعة اختياري';
+  static const String requirementFreeElective = 'مساق حر';
+
+  static String requirementTypeDisplay(String requirementType) {
+    switch (requirementType) {
+      case 'major_required':
+        return requirementMajorRequired;
+      case 'major_elective':
+        return requirementMajorElective;
+      case 'college_required':
+        return requirementCollegeRequired;
+      case 'university_required':
+        return requirementUniversityRequired;
+      case 'university_elective':
+        return requirementUniversityElective;
+      case 'free_elective':
+        return requirementFreeElective;
+      default:
+        return requirementType;
+    }
+  }
+
+  static const String prerequisiteLabel = 'متطلب سابق';
+  static const String noPrerequisite = 'لا يوجد';
+
+  // ===== Phase 7D: admin academic-structure UI =====
+
+  // Departments
+  static const String departmentsTileDesc =
+      'إضافة الأقسام الأكاديمية وتعديلها';
+  static const String addDepartmentLabel = 'إضافة قسم';
+  static const String editDepartmentLabel = 'تعديل القسم';
+  static const String departmentCodeLabel = 'رمز القسم (اختياري)';
+  static const String departmentCodeHint = 'مثال: MIS';
+  static const String departmentAddedSuccess = 'تمت إضافة القسم بنجاح';
+  static const String departmentUpdatedSuccess = 'تم تحديث القسم بنجاح';
+  static const String departmentArchivedSuccess = 'تمت أرشفة القسم';
+  static const String archiveDepartmentTitle = 'أرشفة القسم';
+  static const String archiveDepartmentConfirm =
+      'سيتم إخفاء القسم من قوائم الاختيار مع بقاء مساقاته كما هي. هل تريد المتابعة؟';
+  static const String noDepartmentsFound = 'لا توجد أقسام';
+  static const String noDepartmentsDesc =
+      'أضيفي قسمًا أكاديميًا واحدًا على الأقل قبل إنشاء التخصصات والمساقات.';
+
+  // Majors
+  static const String majorsTileDesc = 'إدارة البرامج الدراسية وخططها';
+  static const String addMajorLabel = 'إضافة تخصص';
+  static const String editMajorLabel = 'تعديل التخصص';
+  static const String majorCodeLabel = 'رمز التخصص';
+  static const String majorCodeHint = 'مثال: MIS';
+  static const String majorTotalLevelsLabel = 'عدد المستويات';
+  static const String majorAddedSuccess = 'تمت إضافة التخصص بنجاح';
+  static const String majorUpdatedSuccess = 'تم تحديث التخصص بنجاح';
+  static const String majorArchivedSuccess = 'تمت أرشفة التخصص';
+  static const String archiveMajorTitle = 'أرشفة التخصص';
+  static const String archiveMajorConfirm =
+      'سيتم إخفاء التخصص من قوائم الاختيار مع بقاء خطته الدراسية كما هي. '
+      'هل تريد المتابعة؟';
+  static const String noMajorsFound = 'لا توجد تخصصات';
+  static const String noMajorsDesc =
+      'أضيفي تخصصًا واحدًا على الأقل ليمكن بناء خطته الدراسية.';
+  static const String levelsSuffix = 'مستويات';
+
+  // Curriculum
+  static const String curriculumTileDesc =
+      'عرض وتعديل خطة التخصص الدراسية بالمستويات';
+  static const String selectMajorLabel = 'التخصص';
+  static const String selectMajorHint = 'اختاري التخصص';
+  static const String selectMajorPrompt =
+      'اختاري تخصصًا لعرض خطته الدراسية.';
+  static const String curriculumEmptyForMajor =
+      'لا توجد صفوف في خطة هذا التخصص بعد.';
+  static const String academicLevelSectionLabel = 'المستوى';
+  static const String curriculumTotalHoursLabel = 'مجموع الساعات';
+  static const String curriculumRowsLabel = 'عدد الصفوف';
+  static const String creditHoursShort = 'س.م';
+  static const String slotEntryBadge = 'خانة متطلب';
+  static const String slotNotSelectableNote =
+      'خانة متطلب لم يُختَر لها مساق بعد';
+
+  // Curriculum entry form
+  static const String addCurriculumEntryLabel = 'إضافة صف للخطة';
+  static const String editCurriculumEntryLabel = 'تعديل صف الخطة';
+  static const String curriculumEntryTypeLabel = 'نوع الصف';
+  static const String entryTypeCourseLabel = 'مساق محدد';
+  static const String entryTypeSlotLabel = 'خانة متطلب';
+  static const String curriculumCoursePickerLabel = 'المساق';
+  static const String curriculumCoursePickerHint = 'اختاري المساق';
+  static const String slotLabelFieldLabel = 'اسم خانة المتطلب';
+  static const String slotLabelHint = 'مثال: متطلب جامعة اختياري (1)';
+  static const String requirementTypeLabel = 'نوع المتطلب';
+  static const String sequenceLabel = 'الترتيب داخل المستوى';
+  static const String prerequisiteTextLabel = 'نص المتطلب السابق (اختياري)';
+  static const String prerequisiteTextHint =
+      'يُحفظ كما ورد في الخطة الرسمية، ولا يُطبَّق في التطبيق';
+  static const String prerequisiteNotEnforcedNote =
+      'المتطلبات السابقة تُعرض للاطلاع فقط ولا تمنع التسجيل.';
+  static const String curriculumEntryAddedSuccess = 'تمت إضافة الصف بنجاح';
+  static const String curriculumEntryUpdatedSuccess = 'تم تحديث الصف بنجاح';
+  static const String curriculumEntryRemovedSuccess = 'تم حذف الصف من الخطة';
+  static const String removeCurriculumEntryTitle = 'حذف صف من الخطة';
+  static const String removeCurriculumEntryConfirm =
+      'سيُحذف هذا الصف من الخطة الدراسية نهائيًا. لن يتأثر مستند المساق نفسه. '
+      'هل تريد المتابعة؟';
+  static const String sequenceInvalid =
+      'يجب أن يكون الترتيب رقمًا صحيحًا أكبر من أو يساوي 0';
+  static const String curriculumIdentityChangeNote =
+      'تغيير المساق أو المستوى أو الترتيب يغيّر معرّف المستند، لذلك يُنشأ صف '
+      'جديد ويُحذف القديم ضمن العملية نفسها.';
+  static const String noCoursesForCurriculum =
+      'لا توجد مساقات في الكتالوج بعد. أضيفي مساقًا قبل بناء الخطة.';
+  static const String allCurriculumCoursesUsed =
+      'كل مساقات الكتالوج مضافة بالفعل إلى خطة هذا التخصص.';
+
+  // ===== Phase 7S2: student Courses =====
+  //
+  // الصياغة العربية للبطاقات والتبويبات منقولة كما كتبها فريق الواجهة في
+  // فرع courses-ui، مع استبدال ما كان يصف بيانات وهمية (نسبة الإنجاز،
+  // التقييم، الجلسة القادمة) بمفاهيم المعمارية الحالية.
+
+  static const String myCoursesTitle = 'مقرراتي الدراسية';
+  static const String courseSearchHint = 'ابحث عن مساق...';
+  static const String coursesLoadError = 'تعذر تحميل المقررات الدراسية';
+  static const String courseDetailLoadError = 'تعذر تحميل بيانات المقرر';
+  static const String viewDetailsAction = 'عرض التفاصيل';
+
+  // التبويبات الأربعة
+  static const String studentTabProgram = 'برنامجي';
+  static const String studentTabAvailableNow = 'المتاحة الآن';
+  static const String studentTabCurrent = 'مساقاتي الحالية';
+  static const String studentTabHistory = 'السجل';
+
+  // برنامجي
+  static const String programTotalHoursLabel = 'مجموع ساعات الخطة';
+  static const String programRowsLabel = 'عدد المقررات والمتطلبات';
+  static const String programLevelHoursSuffix = 'ساعة';
+  static const String noMajorTitle = 'لم يتم تحديد برنامجك الأكاديمي';
+  static const String noMajorDesc =
+      'خطتك الدراسية تُبنى على برنامجك الأكاديمي. يرجى مراجعة المشرف لربط '
+      'حسابك بالتخصص.';
+  static const String programEmptyTitle = 'لا توجد خطة دراسية بعد';
+  static const String programEmptyDesc =
+      'لم تُضَف صفوف إلى خطة تخصصك حتى الآن.';
+
+  // المتاحة الآن
+  static const String availableNowEmptyTitle = 'لا توجد مساقات مطروحة الآن';
+  static const String availableNowEmptyDesc =
+      'لا يوجد حاليًا أي مساق من خطتك الدراسية مطروح في الفصل الدراسي الحالي. '
+      'ستظهر المساقات هنا فور طرحها.';
+  static const String noCurrentSemesterTitle = 'لا يوجد فصل دراسي حالي';
+  static const String noCurrentSemesterDesc =
+      'لم يُحدَّد فصل دراسي حالي بعد، لذلك لا يمكن عرض المساقات المطروحة.';
+
+  // مساقاتي الحالية
+  static const String currentCoursesEmptyTitle = 'لا توجد مساقات مسجلة';
+  static const String currentCoursesEmptyDesc =
+      'لم يتم تسجيلك في أي مساق لهذا الفصل الدراسي بعد. التسجيل يتم عبر '
+      'المشرف الأكاديمي.';
+
+  // السجل
+  static const String coursesArchiveTitle = 'سجل المساقات';
+  static const String historyEmptyTitle = 'لا يوجد سجل دراسي بعد';
+  static const String historyEmptyDesc =
+      'ستظهر هنا المساقات التي أنهيتها في الفصول السابقة.';
+  static const String attemptsCountLabel = 'عدد المحاولات';
+  static const String viewFullArchiveAction = 'عرض السجل كاملًا';
+
+  // بطاقات المساق
+  static const String sectionLabel = 'الشعبة';
+  static const String courseNotInProgramNote = 'مساق خارج خطتك الدراسية';
+  static const String slotNotACourseNote =
+      'خانة متطلب لم يُختَر لها مساق بعد';
+
+  // تفاصيل المساق
+  static const String courseDetailAppBarTitle = 'تفاصيل المساق';
+  static const String courseOverviewTab = 'نظرة عامة';
+  static const String courseAssignmentsTab = 'الواجبات';
+  static const String courseFilesTab = 'الملفات';
+  static const String courseSharedSpaceTab = 'المساحة';
+  static const String courseAttemptSectionTitle = 'بيانات التسجيل';
+  static const String courseProgramSectionTitle = 'موقع المساق في الخطة';
+  static const String featureNotAvailableYetTitle = 'غير متاح بعد';
+  static const String featureNotAvailableYetDesc =
+      'هذا القسم لم يُفعَّل بعد في هذه النسخة من التطبيق.';
+  static const String courseNotFoundStudent = 'تعذر العثور على هذا المساق.';
+
+  // ===== Phase 7S3: student dashboard =====
+  //
+  // اللوحة شاشة تجميع لا مجال بيانات جديد: كل رقم فيها مشتق من مزوّد قائم،
+  // وما لا مصدر له يُعرض كحالة "قريبًا" بدل رقم مختلق.
+
+  static const String dashboardGreeting = 'مرحبًا';
+  static const String dashboardSemesterLabel = 'الفصل الدراسي الحالي';
+  static const String dashboardNoSemester = 'لم يُحدَّد فصل دراسي حالي';
+
+  // ملخص الخطة
+  static const String dashboardPlanSummaryTitle = 'خطتك الدراسية';
+  static const String dashboardPlanTotalHours = 'إجمالي الخطة';
+  static const String dashboardCurrentLevel = 'المستوى الحالي';
+  static const String dashboardLevelHours = 'ساعات المستوى';
+  static const String dashboardPlanUnavailable =
+      'لم يتم تحديد برنامجك الأكاديمي بعد، لذلك لا يمكن عرض خطتك الدراسية. '
+      'يرجى مراجعة المشرف الأكاديمي.';
+  static const String dashboardLevelUnknown = 'غير محدد';
+
+  // ملخص المساقات
+  static const String dashboardCoursesTitle = 'مساقاتك';
+  static const String dashboardCurrentCoursesLabel = 'مسجّلة حاليًا';
+  static const String dashboardAvailableNowLabel = 'متاحة للتسجيل';
+  static const String dashboardNoCurrentCourses =
+      'لم يتم تسجيلك في أي مساق لهذا الفصل بعد.';
+  static const String dashboardNoAvailableCourses =
+      'لا توجد مساقات مطروحة لك في الفصل الحالي حاليًا.';
+  static const String dashboardOpenCoursesAction = 'عرض المساقات';
+
+  // الموصى لمستواك
+  static const String dashboardRecommendedTitle = 'مقررات مستواك';
+  static const String dashboardRecommendedDesc =
+      'ما تتضمّنه خطتك الدراسية في مستواك الحالي.';
+  static const String dashboardRecommendedEmpty =
+      'لا توجد مقررات مسجّلة لمستواك في الخطة.';
+  static const String dashboardMoreItems = 'والمزيد';
+
+  // أقسام مؤجّلة
+  static const String dashboardComingSoonBadge = 'قريبًا';
+  static const String dashboardTasksTitle = 'مهامك';
+  static const String dashboardTasksComingSoon =
+      'إدارة المهام والتسليمات لم تُفعَّل بعد في هذه النسخة.';
+
+  // إجراءات سريعة
+  static const String dashboardQuickActionsTitle = 'إجراءات سريعة';
+  static const String dashboardActionCourses = 'المساقات';
+  static const String dashboardActionProfile = 'ملفي الشخصي';
+  static const String dashboardActionStudyPreferences = 'تفضيلات الدراسة';
+  static const String dashboardActionNotifications = 'إعدادات الإشعارات';
+
+  // Catalog / course details
+  static const String courseOfferingsTileTitle = 'العروض الفصلية';
+  static const String courseOfferingsTileDesc =
+      'إدارة طرح المساق في الفصول الدراسية — تصل في مرحلة لاحقة';
+  static const String courseCodeUniqueNote =
+      'رمز المساق فريد ولا يمكن تكراره في مساق آخر.';
+
+  // Enrollment attempts
+  static const String attemptLabel = 'المحاولة';
+  static const String completionPassedLabel = 'ناجح';
+  static const String completionFailedLabel = 'راسب';
+  static const String completionIncompleteLabel = 'غير مكتمل';
+  static const String gradeLabel = 'التقدير';
+  static const String completionStatusInvalid = 'نتيجة المساق غير صحيحة';
+
+  static String completionStatusDisplay(String? completionStatus) {
+    switch (completionStatus) {
+      case 'passed':
+        return completionPassedLabel;
+      case 'failed':
+        return completionFailedLabel;
+      case 'incomplete':
+        return completionIncompleteLabel;
+      default:
+        return '';
+    }
+  }
 }

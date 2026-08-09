@@ -24,6 +24,13 @@ abstract final class AppRoutes {
   static const String profileAnalytics = '/profile/analytics';
   static const String helpSupport = '/profile/help-support';
 
+  // Student courses (Phase 7S2).
+  // أسماء المسارات مطابقة لما اعتمده فرع واجهة المساقات حتى لا تتغيّر
+  // الروابط التي بُنيت عليها الشاشات.
+  static const String courses = '/courses';
+  static const String courseDetail = '/courses/detail';
+  static const String coursesArchive = '/courses/archive';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';
@@ -45,4 +52,20 @@ abstract final class AppRoutes {
   static const String adminReportedPosts = '/admin/reported-posts';
   static const String adminSettings = '/admin/settings';
   static const String adminProfile = '/admin/profile';
+
+  // Semesters (Phase 6B).
+  // adminAddSemester يخدم الإنشاء والتعديل معًا: يُمرَّر SemesterModel
+  // عبر arguments للتعديل ويُترك فارغًا للإنشاء.
+  static const String adminSemesters = '/admin/semesters';
+  static const String adminAddSemester = '/admin/semesters/add';
+
+  // Academic structure (Phase 7D).
+  // كل شاشة "add" تخدم الإنشاء والتعديل معًا: يُمرَّر النموذج عبر arguments
+  // للتعديل ويُترك فارغًا للإنشاء، كما في شاشة الفصول الدراسية.
+  static const String adminDepartments = '/admin/departments';
+  static const String adminAddDepartment = '/admin/departments/add';
+  static const String adminMajors = '/admin/majors';
+  static const String adminAddMajor = '/admin/majors/add';
+  static const String adminCurriculum = '/admin/curriculum';
+  static const String adminCurriculumEntry = '/admin/curriculum/entry';
 }

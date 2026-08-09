@@ -75,7 +75,7 @@ class ProfileProvider extends ChangeNotifier {
   Future<bool> updateProfile({
     required String fullName,
     String? major,
-    String? academicLevel,
+    int? academicLevel,
   }) async {
     if (_isSaving) return false;
 
@@ -106,9 +106,8 @@ class ProfileProvider extends ChangeNotifier {
       final normalizedMajor = (major != null && major.trim().isNotEmpty)
           ? major.trim()
           : null;
-      final normalizedAcademicLevel =
-          (academicLevel != null && academicLevel.trim().isNotEmpty)
-          ? academicLevel.trim()
+      final normalizedAcademicLevel = (academicLevel != null && academicLevel > 0)
+          ? academicLevel
           : null;
 
       // Immediate local cache update to prevent duplicate fetches

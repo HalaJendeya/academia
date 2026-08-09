@@ -145,6 +145,14 @@ class AuthService {
 
     await user.reload();
 
+    /*
+     * reload() يحدّث كائن المستخدم محليًا فقط ولا يصدر رمز هوية جديدًا،
+     * بينما تعتمد قواعد Firestore على الادعاء email_verified الموجود داخل
+     * رمز الهوية. لذلك نجبر تحديث الرمز قبل كتابة القيمة في Firestore،
+     * وإلا فقد ترفض القاعدة الكتابة لأن الرمز ما زال يحمل القيمة القديمة.
+     */
+    await user.getIdToken(true);
+
     final updatedUser = currentUser;
     final isVerified = updatedUser?.emailVerified ?? false;
 

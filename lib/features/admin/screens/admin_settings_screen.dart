@@ -161,6 +161,51 @@ class AdminSettingsScreen extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
+                    /*
+                     * الهيكل الأكاديمي مرتَّب باتجاه الاعتماد: القسم يملك
+                     * التخصص، والتخصص يملك خطته الدراسية، والفصول الدراسية
+                     * إطار زمني مستقل عنها.
+                     */
+                    AppMenuTile(
+                      icon: Icons.account_tree_rounded,
+                      title: AppStrings.departmentsManagementTitle,
+                      subtitle: AppStrings.departmentsTileDesc,
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.adminDepartments);
+                      },
+                    ),
+                    AppMenuTile(
+                      icon: Icons.school_rounded,
+                      title: AppStrings.majorsManagementTitle,
+                      subtitle: AppStrings.majorsTileDesc,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.adminMajors);
+                      },
+                    ),
+                    AppMenuTile(
+                      icon: Icons.list_alt_rounded,
+                      title: AppStrings.curriculumManagementTitle,
+                      subtitle: AppStrings.curriculumTileDesc,
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.adminCurriculum);
+                      },
+                    ),
+                    // إعداد أكاديمي على مستوى النظام: إنشاء الفصول الدراسية
+                    // وتحديد الفصل الحالي الذي تعتمد عليه شاشات الطروحات.
+                    AppMenuTile(
+                      icon: Icons.event_note_rounded,
+                      title: AppStrings.semestersManagementTitle,
+                      subtitle: AppStrings.semestersTileDesc,
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.adminSemesters);
+                      },
+                    ),
                     AppMenuTile(
                       icon: Icons.help_outline_rounded,
                       title: AppStrings.helpSupportTitle,

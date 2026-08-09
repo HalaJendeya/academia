@@ -1,0 +1,308 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/constants/app_strings.dart';
+import '../../../core/navigation/main_navigation.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_bottom_navigation.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_status_badge.dart';
+import '../../../core/widgets/app_top_bar.dart';
+import '../../../core/widgets/authenticated_page_scaffold.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../curriculum/models/curriculum_course_model.dart';
+import '../models/course_model.dart';
+import '../models/student_course_view.dart';
+import '../providers/student_courses_provider.dart';
+import '../widgets/student_course_header_card.dart';
+
+/// وسيطات شاشة التفاصيل.
+///
+/// [offeringId] هو ما يفرّق السياقين: مساق من الخطة (بلا طرح) أو محاولة
+/// فعلية للطالب في طرح محدد.
+class StudentCourseDetailArgs {
+  const StudentCourseDetailArgs({required this.courseId, this.offeringId});
+
+  final String courseId;
+  final String? offeringId;
+}
+
+/// تفاصيل مساق للطالب.
+///
+/// التبويبات محفوظة كما صمّمها فريق الواجهة، لكن الواجبات والملفات
+/// والمساحة تعرض حالة "غير متاح بعد" صريحة: لا توجد مجموعات تغذّيها،
+/// وملؤها بقيم وهمية يجعل الشاشة تكذب على الطالب.
+class StudentCourseDetailScreen extends StatelessWidget {
+  const StudentCourseDetailScreen({super.key});
+
+  void _handleNavigation(BuildContext context, int index) {
+    handleMainNavigation(
+      context,
+      index,
+      currentIndex: AcademiaBottomNavigation.coursesIndex,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments
+            as StudentCourseDetailArgs?;
+    final provider = context.watch<StudentCoursesProvider>();
+
+    final course = provider.courseById(args?.courseId);
+
+    if (args == null || course == null) {
+      return _scaffold(
+        context,
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.screenHorizontal),
+            child: Text(
+              AppStrings.courseNotFoundStudent,
+              style: TextStyle(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // سياق المحاولة: يوجد تسجيل للطالب في هذا الطرح تحديدًا.
+    StudentCourseView? attempt;
+    if (args.offeringId != null) {
+      for (final view in [...provider.currentCourses, ...provider.history]) {
+        if (view.offeringId == args.offeringId) {
+          attempt = view;
+          break;
+        }
+      }
+    }
+
+    final curriculumEntry = provider.curriculumEntryForCourse(args.courseId);
+    final offering = provider.offeringById(args.offeringId);
+
+    return _scaffold(
+      context,
+      body: DefaultTabController(
+        length: 4,
+        child: Column(
+          children: [
+            _buildTabBar(),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildOverviewTab(
+                    course: course,
+                    attempt: attempt,
+                    instructorName: attempt?.instructorName ??
+                        offering?.instructorName,
+                    curriculumEntry: curriculumEntry,
+                  ),
+                  _buildNotAvailableTab(),
+                  _buildNotAvailableTab(),
+                  _buildNotAvailableTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _scaffold(BuildContext context, {required Widget body}) {
+    return AuthenticatedPageScaffold(
+      currentIndex: AcademiaBottomNavigation.coursesIndex,
+      onNavigationTap: (index) => _handleNavigation(context, index),
+      appBar: const AcademiaSubAppBar(
+        title: AppStrings.courseDetailAppBarTitle,
+      ),
+      body: body,
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderLight, width: 1),
+        ),
+      ),
+      child: const TabBar(
+        isScrollable: false,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primary,
+        labelStyle: AppTextStyles.labelMedium,
+        unselectedLabelStyle: AppTextStyles.labelMedium,
+        tabs: [
+          Tab(text: AppStrings.courseOverviewTab),
+          Tab(text: AppStrings.courseAssignmentsTab),
+          Tab(text: AppStrings.courseFilesTab),
+          Tab(text: AppStrings.courseSharedSpaceTab),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotAvailableTab() {
+    return const AppEmptyState(
+      title: AppStrings.featureNotAvailableYetTitle,
+      description: AppStrings.featureNotAvailableYetDesc,
+      icon: Icons.hourglass_empty_rounded,
+    );
+  }
+
+  Widget _buildOverviewTab({
+    required CourseModel course,
+    required StudentCourseView? attempt,
+    required String? instructorName,
+    required CurriculumCourseModel? curriculumEntry,
+  }) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          StudentCourseHeaderCard(
+            course: course,
+            instructorName: instructorName,
+          ),
+          if (course.description.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.medium),
+            AppCard(
+              child: Text(
+                course.description,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+          if (curriculumEntry != null) ...[
+            const SizedBox(height: AppSpacing.medium),
+            _buildProgramSection(curriculumEntry),
+          ],
+          if (attempt != null) ...[
+            const SizedBox(height: AppSpacing.medium),
+            _buildAttemptSection(attempt),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// موقع المساق في الخطة: يظهر سواء كان الطالب مسجَّلًا فيه أم لا.
+  Widget _buildProgramSection(CurriculumCourseModel entry) {
+    final prerequisiteText = entry.prerequisiteText;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionTitle(AppStrings.courseProgramSectionTitle),
+          const Divider(color: AppColors.divider),
+          _infoRow(
+            AppStrings.academicLevelLabel,
+            AppStrings.academicLevelDisplay(entry.academicLevel),
+          ),
+          _infoRow(
+            AppStrings.requirementTypeLabel,
+            AppStrings.requirementTypeDisplay(entry.requirementType),
+          ),
+          if (prerequisiteText != null && prerequisiteText.trim().isNotEmpty)
+            _infoRow(AppStrings.prerequisiteLabel, prerequisiteText)
+          else
+            _infoRow(AppStrings.prerequisiteLabel, AppStrings.noPrerequisite),
+          const SizedBox(height: AppSpacing.extraSmall),
+          Text(
+            AppStrings.prerequisiteNotEnforcedNote,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+            textAlign: TextAlign.right,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// بيانات التسجيل: خاصة بالطرح والمحاولة، لا بالمساق الدائم.
+  Widget _buildAttemptSection(StudentCourseView attempt) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _sectionTitle(AppStrings.courseAttemptSectionTitle),
+          const Divider(color: AppColors.divider),
+          if (attempt.semesterName.isNotEmpty)
+            _infoRow(AppStrings.courseSemesterLabel, attempt.semesterName),
+          if (attempt.instructorName.isNotEmpty)
+            _infoRow(AppStrings.instructorNameLabel, attempt.instructorName),
+          if (attempt.section.isNotEmpty)
+            _infoRow(AppStrings.sectionLabel, attempt.section),
+          _infoRow(AppStrings.attemptLabel, '${attempt.attemptNumber}'),
+          if (attempt.completionStatus != null)
+            _infoRow(
+              AppStrings.statusLabel,
+              AppStrings.completionStatusDisplay(attempt.completionStatus),
+            ),
+          if (attempt.grade != null && attempt.grade!.trim().isNotEmpty)
+            _infoRow(AppStrings.gradeLabel, attempt.grade!),
+          if (attempt.isRetake) ...[
+            const SizedBox(height: AppSpacing.small),
+            Align(
+              alignment: Alignment.centerRight,
+              child: AppStatusBadge(
+                label: '${AppStrings.attemptLabel} ${attempt.attemptNumber}',
+                backgroundColor: AppColors.warning.withValues(alpha: 0.12),
+                foregroundColor: AppColors.warningDark,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: AppTextStyles.titleMedium.copyWith(
+        fontWeight: FontWeight.bold,
+        color: AppColors.secondary,
+      ),
+      textAlign: TextAlign.right,
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.small),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.right,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

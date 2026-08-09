@@ -1,16 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// مساق دائم في دليل المساقات (الكتالوج).
+///
+/// يمثّل المادة الأكاديمية نفسها ولا يرتبط بفصل دراسي أو مدرّس؛ تلك
+/// تفاصيل خاصة بالطرح وتوجد في CourseOfferingModel.
+///
+/// معرّف المستند تلقائي، و courseCode حقل عمل فريد يُتحقَّق منه في الخدمة.
 class CourseModel {
   final String id;
   final String courseCode;
   final String title;
   final String description;
-  final String instructorName;
-  final String department;
-  final int semester;
-  final String academicYear;
   final int creditHours;
+  final String departmentId;
   final String status;
+  final String source;
+  final String? externalId;
   final String createdBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -20,59 +25,77 @@ class CourseModel {
     required this.courseCode,
     required this.title,
     required this.description,
-    required this.instructorName,
-    required this.department,
-    required this.semester,
-    required this.academicYear,
     required this.creditHours,
+    required this.departmentId,
     required this.status,
-    required this.createdBy,
+    this.source = sourceManual,
+    this.externalId,
+    this.createdBy = '',
     this.createdAt,
     this.updatedAt,
   });
 
-  bool get isActive => status == 'active';
-  bool get isArchived => status == 'archived';
+  static const String statusActive = 'active';
+  static const String statusArchived = 'archived';
+  static const List<String> allowedStatuses = <String>[
+    statusActive,
+    statusArchived,
+  ];
+
+  static const String sourceManual = 'manual';
+  static const String sourceApi = 'api';
+
+  bool get isActive => status == statusActive;
+  bool get isArchived => status == statusArchived;
+
+  /// توحيد رمز المساق للمقارنة والتخزين.
+  static String normalizeCode(String code) => code.trim().toUpperCase();
 
   factory CourseModel.fromFirestore(Map<String, dynamic> data, String id) {
     DateTime? parseDateTime(dynamic value) {
-      if (value is Timestamp) {
-        return value.toDate();
-      } else if (value is String) {
-        return DateTime.tryParse(value);
-      }
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.tryParse(value);
       return null;
     }
 
     return CourseModel(
       id: id,
-      courseCode: data['courseCode'] as String? ?? '',
+      courseCode: (data['courseCode'] as String? ?? '').trim(),
       title: data['title'] as String? ?? '',
       description: data['description'] as String? ?? '',
-      instructorName: data['instructorName'] as String? ?? '',
-      department: data['department'] as String? ?? '',
-      semester: (data['semester'] as num?)?.toInt() ?? 1,
-      academicYear: data['academicYear'] as String? ?? '',
       creditHours: (data['creditHours'] as num?)?.toInt() ?? 3,
-      status: data['status'] as String? ?? 'active',
+      /*
+       * توافق انتقالي حتى ترحيل البيانات: المستندات القديمة تحتوي على
+       * الحقل النصي department بدل departmentId. نقرأ الفارغ بدل الفشل،
+       * بينما تفرض الخدمة وجود departmentId عند الكتابة.
+       */
+      departmentId: data['departmentId'] as String? ?? '',
+      status: data['status'] as String? ?? statusActive,
+      source: data['source'] as String? ?? sourceManual,
+      externalId: data['externalId'] as String?,
       createdBy: data['createdBy'] as String? ?? '',
       createdAt: parseDateTime(data['createdAt']),
       updatedAt: parseDateTime(data['updatedAt']),
     );
   }
 
+  bool get hasDepartment => departmentId.trim().isNotEmpty;
+
+  /// الحقول التي تُكتب إلى Firestore.
+  ///
+  /// الحقول القديمة semesterId و instructorName و academicYear و semester
+  /// لم تعد تُكتب؛ فهي خاصة بالطرح وليست بالمساق الدائم.
   Map<String, dynamic> toMap() {
     return {
       'courseCode': courseCode,
       'title': title,
       'description': description,
-      'instructorName': instructorName,
-      'department': department,
-      'semester': semester,
-      'academicYear': academicYear,
       'creditHours': creditHours,
+      'departmentId': departmentId,
       'status': status,
+      'source': source,
       'createdBy': createdBy,
+      if (externalId != null) 'externalId': externalId,
     };
   }
 
@@ -81,12 +104,11 @@ class CourseModel {
     String? courseCode,
     String? title,
     String? description,
-    String? instructorName,
-    String? department,
-    int? semester,
-    String? academicYear,
     int? creditHours,
+    String? departmentId,
     String? status,
+    String? source,
+    String? externalId,
     String? createdBy,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -96,12 +118,11 @@ class CourseModel {
       courseCode: courseCode ?? this.courseCode,
       title: title ?? this.title,
       description: description ?? this.description,
-      instructorName: instructorName ?? this.instructorName,
-      department: department ?? this.department,
-      semester: semester ?? this.semester,
-      academicYear: academicYear ?? this.academicYear,
       creditHours: creditHours ?? this.creditHours,
+      departmentId: departmentId ?? this.departmentId,
       status: status ?? this.status,
+      source: source ?? this.source,
+      externalId: externalId ?? this.externalId,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

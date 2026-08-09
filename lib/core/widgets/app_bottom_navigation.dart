@@ -87,11 +87,18 @@ class AcademiaBottomNavigation extends StatelessWidget {
     required String label,
   }) {
     final isSelected = currentIndex == index;
-    return _AcademiaNavigationItem(
-      icon: icon,
-      label: label,
-      selected: isSelected,
-      onTap: () => onTap(index),
+    /*
+     * العنصر المحدَّد وحده يعرض نصه، فيصبح أعرض من البقية. على شاشة بعرض
+     * 360 لا يتسع الصف لخمسة عناصر أحدها بنص، لذلك يُجعل كل عنصر مرنًا
+     * ليتقلّص النص عند الحاجة بدل أن يفيض الصف.
+     */
+    return Flexible(
+      child: _AcademiaNavigationItem(
+        icon: icon,
+        label: label,
+        selected: isSelected,
+        onTap: () => onTap(index),
+      ),
     );
   }
 }
@@ -140,10 +147,15 @@ class _AcademiaNavigationItem extends StatelessWidget {
                 ),
                 if (selected) ...[
                   const SizedBox(width: AppSpacing.extraSmall),
-                  Text(
-                    label,
-                    style: AppTextStyles.bottomNavigationSelected.copyWith(
-                      color: Colors.white,
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: AppTextStyles.bottomNavigationSelected.copyWith(
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_menu_tile.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
+import '../../academics/providers/academic_structure_provider.dart';
 import '../../courses/models/course_model.dart';
 
 class AdminCourseDetailsScreen extends StatelessWidget {
@@ -132,25 +135,21 @@ class AdminCourseDetailsScreen extends StatelessWidget {
                         AppStrings.courseCodeLabel,
                         course.courseCode,
                       ),
+                      /*
+                       * المدرّس والفصل الدراسي لم يعودا من بيانات المساق:
+                       * كلاهما يخص الطرح، ويُعرضان في شاشة الطروحات.
+                       */
                       _buildInfoRow(
-                        Icons.person_rounded,
-                        AppStrings.instructorNameLabel,
-                        course.instructorName,
-                      ),
-                      _buildInfoRow(
-                        Icons.school_rounded,
-                        AppStrings.departmentLabel,
-                        course.department,
-                      ),
-                      _buildInfoRow(
-                        Icons.calendar_today_rounded,
-                        AppStrings.semesterLabel,
-                        '${course.semester} (${course.academicYear})',
+                        Icons.account_tree_rounded,
+                        AppStrings.courseDepartmentLabel,
+                        context
+                            .watch<AcademicStructureProvider>()
+                            .departmentNameFor(course.departmentId),
                       ),
                       _buildInfoRow(
                         Icons.hourglass_bottom_rounded,
                         AppStrings.creditHoursLabel,
-                        '${course.creditHours} ${AppStrings.creditHoursLabel}',
+                        '${course.creditHours} ${AppStrings.creditHoursSuffix}',
                       ),
                       if (course.description.isNotEmpty) ...[
                         const Divider(height: 20, color: AppColors.divider),
@@ -165,6 +164,25 @@ class AdminCourseDetailsScreen extends StatelessWidget {
                   ),
                 ),
               ),
+
+              // نقطة الدخول إلى إدارة الطروحات تصل في المرحلة 7E؛ تبقى معطّلة
+              // هنا حتى لا يوحي وجودها بأن التدفق منفَّذ.
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenHorizontal,
+                ),
+                child: AppCard(
+                  padding: EdgeInsets.zero,
+                  child: AppMenuTile(
+                    icon: Icons.event_repeat_rounded,
+                    title: AppStrings.courseOfferingsTileTitle,
+                    subtitle: AppStrings.courseOfferingsTileDesc,
+                    showDivider: false,
+                    enabled: false,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.medium),
 
               // Tab Selector
               TabBar(

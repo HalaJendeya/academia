@@ -30,13 +30,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final TextEditingController _emailController;
 
   String? _selectedMajor;
-  String? _selectedAcademicLevel;
+
+  /// المستوى الأكاديمي رقم صحيح؛ النص العربي يُبنى عند العرض فقط.
+  int? _selectedAcademicLevel;
 
   bool _initialized = false;
 
   final List<String> _majors = AppStrings.majorsList;
 
-  final List<String> _academicLevels = AppStrings.academicLevelsList;
+  final List<int> _academicLevels = AppStrings.academicLevelValues;
 
   @override
   void initState() {
@@ -138,10 +140,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     // Dynamic academic levels dropdown mapping
-    final List<String> dropdownLevels = List.from(_academicLevels);
+    final List<int> dropdownLevels = List.from(_academicLevels);
     if (_selectedAcademicLevel != null &&
         !_academicLevels.contains(_selectedAcademicLevel)) {
       dropdownLevels.add(_selectedAcademicLevel!);
+      dropdownLevels.sort();
     }
 
     return AuthenticatedPageScaffold(
@@ -271,10 +274,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               // Academic Level Dropdown Selector (Level 1 to 5)
               _buildLabel(AppStrings.academicLevelLabel),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<int>(
                 initialValue:
                     _selectedAcademicLevel ??
-                    AppStrings.academicLevelsList.first,
+                    AppStrings.academicLevelValues.first,
                 alignment: Alignment.centerRight,
                 hint: Align(
                   alignment: Alignment.centerRight,
@@ -290,16 +293,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     borderRadius: BorderRadius.circular(AppRadius.button),
                   ),
                 ),
-                items: dropdownLevels.map((String level) {
-                  return DropdownMenuItem<String>(
+                items: dropdownLevels.map((int level) {
+                  return DropdownMenuItem<int>(
                     value: level,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: Text(level),
+                      child: Text(AppStrings.academicLevelDisplay(level)),
                     ),
                   );
                 }).toList(),
-                onChanged: (String? newValue) {
+                onChanged: (int? newValue) {
                   setState(() {
                     _selectedAcademicLevel = newValue;
                   });

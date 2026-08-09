@@ -125,22 +125,11 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteCourse(String courseId) async {
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      await _service.deleteCourse(courseId);
-      return true;
-    } on CourseException catch (e) {
-      _errorMessage = e.message;
-      return false;
-    } catch (e) {
-      _errorMessage = AppStrings.courseSaveError;
-      return false;
-    } finally {
-      notifyListeners();
-    }
-  }
+  /*
+   * أُزيلت deleteCourse في المرحلة 6C. الإزالة المعتمدة للمساق هي
+   * archiveCourse، لأن الحذف النهائي يترك سجلات التسجيل بلا مساق
+   * وتمنعه قواعد Firestore.
+   */
 
   void clearError() {
     _errorMessage = null;

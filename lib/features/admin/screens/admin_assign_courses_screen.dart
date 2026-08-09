@@ -13,9 +13,12 @@ import '../../../core/widgets/app_status_badge.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
 import '../../courses/models/course_model.dart';
+import '../../courses/models/course_offering_model.dart';
 import '../../courses/providers/course_provider.dart';
+import '../../courses/providers/course_offering_provider.dart';
 import '../../enrollments/models/enrollment_model.dart';
 import '../../enrollments/providers/enrollment_provider.dart';
+import '../../semesters/providers/semester_provider.dart';
 import '../models/admin_student_model.dart';
 
 class AdminAssignCoursesScreen extends StatefulWidget {
@@ -50,6 +53,7 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
         if (!mounted) return;
 
         context.read<CourseProvider>().listenToCourses();
+        context.read<SemesterProvider>().listenToSemesters();
         final enrollmentProvider = context.read<EnrollmentProvider>();
 
         if (enrollmentProvider.selectedStudent?.uid != student.uid) {
@@ -61,6 +65,25 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
     } else {
       _hasInitialized = true;
     }
+  }
+
+  /*
+   * التسجيل يتم في طرح المساق ضمن الفصل الحالي، لا في المساق الدائم نفسه.
+   * لذلك نتابع طروحات الفصل الحالي هنا، ونعيد الاشتراك عندما يتغيّر الفصل
+   * الحالي فقط — المقارنة بـ semesterId تمنع إعادة الاشتراك في كل إعادة بناء.
+   */
+  void _syncOfferingsWithCurrentSemester(String? currentSemesterId) {
+    if (currentSemesterId == null) return;
+
+    final offeringProvider = context.read<CourseOfferingProvider>();
+    if (offeringProvider.semesterId == currentSemesterId) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CourseOfferingProvider>().listenToSemesterOfferings(
+        currentSemesterId,
+      );
+    });
   }
 
   void _showRemoveDialog(
@@ -90,8 +113,8 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
               onPressed: () async {
                 Navigator.of(ctx).pop();
                 final provider = context.read<EnrollmentProvider>();
-                final success = await provider.removeCourse(
-                  enrollment.courseId,
+                final success = await provider.removeEnrollment(
+                  enrollment.offeringId,
                 );
                 if (mounted) {
                   if (success) {
@@ -132,6 +155,11 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
       return const AdminAccessGuard(child: Scaffold(body: AppLoadingState()));
     }
 
+    final currentSemester = context.watch<SemesterProvider>().currentSemester;
+    _syncOfferingsWithCurrentSemester(currentSemester?.id);
+
+    final offeringProvider = context.watch<CourseOfferingProvider>();
+
     final courses = List<CourseModel>.from(
       context.watch<CourseProvider>().courses,
     );
@@ -153,7 +181,18 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
           centerTitle: true,
           leading: const AdminBackButton(),
         ),
-        body: provider.isLoadingEnrollments
+        body: currentSemester == null
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(AppSpacing.screenHorizontal),
+                  child: Text(
+                    AppStrings.noCurrentSemesterForAssignment,
+                    style: TextStyle(color: AppColors.warningDark),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            : provider.isLoadingEnrollments
             ? const AppLoadingState()
             : Column(
                 children: [
@@ -179,19 +218,22 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
                       itemCount: filtered.length,
                       itemBuilder: (context, index) {
                         final course = filtered[index];
-                        final enrollment = provider.selectedStudentEnrollments
-                            .firstWhere(
-                              (e) => e.courseId == course.id,
-                              orElse: () => const EnrollmentModel(
-                                id: '',
-                                userId: '',
-                                courseId: '',
-                                status: '',
-                                assignedBy: '',
-                              ),
-                            );
 
-                        return _buildCourseRow(course, enrollment, provider);
+                        // الطرح الفعلي لهذا المساق في الفصل الحالي، إن وُجد.
+                        final offering = offeringProvider
+                            .activeOfferingForCourse(course.id);
+
+                        // بحث قابل للإرجاع الفارغ بدل إنشاء كائن وهمي.
+                        final enrollment = offering == null
+                            ? null
+                            : provider.enrollmentForOffering(offering.id);
+
+                        return _buildCourseRow(
+                          course,
+                          offering,
+                          enrollment,
+                          provider,
+                        );
                       },
                     ),
                   ),
@@ -203,17 +245,21 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
 
   Widget _buildCourseRow(
     CourseModel course,
-    EnrollmentModel enrollment,
+    CourseOfferingModel? offering,
+    EnrollmentModel? enrollment,
     EnrollmentProvider provider,
   ) {
     String statusText;
     Color statusColor;
-    if (enrollment.id.isEmpty) {
+    if (enrollment == null) {
       statusText = AppStrings.notEnrolledStatus;
       statusColor = AppColors.textSecondary;
     } else if (enrollment.isActive) {
       statusText = AppStrings.activeEnrollmentStatus;
       statusColor = AppColors.activeStatus;
+    } else if (enrollment.isCompleted) {
+      statusText = AppStrings.completedEnrollmentStatus;
+      statusColor = AppColors.secondary;
     } else {
       statusText = AppStrings.removedEnrollmentStatus;
       statusColor = AppColors.danger;
@@ -272,24 +318,28 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.small),
+          /*
+           * اسم المدرّس يأتي من الطرح لا من المساق. غياب الطرح يعني أن المساق
+           * غير مطروح هذا الفصل، ولا يمكن التسجيل فيه أصلًا.
+           */
           Text(
-            '${AppStrings.instructorNameLabel}: ${course.instructorName}',
+            offering == null
+                ? AppStrings.courseNotOfferedThisSemester
+                : '${AppStrings.instructorNameLabel}: '
+                      '${offering.instructorName}',
             style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.small),
-          Text(
-            '${AppStrings.semesterLabel} ${course.semester} - ${course.academicYear}',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: offering == null
+                  ? AppColors.warningDark
+                  : AppColors.textSecondary,
             ),
           ),
           const Divider(height: 24, color: AppColors.divider),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (enrollment.id.isEmpty)
+              if (offering == null)
+                const SizedBox.shrink()
+              else if (enrollment == null)
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -304,8 +354,8 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
                           final scaffoldMessenger = ScaffoldMessenger.of(
                             context,
                           );
-                          final success = await provider.assignCourse(
-                            course.id,
+                          final success = await provider.assignToOffering(
+                            offering.id,
                           );
                           if (mounted) {
                             if (success) {
@@ -369,8 +419,8 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
                           final scaffoldMessenger = ScaffoldMessenger.of(
                             context,
                           );
-                          final success = await provider.restoreCourse(
-                            course.id,
+                          final success = await provider.restoreEnrollment(
+                            offering.id,
                           );
                           if (mounted) {
                             if (success) {

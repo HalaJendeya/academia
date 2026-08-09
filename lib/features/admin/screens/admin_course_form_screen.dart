@@ -9,6 +9,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
+import '../../academics/providers/academic_structure_provider.dart';
 import '../../courses/models/course_model.dart';
 import '../../courses/providers/course_provider.dart';
 
@@ -25,13 +26,10 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
   final _titleController = TextEditingController();
   final _codeController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _instructorController = TextEditingController();
-  final _departmentController = TextEditingController();
-  final _semesterController = TextEditingController();
-  final _academicYearController = TextEditingController();
 
   int _selectedCreditHours = 3;
-  String _selectedStatus = 'active';
+  String _selectedStatus = CourseModel.statusActive;
+  String? _selectedDepartmentId;
 
   CourseModel? _editingCourse;
   bool _isEditMode = false;
@@ -48,13 +46,18 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
         _titleController.text = course.title;
         _codeController.text = course.courseCode;
         _descriptionController.text = course.description;
-        _instructorController.text = course.instructorName;
-        _departmentController.text = course.department;
-        _semesterController.text = course.semester.toString();
-        _academicYearController.text = course.academicYear;
         _selectedCreditHours = course.creditHours;
         _selectedStatus = course.status;
+        _selectedDepartmentId = course.hasDepartment
+            ? course.departmentId
+            : null;
       }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AcademicStructureProvider>().listenToDepartments();
+      });
+
       _initialized = true;
     }
   }
@@ -64,11 +67,25 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
     _titleController.dispose();
     _codeController.dispose();
     _descriptionController.dispose();
-    _instructorController.dispose();
-    _departmentController.dispose();
-    _semesterController.dispose();
-    _academicYearController.dispose();
     super.dispose();
+  }
+
+  /*
+   * القيمة الفعلية للقسم المختار.
+   *
+   * القسم يحل محل الفصل الدراسي والمدرّس في هذه الشاشة: المساق كيان دائم،
+   * أما الفصل والمدرّس فيخصّان الطرح وتُدار في شاشة الطروحات.
+   *
+   * عند تعديل مساق قديم بلا قسم نُرجع null حتى يُجبر التحقق المشرفَ على
+   * اختيار قسم قبل الحفظ.
+   */
+  String? _effectiveDepartmentId(AcademicStructureProvider structureProvider) {
+    final selected = _selectedDepartmentId;
+    if (selected != null &&
+        structureProvider.departmentsById.containsKey(selected)) {
+      return selected;
+    }
+    return null;
   }
 
   Widget _buildLabel(String text) {
@@ -98,20 +115,25 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
   }
 
   Future<void> _submitForm() async {
+    final departmentId = _effectiveDepartmentId(
+      context.read<AcademicStructureProvider>(),
+    );
+
     if (_formKey.currentState?.validate() ?? false) {
+      if (departmentId == null) return;
+
       final provider = context.read<CourseProvider>();
       final course = CourseModel(
         id: _isEditMode ? _editingCourse!.id : '',
         courseCode: _codeController.text.trim(),
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        instructorName: _instructorController.text.trim(),
-        department: _departmentController.text.trim(),
-        semester: int.tryParse(_semesterController.text.trim()) ?? 1,
-        academicYear: _academicYearController.text.trim(),
+        departmentId: departmentId,
         creditHours: _selectedCreditHours,
         status: _selectedStatus,
         createdBy: _isEditMode ? _editingCourse!.createdBy : '',
+        source: _isEditMode ? _editingCourse!.source : CourseModel.sourceManual,
+        externalId: _isEditMode ? _editingCourse!.externalId : null,
       );
 
       bool success;
@@ -147,9 +169,53 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
     }
   }
 
+  /// لا يمكن إنشاء مساق قبل وجود قسم أكاديمي واحد على الأقل.
+  ///
+  /// شاشة إدارة الأقسام ما زالت ضمن المرحلة 7D، لذلك تعرض هذه الحالة الرسالة
+  /// دون إجراء انتقال إلى شاشة غير موجودة بعد.
+  Widget _buildNoDepartmentsState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+        child: AppCard(
+          backgroundColor: AppColors.warning.withValues(alpha: 0.05),
+          borderColor: AppColors.warning.withValues(alpha: 0.2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.domain_disabled_rounded,
+                size: 48,
+                color: AppColors.warningDark,
+              ),
+              const SizedBox(height: AppSpacing.medium),
+              Text(
+                AppStrings.noDepartmentsForCourseTitle,
+                style: AppTextStyles.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.warningDark,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.small),
+              Text(
+                AppStrings.noDepartmentsForCourseDesc,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CourseProvider>();
+    final structureProvider = context.watch<AcademicStructureProvider>();
 
     return AdminAccessGuard(
       child: Scaffold(
@@ -162,7 +228,9 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
           centerTitle: true,
           leading: const AdminBackButton(),
         ),
-        body: SingleChildScrollView(
+        body: structureProvider.departments.isEmpty
+            ? _buildNoDepartmentsState()
+            : SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
           child: Form(
             key: _formKey,
@@ -203,31 +271,17 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
                           return null;
                         },
                       ),
-                      _buildLabel(AppStrings.instructorNameLabel),
-                      TextFormField(
-                        controller: _instructorController,
-                        decoration: const InputDecoration(
-                          hintText: AppStrings.instructorHintValue,
+                      /*
+                       * التفرّد لا يمكن التحقق منه في النموذج: قواعد Firestore
+                       * لا تنفّذ استعلامات، لذلك يفحصه CourseService عند الحفظ
+                       * ويعود الخطأ رسالةً واضحة. نوضّح القاعدة هنا مسبقًا.
+                       */
+                      const SizedBox(height: 6),
+                      Text(
+                        AppStrings.courseCodeUniqueNote,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textMuted,
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppStrings.instructorRequired;
-                          }
-                          return null;
-                        },
-                      ),
-                      _buildLabel(AppStrings.departmentLabel),
-                      TextFormField(
-                        controller: _departmentController,
-                        decoration: const InputDecoration(
-                          hintText: AppStrings.departmentHintValue,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppStrings.departmentRequired;
-                          }
-                          return null;
-                        },
                       ),
                       _buildLabel(AppStrings.courseDescriptionLabel),
                       TextFormField(
@@ -242,41 +296,38 @@ class _AdminCourseFormScreenState extends State<AdminCourseFormScreen> {
                 ),
                 const SizedBox(height: AppSpacing.large),
 
-                // Section 2: معلومات الفصل
+                // Section 2: القسم والساعات المعتمدة
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(AppStrings.courseSemesterInfoSection),
+                      _buildSectionHeader(AppStrings.courseAcademicInfoSection),
                       const Divider(color: AppColors.divider),
                       const SizedBox(height: AppSpacing.small),
-                      _buildLabel(AppStrings.semesterLabel),
-                      TextFormField(
-                        controller: _semesterController,
-                        keyboardType: TextInputType.number,
+                      _buildLabel(AppStrings.courseDepartmentLabel),
+                      DropdownButtonFormField<String>(
+                        initialValue: _effectiveDepartmentId(structureProvider),
+                        isExpanded: true,
                         decoration: const InputDecoration(
-                          hintText: AppStrings.semesterHintValue,
+                          hintText: AppStrings.courseDepartmentSelectHint,
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppStrings.semesterInvalid;
-                          }
-                          final parsed = int.tryParse(value.trim());
-                          if (parsed == null || parsed <= 0) {
-                            return AppStrings.semesterInvalid;
-                          }
-                          return null;
+                        items: structureProvider.departments.map((department) {
+                          return DropdownMenuItem<String>(
+                            value: department.id,
+                            child: Text(
+                              department.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedDepartmentId = value;
+                          });
                         },
-                      ),
-                      _buildLabel(AppStrings.academicYearLabel),
-                      TextFormField(
-                        controller: _academicYearController,
-                        decoration: const InputDecoration(
-                          hintText: AppStrings.academicYearHintValue,
-                        ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return AppStrings.academicYearRequired;
+                            return AppStrings.courseDepartmentRequired;
                           }
                           return null;
                         },

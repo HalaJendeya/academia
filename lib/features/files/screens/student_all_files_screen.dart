@@ -1,4 +1,4 @@
-// lib/features/courses/screens/student_courses_screen.dart
+// lib/features/files/screens/student_all_files_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,29 +14,31 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
-import '../models/student_course.dart';
-import '../providers/student_course_provider.dart';
-import '../widgets/student_course_card.dart';
-import '../widgets/student_course_status_tabs.dart';
+import '../models/student_app_file.dart';
+import '../providers/student_file_provider.dart';
+import '../widgets/student_all_file_card.dart';
+import '../widgets/student_download_progress_card.dart';
+import '../widgets/student_download_progress_sheet.dart';
+import '../widgets/student_file_filter_tabs.dart';
 
-class CoursesScreen extends StatefulWidget {
-  const CoursesScreen({super.key});
+class AllFilesScreen extends StatefulWidget {
+  const AllFilesScreen({super.key});
 
   @override
-  State<CoursesScreen> createState() => _CoursesScreenState();
+  State<AllFilesScreen> createState() => _AllFilesScreenState();
 }
 
-class _CoursesScreenState extends State<CoursesScreen> {
+class _AllFilesScreenState extends State<AllFilesScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  String _selectedStatus = Course.statusActive;
+  String _selectedFilter = FileFilterTabs.filterAll;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CourseProvider>().loadCourses();
+      context.read<StudentFileProvider>().loadAllFiles();
     });
     _searchController.addListener(() {
       setState(() {
@@ -55,52 +57,79 @@ class _CoursesScreenState extends State<CoursesScreen> {
     handleMainNavigation(context, index, currentIndex: 1);
   }
 
-  void _openAllFiles() {
-    Navigator.pushNamed(context, AppRoutes.allFiles);
+  void _openOfflineFiles() {
+    Navigator.pushNamed(context, AppRoutes.offlineFiles);
   }
 
-  void _openCourseDetail(String courseId) {
-    Navigator.pushNamed(context, AppRoutes.courseDetail, arguments: courseId);
+  void _openFilePreview(String fileId) {
+    Navigator.pushNamed(context, AppRoutes.filePreview, arguments: fileId);
   }
 
-  List<Course> _filterCourses(List<Course> courses) {
-    if (_searchQuery.isEmpty) return courses;
-    final query = _searchQuery.toLowerCase();
-    return courses.where((course) {
-      return course.title.toLowerCase().contains(query) ||
-          course.instructorName.toLowerCase().contains(query);
-    }).toList();
+  void _showDownloadProgress(StudentAppFile file) {
+    DownloadProgressSheet.show(
+      context,
+      file: file,
+      downloadProgress: 0.65,
+      downloadedSizeLabel: '12MB',
+      totalSizeLabel: '18MB',
+      remainingTimeLabel: AppStrings.downloadRemainingTimeLabel,
+    );
+  }
+
+  void _showDeleteUnderDevelopment() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(AppStrings.screenUnderDevelopment),
+        backgroundColor: AppColors.primary,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  List<StudentAppFile> _filterFiles(List<StudentAppFile> files) {
+    var result = files;
+
+    if (_selectedFilter == FileFilterTabs.filterPdf) {
+      result = result.where((f) => f.type == StudentAppFile.typePdf).toList();
+    } else if (_selectedFilter == FileFilterTabs.filterPresentations) {
+      result = result.where((f) => f.type == StudentAppFile.typePpt).toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      result = result
+          .where((f) => f.title.toLowerCase().contains(query))
+          .toList();
+    }
+
+    return result;
   }
 
   @override
   Widget build(BuildContext context) {
-    final courseProvider = context.watch<CourseProvider>();
+    final fileProvider = context.watch<StudentFileProvider>();
 
-    final hasNoData =
-        courseProvider.activeCourses.isEmpty &&
-            courseProvider.archivedCourses.isEmpty;
-
-    if (courseProvider.isLoadingCourses && hasNoData) {
+    if (fileProvider.isLoadingAllFiles && fileProvider.allFiles.isEmpty) {
       return _buildScaffold(
-        body: const AppLoadingState(message: AppStrings.coursesLoadError),
+        body: const AppLoadingState(message: AppStrings.filesLoadError),
       );
     }
 
-    if (courseProvider.coursesErrorMessage != null && hasNoData) {
+    if (fileProvider.allFilesErrorMessage != null &&
+        fileProvider.allFiles.isEmpty) {
       return _buildScaffold(
         body: AppErrorState(
-          message: courseProvider.coursesErrorMessage!,
+          message: fileProvider.allFilesErrorMessage!,
           onRetry: () {
-            context.read<CourseProvider>().loadCourses(forceRefresh: true);
+            context.read<StudentFileProvider>().loadAllFiles(
+              forceRefresh: true,
+            );
           },
         ),
       );
     }
 
-    final sourceCourses = _selectedStatus == Course.statusActive
-        ? courseProvider.activeCourses
-        : courseProvider.archivedCourses;
-    final filteredCourses = _filterCourses(sourceCourses);
+    final filteredFiles = _filterFiles(fileProvider.allFiles);
 
     return _buildScaffold(
       body: SingleChildScrollView(
@@ -112,26 +141,38 @@ class _CoursesScreenState extends State<CoursesScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildHeader(),
+              Text(
+                AppStrings.allFilesTitle,
+                style: AppTextStyles.headlineSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+                textAlign: TextAlign.right,
+              ),
               const SizedBox(height: AppSpacing.medium),
               _buildSearchField(),
               const SizedBox(height: AppSpacing.medium),
-              CourseStatusTabs(
-                selectedStatus: _selectedStatus,
-                onStatusChanged: (status) {
-                  setState(() => _selectedStatus = status);
+              FileFilterTabs(
+                selectedFilter: _selectedFilter,
+                onFilterChanged: (filter) {
+                  setState(() => _selectedFilter = filter);
                 },
+                onOfflineTap: _openOfflineFiles,
               ),
               const SizedBox(height: AppSpacing.medium),
-              if (filteredCourses.isEmpty)
+              if (filteredFiles.isEmpty)
                 _buildEmptyState()
               else
-                ...filteredCourses.map(
-                      (course) => Padding(
+                ...filteredFiles.map(
+                      (file) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.medium),
-                    child: CourseCard(
-                      course: course,
-                      onTap: () => _openCourseDetail(course.id),
+                    child: file.isDownloading
+                        ? DownloadProgressCard(file: file)
+                        : AllFileCard(
+                      file: file,
+                      onTap: () => _openFilePreview(file.id),
+                      onDownloadTap: () => _showDownloadProgress(file),
+                      onDeleteTap: _showDeleteUnderDevelopment,
                     ),
                   ),
                 ),
@@ -149,48 +190,12 @@ class _CoursesScreenState extends State<CoursesScreen> {
       onNavigationTap: _handleNavigation,
       appBar: const AcademiaMainAppBar(
         title: AppStrings.appName,
+        showBackButton: true,
         showProfile: true,
         showSearch: false,
         showNotifications: true,
       ),
       body: body,
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: Text(
-            AppStrings.myCoursesTitle,
-            style: AppTextStyles.headlineSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.small),
-        Flexible(
-          fit: FlexFit.loose,
-          child: ElevatedButton(
-            onPressed: _openAllFiles,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.textOnPrimary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.medium,
-                vertical: AppSpacing.small,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.button),
-              ),
-            ),
-            child: const Text(AppStrings.coursesFilesButtonLabel),
-          ),
-        ),
-      ],
     );
   }
 
@@ -200,7 +205,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       textAlign: TextAlign.right,
       style: AppTextStyles.bodyMedium,
       decoration: InputDecoration(
-        hintText: AppStrings.courseSearchHint,
+        hintText: AppStrings.allFilesSearchHint,
         hintStyle: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.textDisabled,
         ),
@@ -233,7 +238,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.extraLarge),
       child: Center(
         child: Text(
-          AppStrings.noCoursesFoundMessage,
+          AppStrings.noFilesFoundMessage,
           style: AppTextStyles.bodyMedium,
         ),
       ),

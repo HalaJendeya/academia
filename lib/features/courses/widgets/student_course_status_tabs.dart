@@ -22,8 +22,8 @@ class CourseStatusTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        const Spacer(),
         _StatusChip(
           label: AppStrings.archivedCoursesFilter,
           isSelected: selectedStatus == Course.statusArchived,

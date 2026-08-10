@@ -423,4 +423,37 @@ abstract final class AppStrings {
   static const String coursesArchiveCompletedPrefix = 'تم إنجاز';
   static const String coursesArchiveCompletedSuffix = 'مساقات';
   static const String noArchivedCoursesMessage = 'لا توجد مقررات مؤرشفة';
+
+  // lib/core/constants/app_strings.dart
+
+  // Files feature
+  // lib/core/constants/app_strings.dart
+
+  // Files feature
+  static const String filesLoadError = 'تعذر تحميل الملفات';
+  static const String fileDetailLoadError = 'تعذر تحميل بيانات الملف';
+  static const String offlineFileBadgeLabel = 'بدون إنترنت';
+  static const String fileInfoSectionTitle = 'معلومات الملف';
+  static const String fileInfoSubjectLabel = 'المساق';
+  static const String fileInfoSizeLabel = 'حجم الملف';
+  static const String fileInfoDateLabel = 'تاريخ الإضافة';
+  static const String storageUsageTitle = 'المساحة المستخدمة';
+  static const String storageUsageFilesSuffix = 'ملفات';
+  static const String fileAllFilter = 'كل الملفات';
+  static const String filePdfFilter = 'PDF';
+  static const String fileDownloadedFilter = 'المحملة';
+  static const String filePresentationsFilter = 'عروض';
+  static const String allFilesTitle = 'الملفات';
+  static const String allFilesSearchHint = 'ابحث عن ملف، مساق...';
+  static const String fileOpenExternalAction = 'فتح خارجي';
+  static const String fileShareAction = 'مشاركة';
+  static const String fileDownloadAction = 'تحميل';
+  static const String offlineFilesTitle = 'الملفات المحملة';
+  static const String noOfflineFilesMessage = 'لا توجد ملفات محملة بعد';
+  static const String downloadProgressSheetTitle = 'جاري تحميل الملف';
+  static const String downloadProgressCompleteLabel = 'مكتمل';
+  static const String cancelDownloadAction = 'إلغاء التحميل';
+  static const String downloadRemainingTimeLabel = 'يتبقى حوالي 10 ثوان...';
+  static const String deleteFileAction = 'حذف';
+
 }

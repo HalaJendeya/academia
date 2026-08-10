@@ -27,4 +27,9 @@ abstract final class AppRoutes {
   static const String courses = '/courses';
   static const String courseDetail = '/courses/detail';
   static const String coursesArchive = '/courses/archive';
+
+  // Files feature
+  static const String allFiles = '/files';
+  static const String filePreview = '/files/preview';
+  static const String offlineFiles = '/files/offline';
 }

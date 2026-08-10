@@ -6,7 +6,13 @@ abstract final class AppColors {
   // ---------------------------------------------------------------------------
   // Brand colors
   // ---------------------------------------------------------------------------
+  // lib/core/theme/app_colors.dart
 
+  // ---------------------------------------------------------------------------
+  // Success colors
+  // ---------------------------------------------------------------------------
+
+  static const Color success = Color(0xFF2E7D32);
   static const Color primary = Color(0xFFFF8B00);
   static const Color primaryDark = Color(0xFFC27803);
   static const Color primaryDarker = Color(0xFF713B00);

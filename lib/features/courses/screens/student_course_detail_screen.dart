@@ -18,6 +18,7 @@ import '../providers/student_course_provider.dart';
 import '../widgets/student_assignment_preview_card.dart';
 import '../widgets/student_course_header_card.dart';
 import '../widgets/student_file_list_item_card.dart';
+import '../widgets/student_file_preview_card.dart';
 import '../widgets/student_next_session_card.dart';
 
 class CourseDetailScreen extends StatefulWidget {
@@ -167,7 +168,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
             AssignmentPreviewCard(assignment: firstAssignment),
             const SizedBox(height: AppSpacing.medium),
           ],
-          if (firstFile != null) FileListItemCard(file: firstFile),
+          if (firstFile != null) FilePreviewCard(file: firstFile),
         ],
       ),
     );

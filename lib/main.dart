@@ -21,6 +21,8 @@ import 'features/courses/services/student_course_service.dart';
 import 'features/courses/providers/student_course_file_provider.dart';
 import 'features/courses/services/student_course_file_service.dart';
 import 'firebase_options.dart';
+import 'features/files/providers/student_file_provider.dart';
+import 'features/files/services/student_file_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,7 +68,12 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (_) => CourseFileProvider(CourseFileService()),
         ),
+        ChangeNotifierProvider(
+          create: (_) => StudentFileProvider(StudentFileService()),
+        ),
+
       ],
+
       child: const AkademiaApp(),
     ),
   );

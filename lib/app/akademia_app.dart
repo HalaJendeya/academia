@@ -27,7 +27,9 @@ import '../features/profile/screens/help_faq_screen.dart';
 import '../features/courses/screens/student_courses_screen.dart';
 import '../features/courses/screens/student_course_detail_screen.dart';
 import '../features/courses/screens/student_completed_courses_archive_screen.dart';
-
+import '../features/files/screens/student_all_files_screen.dart';
+import '../features/files/screens/student_file_preview_screen.dart';
+import '../features/files/screens/student_offline_files_screen.dart';
 class AkademiaApp extends StatelessWidget {
   const AkademiaApp({super.key});
 
@@ -80,6 +82,9 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.courseDetail: (context) => const CourseDetailScreen(),
         AppRoutes.coursesArchive: (context) =>
         const CompletedCoursesArchiveScreen(),
+        AppRoutes.allFiles: (context) => const AllFilesScreen(),
+        AppRoutes.filePreview: (context) => const FilePreviewScreen(),
+        AppRoutes.offlineFiles: (context) => const OfflineFilesScreen(),
       },
     );
   }

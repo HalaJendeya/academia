@@ -19,6 +19,7 @@ import '../../semesters/models/semester_model.dart';
 import '../../semesters/providers/semester_provider.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
+import 'admin_course_files_screen.dart';
 import 'admin_offering_form_screen.dart';
 import 'admin_offering_roster_screen.dart';
 
@@ -463,7 +464,13 @@ class _AdminOfferingListScreenState extends State<AdminOfferingListScreen> {
             ],
           ),
           const Divider(height: 24, color: AppColors.divider),
-          Row(
+          // Wrap لا Row: أربعة إجراءات لا تتسع في صف واحد على عرض 360،
+          // فتلتف إلى سطر ثانٍ بدل أن يفيض الصف.
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: AppSpacing.small,
+            runSpacing: AppSpacing.extraSmall,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               TextButton.icon(
                 onPressed: () {
@@ -478,7 +485,21 @@ class _AdminOfferingListScreenState extends State<AdminOfferingListScreen> {
                 icon: const Icon(Icons.groups_rounded, size: 18),
                 label: const Text(AppStrings.viewRosterAction),
               ),
-              const Spacer(),
+              // الملفات تخص الطرح: يُمرَّر كاملًا فلا تسأل الشاشة التالية عن
+              // المساق أو الفصل.
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.adminCourseFiles,
+                    arguments: OfferingFilesArgs(
+                      offering: offering,
+                      courseTitle: title,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.folder_rounded, size: 18),
+                label: const Text(AppStrings.offeringFilesAction),
+              ),
               IconButton(
                 icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
                 tooltip: AppStrings.editAction,

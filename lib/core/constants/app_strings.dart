@@ -1119,6 +1119,102 @@ abstract final class AppStrings {
   static const String assignOfferingDesc =
       'التسجيل يتم في طرح المساق ضمن الفصل الدراسي الحالي.';
 
+  // ===== Phase 7F1A: course files =====
+
+  static const String fileTypeNotAllowed =
+      'نوع الملف غير مسموح. الأنواع المقبولة: PDF، Word، PowerPoint، Excel، '
+      'نص، وصور JPG و PNG.';
+  static const String fileTooLargeError =
+      'حجم الملف يتجاوز الحد المسموح (10 ميغابايت).';
+  static const String fileEmptyError = 'الملف فارغ.';
+  static const String fileUploadError = 'تعذر رفع الملف';
+  static const String fileUploadNetworkError =
+      'تعذر الاتصال بخدمة التخزين. تحققي من الاتصال وحاولي مرة أخرى.';
+
+  /// يُعرض عندما ينجح الرفع ثم تفشل كتابة البيانات الوصفية.
+  ///
+  /// الحالة تُذكر صراحةً لأن الملف يكون قد وصل فعلًا إلى التخزين بينما لا
+  /// يظهر في التطبيق، والحذف من العميل غير ممكن برفع غير موقَّع.
+  static const String fileMetadataFailedAfterUpload =
+      'تم رفع الملف لكن تعذر حفظ بياناته. أعيدي المحاولة، وقد تحتاجين إلى '
+      'حذف النسخة الزائدة من لوحة التخزين.';
+
+  static const String fileLoadError = 'تعذر تحميل ملفات المساق';
+  static const String fileSaveError = 'تعذر حفظ بيانات الملف';
+  static const String fileNotFound = 'الملف غير موجود';
+
+  /// عنوان العرض للملف، غير اسم الملف نفسه (fileTitleRequired أعلاه).
+  static const String courseFileTitleRequired = 'عنوان الملف مطلوب';
+  static const String fileCategoryInvalid = 'تصنيف الملف غير صحيح';
+  static const String fileStatusInvalid = 'حالة الملف غير صحيحة';
+  static const String fileArchivedSuccess = 'تمت أرشفة الملف';
+  static const String fileUploadedSuccess = 'تم رفع الملف بنجاح';
+  static const String fileUpdatedSuccess = 'تم تحديث بيانات الملف';
+
+  // تصنيفات الملفات
+  static const String fileCategoryLecture = 'محاضرة';
+  static const String fileCategorySummary = 'ملخص';
+  static const String fileCategoryAssignmentMaterial = 'مادة تكليف';
+  static const String fileCategoryReference = 'مرجع';
+  static const String fileCategoryOther = 'أخرى';
+
+  static String fileCategoryDisplay(String category) {
+    switch (category) {
+      case 'lecture':
+        return fileCategoryLecture;
+      case 'summary':
+        return fileCategorySummary;
+      case 'assignment_material':
+        return fileCategoryAssignmentMaterial;
+      case 'reference':
+        return fileCategoryReference;
+      case 'other':
+        return fileCategoryOther;
+      default:
+        return category;
+    }
+  }
+
+  // ===== Phase 7F1B: admin course-files management =====
+
+  static const String offeringFilesTitle = 'ملفات الطرح';
+  static const String offeringFilesAction = 'الملفات';
+  static const String offeringFilesCountLabel = 'عدد الملفات';
+  static const String noOfferingFilesTitle = 'لا توجد ملفات لهذا الطرح';
+  static const String noOfferingFilesDesc =
+      'ارفعي محاضرات المساق وملخصاته ليتمكن الطلاب المسجّلون من الاطلاع عليها.';
+
+  static const String uploadFileTitle = 'رفع ملف';
+
+  /// فعل الإرسال في نموذج الرفع، مميَّز عن عنوان الشاشة حتى لا يتشابه
+  /// العنوان مع الزر في الواجهة.
+  static const String confirmUploadAction = 'رفع الملف';
+  static const String selectFileAction = 'اختيار ملف';
+  static const String changeFileAction = 'تغيير الملف';
+  static const String noFileSelected = 'لم يتم اختيار ملف بعد';
+  /// عنوان عرض الملف، مقابل fileTitleLabel أعلاه الذي يصف اسم الملف.
+  static const String courseFileTitleLabel = 'عنوان الملف';
+  static const String courseFileTitleHint = 'مثال: المحاضرة الأولى';
+  static const String fileDescriptionLabel = 'الوصف (اختياري)';
+  static const String fileCategoryLabel = 'التصنيف';
+  static const String fileUploadingLabel = 'جارٍ الرفع…';
+
+  /// يُبنى نصه في العرض من CloudinaryConfig حتى لا تتكرر الأرقام.
+  static String fileConstraintsNote(int maxMegabytes, String extensions) =>
+      'الحد الأقصى $maxMegabytes ميغابايت. الصيغ المسموحة: $extensions';
+
+  static const String editFileTitle = 'تعديل بيانات الملف';
+  static const String fileStatusLabel = 'حالة الملف';
+  static const String fileStatusActive = 'ظاهر للطلاب';
+  static const String fileStatusArchived = 'مؤرشف';
+  static const String openFileAction = 'فتح';
+  static const String archiveFileTitle = 'أرشفة الملف';
+  static const String archiveFileConfirm =
+      'سيُخفى الملف عن الطلاب مع بقائه محفوظًا. لا يمكن حذف الملف نهائيًا من '
+      'التخزين من داخل التطبيق. هل تريد المتابعة؟';
+  static const String fileOpenError = 'تعذر فتح الملف';
+  static const String fileUploadedAtLabel = 'تاريخ الرفع';
+
   // Catalog / course details
   static const String courseOfferingsTileTitle = 'العروض الفصلية';
   static const String courseOfferingsTileDesc =

@@ -22,6 +22,9 @@ import '../features/courses/services/course_offering_service.dart';
 import '../features/curriculum/providers/curriculum_provider.dart';
 import '../features/curriculum/services/curriculum_service.dart';
 import '../features/enrollments/providers/admin_student_record_provider.dart';
+import '../features/files/providers/course_file_provider.dart';
+import '../features/files/services/cloudinary_upload_service.dart';
+import '../features/files/services/course_file_service.dart';
 import '../features/enrollments/providers/enrollment_provider.dart';
 import '../features/enrollments/services/enrollment_service.dart';
 import '../features/semesters/providers/semester_provider.dart';
@@ -64,6 +67,15 @@ final List<SingleChildWidget> appProviders = [
    * ذاك يشارك errorMessage بين القراءة والكتابة، فيكفي فشل إسناد مساق حتى
    * تعرض قائمة السجل خطأً رغم نجاح تحميلها.
    */
+  /*
+   * ملفات المساقات: البيانات الوصفية في Firestore والملف الثنائي في
+   * Cloudinary. المزوّد يجمع الخدمتين ليضمن الترتيب — الرفع أولًا، ثم
+   * كتابة البيانات الوصفية — فلا يوجد مستند يشير إلى ملف غير مرفوع.
+   */
+  ChangeNotifierProvider(
+    create: (_) =>
+        CourseFileProvider(CourseFileService(), CloudinaryUploadService()),
+  ),
   ChangeNotifierProvider(
     create: (_) => AdminStudentRecordProvider(
       EnrollmentService(),

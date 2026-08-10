@@ -542,6 +542,112 @@ service cloud.firestore {
     }
 
     // ===================================================================
+    //  courseFiles/{fileId}
+    //
+    //  Metadata for a file uploaded to a course OFFERING. The binary itself
+    //  lives in Cloudinary; this document is what makes it queryable and
+    //  what controls who may see it.
+    //
+    //  A file belongs to an offering, not to a permanent course: material
+    //  taught this term is not automatically the material of another term.
+    // ===================================================================
+    match /courseFiles/{fileId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      // Enrollment IDs are deterministic ({userId}_{offeringId}), so a
+      // student's enrollment in an offering is a single document lookup —
+      // no query needed, which is what makes this expressible in rules.
+      function enrollmentPath(offeringId) {
+        return /databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + offeringId);
+      }
+
+      // Active enrollment = currently studying it.
+      // Completed enrollment = studied it before; historical material stays
+      // readable, otherwise a student loses their own past course files.
+      // Removed enrollment grants nothing.
+      function isEnrolledInOffering(offeringId) {
+        return isSignedIn()
+          && exists(enrollmentPath(offeringId))
+          && get(enrollmentPath(offeringId)).data.status in ['active', 'completed'];
+      }
+
+      function offeringData() {
+        return get(/databases/$(database)/documents/courseOfferings/$(d().offeringId)).data;
+      }
+
+      // courseId and semesterId are denormalised from the offering, so they
+      // must agree with it. Unverified copies drift from their source.
+      function matchesOffering() {
+        return exists(/databases/$(database)/documents/courseOfferings/$(d().offeringId))
+          && d().courseId == offeringData().courseId
+          && d().semesterId == offeringData().semesterId;
+      }
+
+      function validFile() {
+        return isNonEmptyString(d().offeringId)
+          && isNonEmptyString(d().title)
+          && isNonEmptyString(d().cloudinaryUrl)
+          && isNonEmptyString(d().cloudinaryPublicId)
+          && d().category in ['lecture', 'summary', 'assignment_material',
+                              'reference', 'other']
+          && d().status in ['active', 'archived']
+          && d().fileSize is int
+          && d().fileSize > 0
+          // Mirrors the 10 MB client-side limit; a client can lie about the
+          // number, but the rule keeps an obviously wrong value out.
+          && d().fileSize <= 10485760;
+      }
+
+      // Admins see everything; a student sees a file only for an offering
+      // they are (or were) enrolled in.
+      allow read: if isActiveAdmin()
+        || ( isActiveUser() && isEnrolledInOffering(resource.data.offeringId) );
+
+      // POLICY: students never upload course material. Files are course
+      // content authored by staff, not student submissions.
+      allow create: if isActiveAdmin()
+        && validFile()
+        && matchesOffering()
+        && d().uploadedBy == request.auth.uid
+        && d().keys().hasAll(
+             ['offeringId', 'courseId', 'semesterId', 'title', 'category',
+              'fileName', 'fileSize', 'cloudinaryUrl', 'cloudinaryPublicId',
+              'cloudinaryResourceType', 'uploadedBy', 'status']);
+
+      /*
+       * Only the descriptive fields may change. The offering it belongs to,
+       * the Cloudinary references and the uploader are frozen: changing any
+       * of them would make the document describe a different file, which is
+       * what a new upload is for.
+       */
+      allow update: if isActiveAdmin()
+        && d().offeringId == resource.data.offeringId
+        && d().courseId == resource.data.courseId
+        && d().semesterId == resource.data.semesterId
+        && d().cloudinaryUrl == resource.data.cloudinaryUrl
+        && d().cloudinaryPublicId == resource.data.cloudinaryPublicId
+        && d().cloudinaryResourceType == resource.data.cloudinaryResourceType
+        && d().uploadedBy == resource.data.uploadedBy
+        && d().status in ['active', 'archived']
+        && d().category in ['lecture', 'summary', 'assignment_material',
+                            'reference', 'other']
+        && isNonEmptyString(d().title)
+        && changedKeys().hasOnly(
+             ['title', 'description', 'category', 'status', 'updatedAt']);
+
+      /*
+       * Archive over delete, and here it is not merely a preference: the
+       * upload preset is unsigned, so the client cannot delete the binary
+       * from Cloudinary. Deleting the metadata would leave a file nothing
+       * in the system knows about.
+       */
+      allow delete: if false;
+    }
+
+    // ===================================================================
     //  supportRequests/{requestId}
     //  Outside the academic scope, but required: SupportService already
     //  writes here and default-deny would break the Help & FAQ form.

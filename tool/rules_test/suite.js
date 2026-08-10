@@ -1047,6 +1047,230 @@ t('24q. admin deletes student task denied', {
   existing: VALID.task,
 });
 
+// --- 25. course files (Phase 7F1A) -------------------------------------------
+//
+// Files belong to an OFFERING. Read access follows enrollment in that
+// offering; writes are admin-only.
+
+const FILE_DOC = {
+  offeringId: OFFERING,
+  courseId: COURSE,
+  semesterId: SEM,
+  title: 'المحاضرة الأولى',
+  description: 'مقدمة',
+  category: 'lecture',
+  fileName: 'lecture1.pdf',
+  fileExtension: 'pdf',
+  mimeType: 'application/pdf',
+  fileSize: 2048,
+  cloudinaryUrl: 'https://res.cloudinary.com/xmrgiypo/image/upload/v1/a.pdf',
+  cloudinaryPublicId: 'academia/course_files/off/a',
+  cloudinaryResourceType: 'image',
+  uploadedBy: 'admin1',
+  status: 'active',
+};
+
+// Enrollment documents keyed the deterministic way the rules look them up.
+const ENROLL_ACTIVE = { ...VALID.enrollment, status: 'active' };
+const ENROLL_COMPLETED = { ...VALID.enrollment, status: 'completed' };
+const ENROLL_REMOVED = { ...VALID.enrollment, status: 'removed' };
+
+t('25. admin creates course file allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: FILE_DOC,
+});
+
+t('25a. student creating a course file denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, uploadedBy: 'student1' },
+});
+
+t('25b. file whose courseId disagrees with the offering denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, courseId: 'other-course' },
+});
+
+t('25c. file whose semesterId disagrees with the offering denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, semesterId: 'semester_2024_2' },
+});
+
+t('25d. file referencing a missing offering denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, offeringId: 'ghost' },
+  missing: ['courseOfferings/ghost'],
+});
+
+t('25e. uploadedBy other than the caller denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, uploadedBy: 'someone-else' },
+});
+
+t('25f. unknown category denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, category: 'exam' },
+});
+
+t('25g. file above the 10 MB limit denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, fileSize: 10485761 },
+});
+
+t('25h. file with no Cloudinary reference denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'create',
+  data: { ...FILE_DOC, cloudinaryUrl: '', cloudinaryPublicId: '' },
+});
+
+// ---- reads follow enrollment ----
+t('25i. actively enrolled student reads the file', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+  world: { ...WORLD, [`enrollments/${ENROLLMENT}`]: ENROLL_ACTIVE },
+});
+
+t('25j. student with a COMPLETED enrollment still reads historical files', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+  world: { ...WORLD, [`enrollments/${ENROLLMENT}`]: ENROLL_COMPLETED },
+});
+
+t('25k. student with a REMOVED enrollment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+  world: { ...WORLD, [`enrollments/${ENROLLMENT}`]: ENROLL_REMOVED },
+});
+
+// student1/student2 are already enrolled in OFFERING in WORLD, so a genuine
+// "not enrolled" case needs an active student with no enrollment document.
+t('25l. student not enrolled in the offering denied', {
+  expect: 'DENY',
+  uid: 'student3',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+  world: { ...WORLD, 'users/student3': STUDENT },
+  missing: [`enrollments/student3_${OFFERING}`],
+});
+
+t('25m. unauthenticated file read denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+});
+
+t('25n. admin reads any course file', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+});
+
+// ---- updates ----
+t('25o. admin edits title/description/category allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'update',
+  data: { ...FILE_DOC, title: 'عنوان محدَّث', category: 'summary' },
+  existing: FILE_DOC,
+});
+
+t('25p. admin archives the file allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'update',
+  data: { ...FILE_DOC, status: 'archived' },
+  existing: FILE_DOC,
+});
+
+for (const [field, value] of [
+  ['offeringId', 'other-offering'],
+  ['courseId', 'other-course'],
+  ['semesterId', 'semester_2024_2'],
+  ['cloudinaryUrl', 'https://evil.example/x.pdf'],
+  ['cloudinaryPublicId', 'other/public/id'],
+  ['cloudinaryResourceType', 'raw'],
+  ['uploadedBy', 'student1'],
+]) {
+  t(`25q. mutating courseFile.${field} denied`, {
+    expect: 'DENY',
+    uid: 'admin1',
+    path: 'courseFiles/file1',
+    method: 'update',
+    data: { ...FILE_DOC, [field]: value },
+    existing: FILE_DOC,
+  });
+}
+
+t('25r. enrolled student updating a course file denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'update',
+  data: { ...FILE_DOC, title: 'عبث' },
+  existing: FILE_DOC,
+  world: { ...WORLD, [`enrollments/${ENROLLMENT}`]: ENROLL_ACTIVE },
+});
+
+t('25s. student deleting a course file denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'courseFiles/file1',
+  method: 'delete',
+  existing: FILE_DOC,
+  world: { ...WORLD, [`enrollments/${ENROLLMENT}`]: ENROLL_ACTIVE },
+});
+
+// Archive-only: the unsigned preset means the client cannot delete the
+// Cloudinary binary, so deleting metadata would orphan the file.
+t('25t. admin hard-deleting a course file denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'courseFiles/file1',
+  method: 'delete',
+  existing: FILE_DOC,
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {

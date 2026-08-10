@@ -4,7 +4,6 @@ import '../constants/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_text_styles.dart';
 
 class AcademiaBottomNavigation extends StatelessWidget {
   const AcademiaBottomNavigation({
@@ -135,31 +134,12 @@ class _AcademiaNavigationItem extends StatelessWidget {
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  color: selected
-                      ? AppColors.bottomNavigationSelectedIcon
-                      : AppColors.bottomNavigationUnselected,
-                  size: 24,
-                ),
-                if (selected) ...[
-                  const SizedBox(width: AppSpacing.extraSmall),
-                  Flexible(
-                    child: Text(
-                      label,
-                      style: AppTextStyles.bottomNavigationSelected.copyWith(
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ],
+            child: Icon(
+              icon,
+              color: selected
+                  ? AppColors.bottomNavigationSelectedIcon
+                  : AppColors.bottomNavigationUnselected,
+              size: 24,
             ),
           ),
         ),

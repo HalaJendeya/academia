@@ -85,11 +85,7 @@ class _AdminAssignCoursesScreenState extends State<AdminAssignCoursesScreen> {
       );
     });
   }
-
-  /// رقم المحاولة المتوقَّع، للعرض فقط.
-  ///
-  /// الرقم النهائي تحسبه الخدمة عند الكتابة (أكبر رقم موجود + 1، شاملًا
-  /// المُزالة)؛ هذا مجرد معاينة للمشرف قبل الضغط.
+  
   int _nextAttemptNumber(List<EnrollmentModel> previousAttempts) {
     var maxAttempt = 0;
     for (final attempt in previousAttempts) {

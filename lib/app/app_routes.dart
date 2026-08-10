@@ -31,6 +31,11 @@ abstract final class AppRoutes {
   static const String courseDetail = '/courses/detail';
   static const String coursesArchive = '/courses/archive';
 
+  // Student tasks (Phase 7T1B).
+  static const String tasks = '/tasks';
+  static const String taskDetail = '/tasks/detail';
+  static const String createEditTask = '/tasks/create-edit';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';

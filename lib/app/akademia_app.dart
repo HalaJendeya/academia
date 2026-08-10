@@ -26,6 +26,9 @@ import '../features/courses/screens/student_courses_screen.dart';
 import '../features/courses/screens/student_course_detail_screen.dart';
 import '../features/courses/screens/student_courses_archive_screen.dart';
 import '../features/admin/screens/admin_dashboard_screen.dart';
+import '../features/tasks/screens/tasks_screen.dart';
+import '../features/tasks/screens/task_detail_screen.dart';
+import '../features/tasks/screens/create_edit_task_screen.dart';
 import '../features/admin/screens/admin_course_list_screen.dart';
 import '../features/admin/screens/admin_course_form_screen.dart';
 import '../features/admin/screens/admin_student_list_screen.dart';
@@ -117,6 +120,11 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.courseDetail: (context) => const StudentCourseDetailScreen(),
         AppRoutes.coursesArchive: (context) =>
             const StudentCoursesArchiveScreen(),
+
+        //Student Tasks Routes
+        AppRoutes.tasks: (context) => const TasksScreen(),
+        AppRoutes.taskDetail: (context) => const TaskDetailScreen(),
+        AppRoutes.createEditTask: (context) => const CreateEditTaskScreen(),
 
         //admin Routes
         AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),

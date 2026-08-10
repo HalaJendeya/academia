@@ -22,7 +22,7 @@ void handleMainNavigation(
       break;
 
     case AcademiaBottomNavigation.tasksIndex:
-      _navigateOrShowUnderDevelopment(context, '/tasks');
+      _navigateOrShowUnderDevelopment(context, AppRoutes.tasks);
       break;
 
     case AcademiaBottomNavigation.studyIndex:

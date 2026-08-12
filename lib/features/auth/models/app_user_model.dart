@@ -16,6 +16,7 @@ class AppUserModel {
     this.major,
     this.majorId,
     this.academicLevel,
+    this.photoUrl,
     this.createdAt,
     this.updatedAt,
   });
@@ -46,6 +47,12 @@ class AppUserModel {
   /// المستخدم هو مصدر الحقيقة للمستوى، ومنه تشتق واجهة المساقات "الموصى
   /// لمستواي" بدل أن تسأل الشاشة عن المستوى أو تفترضه.
   final int? academicLevel;
+
+  /// رابط الصورة الشخصية في Cloudinary.
+  ///
+  /// المستند يحمل الرابط فقط؛ الصورة نفسها في Cloudinary. null يعني ألا
+  /// صورة، وتعرض الواجهة الأيقونة الافتراضية.
+  final String? photoUrl;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -81,6 +88,7 @@ class AppUserModel {
       major: _readNullableString(data['major']),
       majorId: _readNullableString(data['majorId']),
       academicLevel: _readAcademicLevel(data['academicLevel']),
+      photoUrl: _readNullableString(data['photoUrl']),
       createdAt: _readDateTime(data['createdAt']),
       updatedAt: _readDateTime(data['updatedAt']),
     );
@@ -99,6 +107,7 @@ class AppUserModel {
       if (major != null) 'major': major,
       if (majorId != null) 'majorId': majorId,
       if (academicLevel != null) 'academicLevel': academicLevel,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
@@ -117,6 +126,7 @@ class AppUserModel {
     String? major,
     String? majorId,
     int? academicLevel,
+    String? photoUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -133,6 +143,7 @@ class AppUserModel {
       major: major ?? this.major,
       majorId: majorId ?? this.majorId,
       academicLevel: academicLevel ?? this.academicLevel,
+      photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

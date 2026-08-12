@@ -37,6 +37,33 @@ class CloudinaryConfig {
     'png',
   ];
 
+  // ===== الصور الشخصية (المرحلة 7H1) =====
+  //
+  // preset منفصل عن ملفات المساقات عن قصد. preset ملفات المساقات يقبل
+  // المستندات ويودعها في شجرة مجلدات الطروحات، وهما شرطان لا يصحّان لصورة
+  // شخصية: الصورة ليست مادة تعليمية، ولا تنتمي إلى طرح.
+
+  /// preset غير موقَّع مخصص للصور الشخصية.
+  ///
+  /// يجب إنشاؤه يدويًا في لوحة Cloudinary باسم مطابق ووضع Unsigned. لا
+  /// يُنشأ من التطبيق: إنشاء presets يتطلب مفتاحًا سريًا لا مكان له هنا.
+  static const String profileImageUploadPreset = 'academia_profile_images';
+
+  /// حد حجم الصورة الشخصية: 5 ميغابايت.
+  ///
+  /// أقل من حد ملفات المساقات لأن الصورة تُعرض في دائرة صغيرة، ولا فائدة
+  /// من تحميل الطالب ملفًا أكبر مما ستظهر به.
+  static const int maxProfileImageSizeBytes = 5 * 1024 * 1024;
+
+  /// صيغ الصور الشخصية المقبولة، أضيق من allowedExtensions عمدًا: الصورة
+  /// الشخصية صورة، لا مستند.
+  static const List<String> allowedImageExtensions = <String>[
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+  ];
+
   /// نقطة الرفع. نستخدم `auto` ليحدّد Cloudinary نوع المورد بنفسه، ثم نخزّن
   /// ما يعيده: ملفات PDF مثلًا تُصنَّف image لا raw، وتخمين ذلك في العميل
   /// مصدر أخطاء.
@@ -50,6 +77,13 @@ class CloudinaryConfig {
   static String folderForOffering(String offeringId) =>
       'academia/course_files/$offeringId';
 
+  /// مجلد صور المستخدم الواحد. تنظيمي فقط، كما في مجلد الطروحات.
+  ///
+  /// كل رفع ينشئ مورداً جديداً ولا يستبدل السابق: الاستبدال يحتاج توقيعًا،
+  /// والرابط الجديد وحده هو ما يُخزَّن في Firestore.
+  static String folderForProfileImage(String uid) =>
+      'academia/profile_images/$uid';
+
   static String normalizeExtension(String fileName) {
     final dot = fileName.lastIndexOf('.');
     if (dot < 0 || dot == fileName.length - 1) return '';
@@ -61,4 +95,10 @@ class CloudinaryConfig {
 
   static bool isWithinSizeLimit(int sizeBytes) =>
       sizeBytes > 0 && sizeBytes <= maxFileSizeBytes;
+
+  static bool isAllowedImageExtension(String extension) =>
+      allowedImageExtensions.contains(extension.trim().toLowerCase());
+
+  static bool isWithinProfileImageSizeLimit(int sizeBytes) =>
+      sizeBytes > 0 && sizeBytes <= maxProfileImageSizeBytes;
 }

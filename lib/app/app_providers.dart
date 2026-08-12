@@ -35,7 +35,14 @@ import '../features/tasks/services/task_service.dart';
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
   ChangeNotifierProvider(create: (_) => OnboardingProvider()),
-  ChangeNotifierProvider(create: (_) => ProfileProvider(ProfileService())),
+  /*
+   * الملف الشخصي يرفع الصورة إلى Cloudinary نفسها التي ترفع إليها ملفات
+   * المساقات، ويكتب الرابط في مستند المستخدم — لا تخزين ثانٍ ولا مجموعة
+   * جديدة.
+   */
+  ChangeNotifierProvider(
+    create: (_) => ProfileProvider(ProfileService(), CloudinaryUploadService()),
+  ),
   ChangeNotifierProvider(
     create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
   ),

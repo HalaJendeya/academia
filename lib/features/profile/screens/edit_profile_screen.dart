@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_strings.dart';
@@ -12,11 +11,16 @@ import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/student_profile.dart';
 import '../providers/profile_provider.dart';
+import '../services/profile_image_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  const EditProfileScreen({super.key, this.picker});
+
+  /// منتقي الصور. يُحقن في الاختبارات ببديل يعيد صورة مصطنعة أو لا شيء.
+  final ProfileImagePickerFn? picker;
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -344,6 +348,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     ProfileProvider profileProvider,
     StudentProfile profile,
   ) {
+    final isUploading = profileProvider.isUploadingPhoto;
+    final photoUrl = profile.photoUrl?.trim() ?? '';
+    final hasPhoto = photoUrl.isNotEmpty;
+
+    // أثناء الرفع تبقى الصورة القديمة ظاهرة: الرفع قد يفشل، وإخفاؤها
+    // مسبقًا يوهم بتغيير لم يحدث بعد.
     return Center(
       child: Column(
         children: [
@@ -354,16 +364,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: CircleAvatar(
                   radius: 48,
                   backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
-                  backgroundImage: profileProvider.localPhotoBytes != null
-                      ? MemoryImage(profileProvider.localPhotoBytes!)
-                      : (profile.photoUrl != null &&
-                            profile.photoUrl!.trim().isNotEmpty)
-                      ? NetworkImage(profile.photoUrl!) as ImageProvider
-                      : null,
-                  child:
-                      (profileProvider.localPhotoBytes != null ||
-                          (profile.photoUrl != null &&
-                              profile.photoUrl!.trim().isNotEmpty))
+                  backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+                  child: hasPhoto
                       ? null
                       : const Icon(
                           Icons.person_rounded,
@@ -372,15 +374,40 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ),
                 ),
               ),
+              if (isUploading)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.secondary.withValues(alpha: 0.35),
+                    ),
+                    child: const Center(
+                      // حالة غير محدَّدة: لا نملك نسبة تقدّم حقيقية.
+                      child: SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned(
                 bottom: 0,
                 left: 0,
                 child: GestureDetector(
-                  onTap: _pickAndUploadImage,
+                  // تعطيل اللمس أثناء الرفع يمنع رفعًا ثانيًا متوازيًا.
+                  onTap: isUploading ? null : _pickAndUploadImage,
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
+                    decoration: BoxDecoration(
+                      color: isUploading
+                          ? AppColors.textDisabled
+                          : AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -395,24 +422,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.small),
           TextButton(
-            onPressed: _pickAndUploadImage,
+            onPressed: isUploading ? null : _pickAndUploadImage,
             child: Text(
-              AppStrings.changeProfilePicture,
+              isUploading
+                  ? AppStrings.uploadingProfileImage
+                  : AppStrings.changeProfilePicture,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
+                color: isUploading ? AppColors.textSecondary : AppColors.primary,
                 fontWeight: FontWeight.bold,
               ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.small),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.medium),
-            child: Text(
-              AppStrings.profileImageTemporaryNote,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
             ),
           ),
         ],
@@ -420,41 +438,62 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  /// اختيار صورة ورفعها.
+  ///
+  /// الشاشة لا تعرف Cloudinary ولا Firestore: تختار الصورة وتسلّمها إلى
+  /// المزوّد، ثم تعرض النتيجة. الإلغاء لا ينتج عنه شيء — لا خطأ ولا رسالة.
   Future<void> _pickAndUploadImage() async {
+    final profileProvider = context.read<ProfileProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final picker = widget.picker ?? pickProfileImage;
+
+    PickedProfileImage? picked;
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 70,
-      );
-
-      if (image == null) return;
-
-      final bytes = await image.readAsBytes();
-      if (!mounted) return;
-
-      final success = await context
-          .read<ProfileProvider>()
-          .uploadProfilePicture(bytes);
-
-      if (!mounted) return;
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.profileImageUpdatedLocally),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
+      picked = await picker();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         const SnackBar(
           content: Text(AppStrings.profileImagePickOrUploadError),
           backgroundColor: AppColors.error,
         ),
       );
+      return;
     }
+
+    // إلغاء الاختيار: لا رفع ولا رسالة.
+    if (picked == null) return;
+
+    final uploadedUrl = await profileProvider.uploadProfilePicture(
+      bytes: picked.bytes,
+      fileName: picked.fileName,
+    );
+
+    if (!mounted) return;
+
+    if (uploadedUrl != null) {
+      // نموذج المستخدم في AuthProvider يحمل الرابط أيضًا، فيُحدَّث فورًا
+      // بلا حاجة إلى تسجيل خروج ودخول.
+      authProvider.applyPhotoUrl(uploadedUrl);
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text(AppStrings.profileImageUpdatedSuccessfully),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+      return;
+    }
+
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          profileProvider.errorMessage ?? AppStrings.profileImageUploadError,
+        ),
+        backgroundColor: AppColors.error,
+      ),
+    );
   }
 
   void _saveProfile() async {

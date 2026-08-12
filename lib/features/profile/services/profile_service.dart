@@ -20,6 +20,13 @@ class ProfileService {
     : _auth = auth ?? FirebaseAuth.instance,
       _firestore = firestore ?? FirebaseFirestore.instance;
 
+  /// معرّف الحساب المسجَّل حاليًا، أو null إن لم يوجد.
+  ///
+  /// يُقرأ من الخدمة لا من FirebaseAuth.instance مباشرة في المزوّد: الطبقة
+  /// التي تتحدث إلى Firebase هي الخدمة، وهذا ما يجعل المزوّد قابلًا
+  /// للاختبار بخدمة بديلة.
+  String? get currentUid => _auth.currentUser?.uid;
+
   Future<StudentProfile> getCurrentProfile() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) {
@@ -86,6 +93,37 @@ class ProfileService {
           .set(updateData, SetOptions(merge: true));
     } catch (e) {
       throw const ProfileException(AppStrings.profileUpdateError);
+    }
+  }
+
+  /// كتابة رابط الصورة الشخصية بعد نجاح الرفع إلى Cloudinary.
+  ///
+  /// تُستدعى بعد الرفع لا قبله: مستند يشير إلى صورة غير موجودة أسوأ من
+  /// مستند بلا صورة.
+  ///
+  /// الحقلان المكتوبان photoUrl و updatedAt وحدهما، وكلاهما ضمن ما تسمح به
+  /// قواعد Firestore للطالب على مستنده — أي حقل إضافي هنا يجعل الكتابة
+  /// كلها مرفوضة.
+  Future<void> updateProfilePhoto(String photoUrl) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw const ProfileException(AppStrings.authenticationRequired);
+    }
+
+    final trimmedUrl = photoUrl.trim();
+    if (trimmedUrl.isEmpty) {
+      throw const ProfileException(AppStrings.profileImageUploadError);
+    }
+
+    try {
+      await _firestore.collection('users').doc(currentUser.uid).set({
+        'photoUrl': trimmedUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw const ProfileException(
+        AppStrings.profileImageSavedButProfileNotUpdated,
+      );
     }
   }
 }

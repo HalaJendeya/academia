@@ -293,10 +293,24 @@ abstract final class AppStrings {
     return 'المستوى $level';
   }
 
-  static const String profileImageUpdatedLocally =
-      'تم تحديث الصورة مؤقتًا على هذا الجهاز';
-  static const String profileImageTemporaryNote =
-      '* تم حفظ الصورة مؤقتًا على هذا الجهاز ولن تستمر بعد إعادة تشغيل التطبيق';
+  // ===== Phase 7H1: profile image upload (Cloudinary) =====
+
+  /// حدود الصورة الشخصية معروضة للمستخدم، ومصدرها CloudinaryConfig.
+  static const String profileImageTypeNotAllowed =
+      'نوع الصورة غير مسموح. الأنواع المقبولة: JPG و PNG و WEBP.';
+  static const String profileImageTooLarge =
+      'حجم الصورة يتجاوز الحد المسموح (5 ميغابايت).';
+  static const String profileImageEmpty = 'الصورة فارغة.';
+
+  /// يُعرض عندما ينجح الرفع إلى Cloudinary ثم تفشل كتابة الرابط في Firestore.
+  ///
+  /// الحالة تُذكر صراحةً لأن الصورة تكون قد وصلت فعلًا إلى التخزين بينما لا
+  /// يعرفها الملف الشخصي، والحذف من العميل غير ممكن برفع غير موقَّع.
+  static const String profileImageSavedButProfileNotUpdated =
+      'تم رفع الصورة لكن تعذر تحديث ملفك الشخصي. أعيدي المحاولة.';
+
+  static const String profileImageNoProfileLoaded =
+      'تعذر تحديد الحساب الحالي. أعيدي فتح الصفحة ثم حاولي مرة أخرى.';
 
   static const String notificationSettingsHeroTitle =
       'تحكم في تنبيهاتك الدراسية';

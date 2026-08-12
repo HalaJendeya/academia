@@ -1,28 +1,37 @@
-import 'dart:typed_data';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../files/services/cloudinary_upload_service.dart';
 import '../models/student_profile.dart';
 import '../services/profile_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _profileService;
 
-  ProfileProvider(this._profileService);
+  /// خدمة الرفع نفسها التي ترفع ملفات المساقات.
+  ///
+  /// معمارية تخزين واحدة للتطبيق كله: Cloudinary للملف الثنائي و Firestore
+  /// للبيانات الوصفية. الصورة الشخصية تختلف في preset والمجلد فقط.
+  final CloudinaryUploadService _uploadService;
+
+  ProfileProvider(this._profileService, this._uploadService);
 
   StudentProfile? _profile;
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isUploadingPhoto = false;
   String? _errorMessage;
   String? _loadedUserId;
-  Uint8List? _localPhotoBytes;
 
   StudentProfile? get profile => _profile;
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
+
+  /// رفع الصورة جارٍ. حالة غير محدَّدة عمدًا: الرفع عبر multipart لا يوفّر
+  /// تقدّمًا حقيقيًا، ونسبة مُختلقة توهم بدقة لا نملكها.
+  bool get isUploadingPhoto => _isUploadingPhoto;
+
   String? get errorMessage => _errorMessage;
-  Uint8List? get localPhotoBytes => _localPhotoBytes;
 
   void clearError() {
     _errorMessage = null;
@@ -34,19 +43,18 @@ class ProfileProvider extends ChangeNotifier {
     _errorMessage = null;
     _isLoading = false;
     _isSaving = false;
+    _isUploadingPhoto = false;
     _loadedUserId = null;
-    _localPhotoBytes = null;
     notifyListeners();
   }
 
   Future<void> loadProfile({bool forceRefresh = false}) async {
-    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final currentUid = _profileService.currentUid;
 
     // Account switch check
     if (currentUid != _loadedUserId) {
       _profile = null;
       _errorMessage = null;
-      _localPhotoBytes = null;
       _loadedUserId = currentUid;
     } else if (_profile != null && !forceRefresh) {
       // Avoid duplicate fetches if profile is already loaded
@@ -131,10 +139,83 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> uploadProfilePicture(Uint8List bytes) async {
-    // Save locally in memory for session-only preview
-    _localPhotoBytes = bytes;
+  /// رفع صورة شخصية جديدة وربطها بالحساب.
+  ///
+  /// الترتيب مقصود: Cloudinary أولًا، ثم Firestore. فشل الرفع يعني ألا
+  /// يُكتب أي رابط، فتبقى الصورة القديمة كما هي.
+  ///
+  /// إن نجح الرفع وفشلت الكتابة، تبقى الصورة القديمة معروضة وتُبلَّغ
+  /// الحالة صراحةً. لا نحاول حذف النسخة من Cloudinary: الحذف يتطلب توقيعًا
+  /// بمفتاح سري لا مكان له في تطبيق العميل.
+  ///
+  /// يعيد رابط الصورة عند النجاح، و null عند أي فشل، ليستطيع النداء تحديث
+  /// نموذج المستخدم في AuthProvider دون قراءة إضافية.
+  Future<String?> uploadProfilePicture({
+    required List<int> bytes,
+    required String fileName,
+  }) async {
+    if (_isUploadingPhoto) return null;
+
+    final uid = _profile?.uid;
+    if (uid == null || uid.isEmpty) {
+      _errorMessage = AppStrings.profileImageNoProfileLoaded;
+      notifyListeners();
+      return null;
+    }
+
+    /*
+     * التحقق قبل أي طلب شبكة: صورة مرفوضة لصيغتها أو حجمها يجب ألا تستهلك
+     * اتصال الطالبة، ورسالة الرفض تصلها فورًا بالعربية.
+     */
+    try {
+      CloudinaryUploadService.validateProfileImage(
+        fileName: fileName,
+        sizeBytes: bytes.length,
+      );
+    } on CloudinaryUploadException catch (e) {
+      _errorMessage = e.message;
+      notifyListeners();
+      return null;
+    }
+
+    _isUploadingPhoto = true;
+    _errorMessage = null;
     notifyListeners();
-    return true;
+
+    CloudinaryUploadResult uploadResult;
+    try {
+      uploadResult = await _uploadService.uploadProfileImage(
+        bytes: bytes,
+        fileName: fileName,
+        uid: uid,
+      );
+    } on CloudinaryUploadException catch (e) {
+      _errorMessage = e.message;
+      _isUploadingPhoto = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _errorMessage = AppStrings.profileImageUploadError;
+      _isUploadingPhoto = false;
+      notifyListeners();
+      return null;
+    }
+
+    // من هنا فصاعدًا الصورة موجودة فعلًا في Cloudinary.
+    try {
+      await _profileService.updateProfilePhoto(uploadResult.secureUrl);
+
+      _profile = _profile?.copyWith(photoUrl: uploadResult.secureUrl);
+      return uploadResult.secureUrl;
+    } on ProfileException catch (e) {
+      _errorMessage = e.message;
+      return null;
+    } catch (e) {
+      _errorMessage = AppStrings.profileImageSavedButProfileNotUpdated;
+      return null;
+    } finally {
+      _isUploadingPhoto = false;
+      notifyListeners();
+    }
   }
 }

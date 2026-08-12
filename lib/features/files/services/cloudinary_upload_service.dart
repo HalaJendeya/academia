@@ -61,6 +61,30 @@ class CloudinaryUploadService {
     }
   }
 
+  /// التحقق من الصورة الشخصية قبل الرفع.
+  ///
+  /// منفصل عن [validate]: حدود الصورة الشخصية أضيق (صيغ صور فقط، و5
+  /// ميغابايت)، ورسائلها يجب أن تتحدث عن صورة لا عن ملف مساق.
+  static void validateProfileImage({
+    required String fileName,
+    required int sizeBytes,
+  }) {
+    final extension = CloudinaryConfig.normalizeExtension(fileName);
+
+    if (extension.isEmpty ||
+        !CloudinaryConfig.isAllowedImageExtension(extension)) {
+      throw const CloudinaryUploadException(
+        AppStrings.profileImageTypeNotAllowed,
+      );
+    }
+    if (sizeBytes <= 0) {
+      throw const CloudinaryUploadException(AppStrings.profileImageEmpty);
+    }
+    if (!CloudinaryConfig.isWithinProfileImageSizeLimit(sizeBytes)) {
+      throw const CloudinaryUploadException(AppStrings.profileImageTooLarge);
+    }
+  }
+
   /// رفع محتوى الملف. يعيد بيانات Cloudinary عند النجاح فقط.
   ///
   /// [bytes] محتوى الملف كاملًا: الحد الأقصى 10 ميغابايت يجعل تحميله في
@@ -69,12 +93,46 @@ class CloudinaryUploadService {
     required List<int> bytes,
     required String fileName,
     required String offeringId,
-  }) async {
+  }) {
     validate(fileName: fileName, sizeBytes: bytes.length);
 
+    return _send(
+      bytes: bytes,
+      fileName: fileName,
+      uploadPreset: CloudinaryConfig.uploadPreset,
+      folder: CloudinaryConfig.folderForOffering(offeringId),
+    );
+  }
+
+  /// رفع صورة شخصية لمستخدم واحد.
+  ///
+  /// يستعمل preset الصور ومجلد المستخدم، ويشترك مع [upload] في النقل نفسه:
+  /// طلب multipart بلا مفتاح سري، ولا حذف.
+  Future<CloudinaryUploadResult> uploadProfileImage({
+    required List<int> bytes,
+    required String fileName,
+    required String uid,
+  }) {
+    validateProfileImage(fileName: fileName, sizeBytes: bytes.length);
+
+    return _send(
+      bytes: bytes,
+      fileName: fileName,
+      uploadPreset: CloudinaryConfig.profileImageUploadPreset,
+      folder: CloudinaryConfig.folderForProfileImage(uid),
+    );
+  }
+
+  /// النقل المشترك: preset والمجلد وحدهما ما يختلف بين الاستعمالين.
+  Future<CloudinaryUploadResult> _send({
+    required List<int> bytes,
+    required String fileName,
+    required String uploadPreset,
+    required String folder,
+  }) async {
     final request = http.MultipartRequest('POST', CloudinaryConfig.uploadUri())
-      ..fields['upload_preset'] = CloudinaryConfig.uploadPreset
-      ..fields['folder'] = CloudinaryConfig.folderForOffering(offeringId)
+      ..fields['upload_preset'] = uploadPreset
+      ..fields['folder'] = folder
       ..files.add(
         http.MultipartFile.fromBytes('file', bytes, filename: fileName),
       );

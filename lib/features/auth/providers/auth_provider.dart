@@ -108,6 +108,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// تحديث رابط الصورة الشخصية في النموذج المحمَّل بعد نجاح كتابته في
+  /// Firestore.
+  ///
+  /// استبدال في الذاكرة لا قراءة جديدة: المستند تغيّر في حقل واحد نعرف
+  /// قيمته، وإعادة تحميله كاملة قراءة زائدة. لا يُستدعى إلا بعد نجاح
+  /// الكتابة، فلا يعرض النموذج رابطًا لم يُحفظ.
+  void applyPhotoUrl(String? photoUrl) {
+    final profile = _currentUserProfile;
+    if (profile == null) return;
+
+    _currentUserProfile = profile.copyWith(photoUrl: photoUrl);
+    notifyListeners();
+  }
+
   /// تسجيل الدخول وتحميل دور المستخدم وبياناته.
   Future<bool> login(String email, String password) async {
     _setLoading(true);

@@ -192,7 +192,11 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    // وجهات عاملة فقط: المهام والدراسة ما زالتا غير منفَّذتين.
+    /*
+     * وجهات عاملة فقط. المهام منفَّذة الآن، لكنها لا تظهر هنا عن قصد:
+     * بطاقة "مهام اليوم" أعلاه تفتحها بالضغط وبزر "عرض الكل"، وإضافة
+     * إجراء ثالث لها تكرار لا فائدة منه. المذاكرة ما زالت غير منفَّذة.
+     */
     final actions = <({IconData icon, String label, String route})>[
       (
         icon: Icons.school_rounded,

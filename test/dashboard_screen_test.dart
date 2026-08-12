@@ -12,6 +12,8 @@ import 'package:academia/features/courses/providers/student_courses_provider.dar
 import 'package:academia/features/dashboard/screens/dashboard_screen.dart';
 import 'package:academia/features/curriculum/models/curriculum_course_model.dart';
 import 'package:academia/features/semesters/models/semester_model.dart';
+import 'package:academia/features/tasks/models/task_model.dart';
+import 'package:academia/features/tasks/providers/task_provider.dart';
 
 const _majorId = 'Bo7h3btN54SxANGuVqb1';
 
@@ -194,9 +196,36 @@ class FakeStudentCoursesProvider extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// The dashboard's tasks summary reads this provider directly, so the tree
+/// needs one. Defaults to a loaded, empty task list.
+class FakeTaskProvider extends ChangeNotifier implements TaskProvider {
+  FakeTaskProvider({
+    this.tasksValue = const [],
+    this.isLoadingValue = false,
+    this.errorValue,
+  });
+
+  final List<TaskModel> tasksValue;
+  final bool isLoadingValue;
+  final String? errorValue;
+
+  @override
+  List<TaskModel> get tasks => tasksValue;
+
+  @override
+  bool get isLoading => isLoadingValue;
+
+  @override
+  String? get errorMessage => errorValue;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 Widget _wrap({
   FakeStudentCoursesProvider? courses,
   FakeAuthProvider? auth,
+  FakeTaskProvider? tasks,
 }) {
   return MultiProvider(
     providers: [
@@ -205,6 +234,9 @@ Widget _wrap({
       ),
       ChangeNotifierProvider<StudentCoursesProvider>.value(
         value: courses ?? FakeStudentCoursesProvider(),
+      ),
+      ChangeNotifierProvider<TaskProvider>.value(
+        value: tasks ?? FakeTaskProvider(),
       ),
     ],
     child: const MaterialApp(
@@ -342,8 +374,8 @@ void main() {
     });
   });
 
-  group('deferred features', () {
-    testWidgets('tasks show a coming-soon state, never fake counts', (
+  group('tasks summary', () {
+    testWidgets('with no tasks it is honest, not "coming soon"', (
       tester,
     ) async {
       _useNarrowScreen(tester);
@@ -353,7 +385,10 @@ void main() {
       final tasks = find.text(AppStrings.dashboardTasksTitle);
       await tester.scrollUntilVisible(tasks, 200);
       expect(tasks, findsOneWidget);
-      expect(find.text(AppStrings.dashboardComingSoonBadge), findsOneWidget);
+
+      // The section is implemented now: no deferred badge anywhere.
+      expect(find.text(AppStrings.dashboardComingSoonBadge), findsNothing);
+      expect(find.text(AppStrings.dashboardTasksEmpty), findsOneWidget);
 
       // None of the invented metrics the old design implied.
       for (final fake in ['3 مهام اليوم', 'مهمتان', 'إنجاز', 'ساعات الدراسة']) {

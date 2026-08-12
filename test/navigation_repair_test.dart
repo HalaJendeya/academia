@@ -22,6 +22,8 @@ import 'package:academia/features/enrollments/providers/enrollment_provider.dart
 import 'package:academia/features/files/providers/course_file_provider.dart';
 import 'package:academia/features/semesters/models/semester_model.dart';
 import 'package:academia/features/academics/models/major_model.dart';
+import 'package:academia/features/tasks/models/task_model.dart';
+import 'package:academia/features/tasks/providers/task_provider.dart';
 
 // --------------------------------------------------------------- fixtures
 
@@ -121,6 +123,20 @@ class FakeCourseFileProvider extends ChangeNotifier
   Future<void> loadActiveFileCount() async {
     loadCountCallCount++;
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeTaskProvider extends ChangeNotifier implements TaskProvider {
+  @override
+  List<TaskModel> get tasks => const [];
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -469,6 +485,8 @@ void main() {
       ChangeNotifierProvider<StudentCoursesProvider>(
         create: (_) => FakeStudentCoursesProvider(),
       ),
+      // The dashboard's tasks summary reads this directly.
+      ChangeNotifierProvider<TaskProvider>(create: (_) => FakeTaskProvider()),
     ];
 
     testWidgets('the dashboard avatar opens the profile route', (tester) async {

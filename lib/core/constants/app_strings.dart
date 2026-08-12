@@ -1038,9 +1038,40 @@ abstract final class AppStrings {
 
   // أقسام مؤجّلة
   static const String dashboardComingSoonBadge = 'قريبًا';
-  static const String dashboardTasksTitle = 'مهامك';
-  static const String dashboardTasksComingSoon =
-      'إدارة المهام والتسليمات لم تُفعَّل بعد في هذه النسخة.';
+
+  // ===== المرحلة 7H4: ملخص مهام الطالب في اللوحة =====
+  //
+  // القسم كان بطاقة "قريبًا"؛ صار ملخصًا حقيقيًا مصدره TaskProvider نفسه
+  // الذي تعتمد عليه شاشة المهام. الصيغ العربية تُبنى هنا لا في الودجت.
+
+  static const String dashboardTasksTitle = 'مهام اليوم';
+  static const String dashboardTasksViewAll = 'عرض الكل';
+
+  static const String dashboardTasksEmpty = 'لا توجد مهام مستحقة اليوم';
+  static const String dashboardTasksEmptyHint =
+      'أضيفي مهمة جديدة لتنظيم وقتك الدراسي.';
+
+  static const String dashboardTasksNoDueDate = 'بدون موعد تسليم';
+
+  /// عدد المهام المستحقة اليوم، بصيغة عربية سليمة (مفرد/مثنى/جمع).
+  ///
+  /// تُبنى وقت العرض من قائمة المهام المحمَّلة؛ لا يُخزَّن أي عدّاد في
+  /// قاعدة البيانات، ولا يُعرض رقم قبل اكتمال التحميل.
+  static String dashboardTasksTodaySummary(int count) {
+    if (count == 0) return dashboardTasksEmpty;
+    if (count == 1) return 'مهمة واحدة مستحقة اليوم';
+    if (count == 2) return 'مهمتان مستحقتان اليوم';
+    if (count <= 10) return '$count مهام مستحقة اليوم';
+    return '$count مهمة مستحقة اليوم';
+  }
+
+  /// عدد المهام المتأخرة. لا يُعرض إطلاقًا حين يكون صفرًا.
+  static String dashboardTasksOverdueSummary(int count) {
+    if (count == 1) return 'مهمة متأخرة';
+    if (count == 2) return 'مهمتان متأخرتان';
+    if (count <= 10) return '$count مهام متأخرة';
+    return '$count مهمة متأخرة';
+  }
 
   // إجراءات سريعة
   static const String dashboardQuickActionsTitle = 'إجراءات سريعة';

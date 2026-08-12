@@ -64,6 +64,27 @@ class CourseFileService {
         .map(_map);
   }
 
+  /// عدد الملفات النشطة في كل الطروحات، لبطاقة إحصاء لوحة المشرف.
+  ///
+  /// استعلام تجميعي لا قراءة مستندات: العدد وحده مطلوب، وتحميل كل مستندات
+  /// البيانات الوصفية لعدّها هدر. ولا استماع مستمر: الرقم يُقرأ مرة عند
+  /// فتح اللوحة.
+  ///
+  /// المؤرشف مستثنى عمدًا. الأرشفة هي الإزالة المعتمدة في المشروع، وعدّ
+  /// المؤرشف يجعل الرقم يعدّ ما أُزيل.
+  Future<int> getActiveFileCount() async {
+    try {
+      final snapshot = await _files
+          .where('status', isEqualTo: CourseFileModel.statusActive)
+          .count()
+          .get();
+
+      return snapshot.count ?? 0;
+    } catch (e) {
+      throw const CourseFileException(AppStrings.fileLoadError);
+    }
+  }
+
   Future<List<CourseFileModel>> getOfferingFiles(String offeringId) async {
     if (offeringId.trim().isEmpty) return <CourseFileModel>[];
     try {

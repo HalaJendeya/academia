@@ -47,11 +47,20 @@ class DashboardScreen extends StatelessWidget {
     return AuthenticatedPageScaffold(
       currentIndex: AcademiaBottomNavigation.homeIndex,
       onNavigationTap: (index) => _handleNavigation(context, index),
-      appBar: const AcademiaMainAppBar(
+      /*
+       * صورة الحساب تفتح الملف الشخصي. كانت ظاهرة بلا وجهة، فتبدو قابلة
+       * للضغط ولا تفعل شيئًا.
+       *
+       * جرس التنبيهات ما زال بلا وجهة: لا شاشة تنبيهات بعد، وربطه بشيء
+       * الآن يعني اختراع وجهة لا وجود لها.
+       */
+      appBar: AcademiaMainAppBar(
         title: AppStrings.appName,
         showProfile: true,
         showSearch: false,
         showNotifications: true,
+        onProfilePressed: () =>
+            Navigator.pushNamed(context, AppRoutes.profile),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(

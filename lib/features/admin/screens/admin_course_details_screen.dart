@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/app_routes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -165,8 +166,14 @@ class AdminCourseDetailsScreen extends StatelessWidget {
                 ),
               ),
 
-              // نقطة الدخول إلى إدارة الطروحات تصل في المرحلة 7E؛ تبقى معطّلة
-              // هنا حتى لا يوحي وجودها بأن التدفق منفَّذ.
+              /*
+               * إدارة الطروحات وصلت في المرحلة 7E، فالبلاطة مفعَّلة الآن.
+               *
+               * تفتح شاشة الطروحات القائمة بلا وسيطات: تلك الشاشة مقيَّدة
+               * بفصل دراسي لا بمساق، ولا تقبل تصفية حسب المساق. تركها بلا
+               * وسيطات يجعلها تبدأ من الفصل الحالي، وهو الفصل الذي يعمل
+               * عليه المشرف.
+               */
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.screenHorizontal,
@@ -178,7 +185,9 @@ class AdminCourseDetailsScreen extends StatelessWidget {
                     title: AppStrings.courseOfferingsTileTitle,
                     subtitle: AppStrings.courseOfferingsTileDesc,
                     showDivider: false,
-                    enabled: false,
+                    onTap: () {
+                      Navigator.of(context).pushNamed(AppRoutes.adminOfferings);
+                    },
                   ),
                 ),
               ),

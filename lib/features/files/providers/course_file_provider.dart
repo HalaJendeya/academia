@@ -7,10 +7,15 @@ import '../models/course_file_model.dart';
 import '../services/cloudinary_upload_service.dart';
 import '../services/course_file_service.dart';
 
-/// ملفات طرح واحد في كل مرة.
+/// ملفات طرح واحد في كل مرة، وعدّاد إجمالي منفصل للوحة المشرف.
 ///
-/// الملفات دائمًا مقيَّدة بطرح: "ما ملفات هذا الطرح؟" هو السؤال الوحيد الذي
-/// تطرحه الشاشات، ولا معنى لقائمة ملفات عابرة للفصول.
+/// القائمة دائمًا مقيَّدة بطرح: "ما ملفات هذا الطرح؟" هو السؤال الذي تطرحه
+/// شاشات الملفات، ولا معنى لقائمة ملفات عابرة للفصول.
+///
+/// [activeFileCount] استثناء مقصود ومحدود: لوحة المشرف تحتاج رقمًا واحدًا
+/// لا قائمة، ويُقرأ باستعلام تجميعي منفصل لا يمسّ [files] ولا يُحمّل أي
+/// مستند. لذلك لا يمسحه [clearFiles]: الخروج من شاشة ملفات طرح لا يعني أن
+/// إجمالي ملفات النظام تغيّر.
 class CourseFileProvider extends ChangeNotifier {
   final CourseFileService _fileService;
   final CloudinaryUploadService _uploadService;
@@ -24,6 +29,9 @@ class CourseFileProvider extends ChangeNotifier {
   bool _isUploading = false;
   bool _isSaving = false;
   String? _errorMessage;
+
+  int? _activeFileCount;
+  bool _isLoadingActiveFileCount = false;
 
   StreamSubscription<List<CourseFileModel>>? _subscription;
 
@@ -43,6 +51,34 @@ class CourseFileProvider extends ChangeNotifier {
 
   bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
+
+  /// عدد الملفات النشطة في النظام كله، أو null إن لم يُقرأ بعد أو فشلت
+  /// قراءته.
+  ///
+  /// null ليس صفرًا: الصفر يعني "لا ملفات"، وعرضه عند فشل القراءة رقمٌ
+  /// مختلق. الواجهة تعرض شرطة مكانه.
+  int? get activeFileCount => _activeFileCount;
+
+  bool get isLoadingActiveFileCount => _isLoadingActiveFileCount;
+
+  /// قراءة واحدة محدودة للعدّاد. تُستدعى عند فتح لوحة المشرف.
+  Future<void> loadActiveFileCount() async {
+    if (_isLoadingActiveFileCount) return;
+
+    _isLoadingActiveFileCount = true;
+    notifyListeners();
+
+    try {
+      _activeFileCount = await _fileService.getActiveFileCount();
+    } catch (e) {
+      // لا رسالة خطأ في errorMessage: ذاك يخص قائمة ملفات الطرح، وفشل
+      // عدّاد إحصائي لا يجب أن يظهر كخطأ في شاشة الملفات.
+      _activeFileCount = null;
+    } finally {
+      _isLoadingActiveFileCount = false;
+      notifyListeners();
+    }
+  }
 
   List<CourseFileModel> filesByCategory(String category) =>
       _files.where((file) => file.category == category).toList();

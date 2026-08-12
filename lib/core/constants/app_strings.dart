@@ -1232,7 +1232,7 @@ abstract final class AppStrings {
   // Catalog / course details
   static const String courseOfferingsTileTitle = 'العروض الفصلية';
   static const String courseOfferingsTileDesc =
-      'إدارة طرح المساق في الفصول الدراسية — تصل في مرحلة لاحقة';
+      'إدارة طرح المساقات في الفصول الدراسية';
   static const String courseCodeUniqueNote =
       'رمز المساق فريد ولا يمكن تكراره في مساق آخر.';
 

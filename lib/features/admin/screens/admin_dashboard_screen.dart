@@ -11,6 +11,7 @@ import '../../../core/widgets/app_status_badge.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../courses/providers/course_provider.dart';
 import '../../enrollments/providers/enrollment_provider.dart';
+import '../../files/providers/course_file_provider.dart';
 import '../widgets/admin_quick_action_card.dart';
 import '../widgets/admin_stat_card.dart';
 
@@ -31,6 +32,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) return;
       context.read<CourseProvider>().listenToCourses();
       context.read<EnrollmentProvider>().listenToStudents();
+      // قراءة واحدة لا استماع: بطاقة إحصاء لا تحتاج تحديثًا لحظيًا.
+      context.read<CourseFileProvider>().loadActiveFileCount();
     });
   }
 
@@ -51,6 +54,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final archivedCoursesCount = courseProvider.courses
         .where((c) => c.status == 'archived')
         .length;
+
+    /*
+     * عدد الملفات النشطة من مزوّد الملفات، لا رقم مكتوب في الشاشة.
+     * الشرطة تُعرض ما دام الرقم غير معروف — أثناء القراءة أو عند فشلها —
+     * لأن عرض صفر يعني "لا ملفات" وهو ادّعاء لا نملكه.
+     */
+    final fileProvider = context.watch<CourseFileProvider>();
+    final activeFilesCount = fileProvider.activeFileCount;
+    final activeFilesValue = activeFilesCount?.toString() ?? '—';
 
     return Scaffold(
       appBar: AppBar(
@@ -136,9 +148,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   iconColor: AppColors.accentPurple,
                   iconBackgroundColor: AppColors.accentPurpleLight,
                 ),
-                const AdminStatCard(
+                AdminStatCard(
                   title: AppStrings.filesManagementTitle,
-                  value: '0',
+                  value: activeFilesValue,
                   icon: Icons.folder_open_rounded,
                   iconColor: AppColors.accentTeal,
                   iconBackgroundColor: AppColors.accentTealLight,
@@ -190,12 +202,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ).pushNamed(AppRoutes.adminAddAssignment);
                   },
                 ),
+                /*
+                 * الرفع يبدأ من الطرح لا من اللوحة.
+                 *
+                 * شاشة الرفع مقيَّدة بطرح وتطلب UploadFileArgs، والانتقال
+                 * إليها مباشرة من هنا كان يعرض "الطرح غير موجود". اللوحة
+                 * لا تعرف أي طرح يقصد المشرف، وتلفيق طرح لتمريره يكذب على
+                 * الطبقة التي تشتقّ منه المساق والفصل. لذلك ننتقل إلى
+                 * شاشة الطروحات ليختار المشرف الطرح، ومنها إلى ملفاته.
+                 */
                 AdminQuickActionCard(
                   title: AppStrings.uploadFileQuickAction,
                   icon: Icons.upload_file_rounded,
                   color: AppColors.accentTeal,
                   onTap: () {
-                    Navigator.of(context).pushNamed(AppRoutes.adminUploadFile);
+                    Navigator.of(context).pushNamed(AppRoutes.adminOfferings);
                   },
                 ),
               ],
@@ -215,34 +236,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.large),
+                  /*
+                   * كل عمود مرن يأخذ نصف العرض: التسميتان العربيتان
+                   * الطويلتان كانتا تفيضان عن الصف على عرض 360 لأن العمودين
+                   * كانا بلا عامل مرونة، فيطلبان عرضهما الطبيعي كاملًا.
+                   */
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      Column(
-                        children: [
-                          Text(
-                            activeCoursesCount.toString(),
-                            style: AppTextStyles.headlineMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.activeStatus,
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              activeCoursesCount.toString(),
+                              style: AppTextStyles.headlineMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.activeStatus,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(AppStrings.activeCoursesLabel),
-                        ],
+                            const SizedBox(height: 4),
+                            const Text(
+                              AppStrings.activeCoursesLabel,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
-                      Column(
-                        children: [
-                          Text(
-                            archivedCoursesCount.toString(),
-                            style: AppTextStyles.headlineMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textMuted,
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              archivedCoursesCount.toString(),
+                              style: AppTextStyles.headlineMedium.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textMuted,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(AppStrings.archivedCoursesLabel),
-                        ],
+                            const SizedBox(height: 4),
+                            const Text(
+                              AppStrings.archivedCoursesLabel,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

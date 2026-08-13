@@ -189,4 +189,13 @@ abstract final class AppColors {
     surface: surface,
     onSurface: textPrimary,
   );
+
+  // ---------------------------------------------------------------------------
+  // Admin UI Accents and Status Colors
+  // ---------------------------------------------------------------------------
+  static const Color activeStatus = Color(0xFF4CAF50);
+  static const Color accentPurple = Color(0xFF9C27B0);
+  static const Color accentPurpleLight = Color(0xFFF3E5F5);
+  static const Color accentTeal = Color(0xFF009688);
+  static const Color accentTealLight = Color(0xFFE0F2F1);
 }

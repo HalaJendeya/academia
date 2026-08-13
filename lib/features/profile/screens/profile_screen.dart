@@ -17,6 +17,9 @@ import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
 import '../models/student_profile.dart';
 import '../providers/profile_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../auth/providers/auth_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -115,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Student summary card
-              _buildSummaryCard(context, profileProvider, profile),
+              _buildSummaryCard(context, profile),
               const SizedBox(height: AppSpacing.large),
               // First settings section
               _buildFirstSection(context),
@@ -134,11 +137,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSummaryCard(
-    BuildContext context,
-    ProfileProvider profileProvider,
-    StudentProfile profile,
-  ) {
+  /// الصورة الشخصية من الرابط المخزَّن، وإلا الأيقونة الافتراضية.
+  ///
+  /// الرابط وحده مصدر الصورة: لم تعد هناك نسخة محلية مؤقتة تعيش في الذاكرة
+  /// وتختفي عند إعادة التشغيل.
+  Widget _buildAvatar(StudentProfile profile) {
+    final photoUrl = profile.photoUrl?.trim() ?? '';
+    final hasPhoto = photoUrl.isNotEmpty;
+
+    return Semantics(
+      label: AppStrings.studentAvatarSemantics,
+      child: CircleAvatar(
+        radius: 32,
+        backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
+        backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+        child: hasPhoto
+            ? null
+            : const Icon(
+                Icons.person_rounded,
+                color: AppColors.secondary,
+                size: 40,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(BuildContext context, StudentProfile profile) {
     final displayName = profile.fullName.trim().isEmpty
         ? AppStrings.profileNameUnavailable
         : profile.fullName;
@@ -150,29 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         children: [
           // Circular avatar on the far right (index 0 in RTL)
-          Semantics(
-            label: AppStrings.studentAvatarSemantics,
-            child: CircleAvatar(
-              radius: 32,
-              backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
-              backgroundImage: profileProvider.localPhotoBytes != null
-                  ? MemoryImage(profileProvider.localPhotoBytes!)
-                  : (profile.photoUrl != null &&
-                        profile.photoUrl!.trim().isNotEmpty)
-                  ? NetworkImage(profile.photoUrl!) as ImageProvider
-                  : null,
-              child:
-                  (profileProvider.localPhotoBytes != null ||
-                      (profile.photoUrl != null &&
-                          profile.photoUrl!.trim().isNotEmpty))
-                  ? null
-                  : const Icon(
-                      Icons.person_rounded,
-                      color: AppColors.secondary,
-                      size: 40,
-                    ),
-            ),
-          ),
+          _buildAvatar(profile),
           const SizedBox(width: AppSpacing.medium),
           // Student details in the middle
           Expanded(
@@ -290,8 +292,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  Directionality.of(context) == TextDirection.rtl
-                      ? Icons.chevron_right_rounded
+                  Directionality.of(context) == TextDirection.ltr
+                      ? Icons.chevron_left_rounded
                       : Icons.chevron_right_rounded,
                   color: AppColors.textSecondary,
                   size: 24,
@@ -328,50 +330,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showLogoutDialog(BuildContext context) {
+    bool isLoggingOut = false;
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(AppStrings.logout, textAlign: TextAlign.right),
-          content: const Text(
-            AppStrings.logoutConfirmation,
-            textAlign: TextAlign.right,
-          ),
-          actionsAlignment: MainAxisAlignment.start,
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(AppStrings.logout, textAlign: TextAlign.right),
+              content: const Text(
+                AppStrings.logoutConfirmation,
+                textAlign: TextAlign.right,
               ),
-              onPressed: () {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(AppStrings.logoutLogicComingSoon),
-                    backgroundColor: AppColors.primary,
+              actionsAlignment: MainAxisAlignment.start,
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.danger,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.button),
+                    ),
                   ),
-                );
-              },
-              child: const Text(AppStrings.logoutConfirmAction),
-            ),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(color: AppColors.primary),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  onPressed: isLoggingOut
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isLoggingOut = true;
+                          });
+
+                          final authProvider = context.read<AuthProvider>();
+
+                          final navigator = Navigator.of(context);
+
+                          final success = await authProvider.logout();
+
+                          if (!success) {
+                            if (!context.mounted) {
+                              return;
+                            }
+
+                            setDialogState(() {
+                              isLoggingOut = false;
+                            });
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  authProvider.errorMessage ??
+                                      AppStrings.errorUnknown,
+                                ),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+
+                            return;
+                          }
+
+                          final preferences =
+                              await SharedPreferences.getInstance();
+
+                          await preferences.setBool('has_account', false);
+
+                          if (!context.mounted) {
+                            return;
+                          }
+
+                          navigator.pushNamedAndRemoveUntil(
+                            AppRoutes.login,
+                            (route) => false,
+                          );
+                        },
+                  child: isLoggingOut
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(AppStrings.logoutConfirmAction),
                 ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(AppStrings.cancel),
-            ),
-          ],
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.button),
+                    ),
+                  ),
+                  onPressed: isLoggingOut
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: const Text(AppStrings.cancel),
+                ),
+              ],
+            );
+          },
         );
       },
     );

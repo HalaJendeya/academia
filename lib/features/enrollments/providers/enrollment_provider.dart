@@ -1,0 +1,323 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+import '../../../core/constants/app_strings.dart';
+import '../../admin/models/admin_student_model.dart';
+import '../models/enrollment_model.dart';
+import '../services/enrollment_service.dart';
+
+class EnrollmentProvider extends ChangeNotifier {
+  final EnrollmentService _service;
+
+  EnrollmentProvider(this._service);
+
+  List<AdminStudentModel> _students = [];
+  List<EnrollmentModel> _selectedStudentEnrollments = [];
+  AdminStudentModel? _selectedStudent;
+
+  bool _isLoadingStudents = false;
+  bool _isLoadingEnrollments = false;
+  bool _isSaving = false;
+  String? _errorMessage;
+
+  StreamSubscription<List<AdminStudentModel>>? _studentsSubscription;
+  StreamSubscription<List<EnrollmentModel>>? _enrollmentsSubscription;
+
+  List<AdminStudentModel> get students => _students;
+  List<EnrollmentModel> get selectedStudentEnrollments =>
+      _selectedStudentEnrollments;
+  AdminStudentModel? get selectedStudent => _selectedStudent;
+
+  bool get isLoadingStudents => _isLoadingStudents;
+  bool get isLoadingEnrollments => _isLoadingEnrollments;
+  bool get isSaving => _isSaving;
+  String? get errorMessage => _errorMessage;
+
+  void listenToStudents() {
+    stopListeningToStudents();
+    _isLoadingStudents = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    _studentsSubscription = _service.watchStudents().listen(
+      (data) {
+        _students = data;
+        _isLoadingStudents = false;
+        _errorMessage = null;
+        notifyListeners();
+      },
+      onError: (err) {
+        _isLoadingStudents = false;
+        _errorMessage = AppStrings.courseLoadError;
+        notifyListeners();
+      },
+    );
+  }
+
+  void stopListeningToStudents() {
+    _studentsSubscription?.cancel();
+    _studentsSubscription = null;
+  }
+
+  void selectStudent(AdminStudentModel student) {
+    _selectedStudent = student;
+    notifyListeners();
+    loadStudentEnrollments(student.uid);
+  }
+
+  void loadStudentEnrollments(String userId) {
+    _enrollmentsSubscription?.cancel();
+    _enrollmentsSubscription = null;
+
+    _isLoadingEnrollments = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    _enrollmentsSubscription = _service
+        .watchStudentEnrollments(userId)
+        .listen(
+          (data) {
+            _selectedStudentEnrollments = data;
+            _isLoadingEnrollments = false;
+            _errorMessage = null;
+            notifyListeners();
+          },
+          onError: (err) {
+            _isLoadingEnrollments = false;
+            _errorMessage = AppStrings.courseLoadError;
+            notifyListeners();
+          },
+        );
+  }
+
+  /// قائمة المسجَّلين في طرح معيّن.
+  ///
+  /// منفصلة عن تسجيلات الطالب المحدَّد: الشاشتان تسألان سؤالين مختلفين —
+  /// "ما مساقات هذا الطالب؟" مقابل "من في هذا الطرح؟" — ودمجهما في قائمة
+  /// واحدة يجعل إحداهما تمسح الأخرى.
+  List<EnrollmentModel> _roster = [];
+  bool _isLoadingRoster = false;
+  String? _rosterOfferingId;
+  StreamSubscription<List<EnrollmentModel>>? _rosterSubscription;
+
+  List<EnrollmentModel> get roster => _roster;
+  bool get isLoadingRoster => _isLoadingRoster;
+  String? get rosterOfferingId => _rosterOfferingId;
+
+  void listenToOfferingRoster(String offeringId) {
+    if (_rosterOfferingId == offeringId && _rosterSubscription != null) return;
+
+    stopListeningToRoster();
+    _rosterOfferingId = offeringId;
+    _isLoadingRoster = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    _rosterSubscription = _service
+        .watchOfferingRoster(offeringId)
+        .listen(
+          (data) {
+            _roster = data;
+            _isLoadingRoster = false;
+            _errorMessage = null;
+            notifyListeners();
+          },
+          onError: (err) {
+            _isLoadingRoster = false;
+            _errorMessage = AppStrings.courseLoadError;
+            notifyListeners();
+          },
+        );
+  }
+
+  void stopListeningToRoster() {
+    _rosterSubscription?.cancel();
+    _rosterSubscription = null;
+    _roster = const <EnrollmentModel>[];
+    _rosterOfferingId = null;
+  }
+
+  /// تنفيذ عملية كتابة واحدة مع إدارة حالة الحفظ ورسالة الخطأ.
+  Future<bool> _runWrite(Future<void> Function(String userId) action) async {
+    final student = _selectedStudent;
+    if (student == null) return false;
+    return _runWriteFor(student.uid, action);
+  }
+
+  /// نفس الغلاف لكن لطالب محدَّد بمعرّفه.
+  ///
+  /// شاشة قائمة الطرح تكتب لطلاب متعدّدين ولا يوجد فيها "طالب محدَّد".
+  Future<bool> _runWriteFor(
+    String userId,
+    Future<void> Function(String userId) action,
+  ) async {
+    if (_isSaving) return false;
+
+    _isSaving = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await action(userId);
+      return true;
+    } on EnrollmentException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } catch (e) {
+      _errorMessage = AppStrings.courseSaveError;
+      return false;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
+  }
+
+  /// تسجيل نتيجة محاولة لطالب محدَّد، من شاشة قائمة الطرح.
+  Future<bool> setCompletionStatusFor({
+    required String userId,
+    required String offeringId,
+    required String completionStatus,
+    String? grade,
+  }) {
+    return _runWriteFor(
+      userId,
+      (uid) => _service.setCompletionStatus(
+        userId: uid,
+        offeringId: offeringId,
+        completionStatus: completionStatus,
+        grade: grade,
+      ),
+    );
+  }
+
+  /// إزالة تسجيل طالب محدَّد من طرح، من شاشة قائمة الطرح.
+  Future<bool> removeEnrollmentFor({
+    required String userId,
+    required String offeringId,
+  }) {
+    return _runWriteFor(
+      userId,
+      (uid) => _service.removeEnrollment(userId: uid, offeringId: offeringId),
+    );
+  }
+
+  Future<bool> assignToOffering(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.assignToOffering(userId: userId, offeringId: offeringId),
+    );
+  }
+
+  Future<bool> removeEnrollment(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.removeEnrollment(userId: userId, offeringId: offeringId),
+    );
+  }
+
+  Future<bool> restoreEnrollment(String offeringId) {
+    return _runWrite(
+      (userId) =>
+          _service.restoreEnrollment(userId: userId, offeringId: offeringId),
+    );
+  }
+
+  /// إنهاء المحاولة إداريًا دون تسجيل نتيجة أكاديمية.
+  ///
+  /// completionStatus يبقى null لأن نتيجة الطالب لا تُستنتج من كون المساق
+  /// منتهيًا؛ تُسجَّل صراحةً عبر [setCompletionStatus].
+  Future<bool> markEnrollmentCompleted(String offeringId) {
+    return setEnrollmentStatus(
+      offeringId: offeringId,
+      status: EnrollmentModel.statusCompleted,
+    );
+  }
+
+  Future<bool> setEnrollmentStatus({
+    required String offeringId,
+    required String status,
+  }) {
+    return _runWrite(
+      (userId) => _service.setEnrollmentStatus(
+        userId: userId,
+        offeringId: offeringId,
+        status: status,
+      ),
+    );
+  }
+
+  Future<bool> setCompletionStatus({
+    required String offeringId,
+    required String completionStatus,
+    String? grade,
+  }) {
+    return _runWrite(
+      (userId) => _service.setCompletionStatus(
+        userId: userId,
+        offeringId: offeringId,
+        completionStatus: completionStatus,
+        grade: grade,
+      ),
+    );
+  }
+
+  /// سجل تسجيل الطالب في طرح معيّن، أو null إن لم يكن مسجلًا فيه.
+  EnrollmentModel? enrollmentForOffering(String offeringId) {
+    for (final enrollment in _selectedStudentEnrollments) {
+      if (enrollment.offeringId == offeringId) return enrollment;
+    }
+    return null;
+  }
+
+  /// كل محاولات الطالب في مساق دائم، مرتبة برقم المحاولة.
+  ///
+  /// تشمل المُزالة: الإزالة لا تلغي أن المحاولة حدثت، وهي تدخل في احتساب
+  /// رقم المحاولة التالية تمامًا كما في الخدمة.
+  List<EnrollmentModel> attemptsForCourse(String courseId) {
+    final attempts = _selectedStudentEnrollments
+        .where((enrollment) => enrollment.courseId == courseId)
+        .toList();
+    attempts.sort((a, b) => a.attemptNumber.compareTo(b.attemptNumber));
+    return attempts;
+  }
+
+  /// أحدث محاولة للطالب في مساق دائم، أي صاحبة أكبر رقم محاولة.
+  EnrollmentModel? latestAttemptForCourse(String courseId) {
+    EnrollmentModel? latest;
+    for (final enrollment in _selectedStudentEnrollments) {
+      if (enrollment.courseId != courseId) continue;
+      if (latest == null || enrollment.attemptNumber > latest.attemptNumber) {
+        latest = enrollment;
+      }
+    }
+    return latest;
+  }
+
+  void stopListeningToSelectedStudentEnrollments() {
+    _enrollmentsSubscription?.cancel();
+    _enrollmentsSubscription = null;
+  }
+
+  void clearSelectedStudent({bool notify = true}) {
+    _selectedStudent = null;
+    _selectedStudentEnrollments = [];
+    stopListeningToSelectedStudentEnrollments();
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    stopListeningToStudents();
+    stopListeningToRoster();
+    _enrollmentsSubscription?.cancel();
+    _enrollmentsSubscription = null;
+    super.dispose();
+  }
+}

@@ -32,11 +32,17 @@ class AppStatusBadge extends StatelessWidget {
             Icon(icon, size: 14, color: foregroundColor),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: foregroundColor,
-              fontWeight: FontWeight.bold,
+          // الشارة تُستخدم داخل صفوف ضيقة وشبكات؛ بدون Flexible لا يستطيع
+          // النص التقلّص فيفيض الصف عند طول التسمية أو ضيق الشاشة.
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: foregroundColor,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

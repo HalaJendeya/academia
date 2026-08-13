@@ -1,19 +1,49 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/services/auth_service.dart';
+import 'package:flutter/material.dart';
+
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/auth_service.dart';
+import '../models/app_user_model.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final AuthService _authService = AuthService();
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService();
+
+  final AuthService _authService;
 
   bool _isLoading = false;
   String? _errorMessage;
+  AppUserModel? _currentUserProfile;
 
   bool get isLoading => _isLoading;
+
   String? get errorMessage => _errorMessage;
+
+  /// مستخدم Firebase Authentication الحالي.
   User? get currentUser => _authService.currentUser;
+
+  /// بيانات المستخدم المحفوظة داخل Firestore.
+  AppUserModel? get currentUserProfile => _currentUserProfile;
+
+  /// هل يوجد مستخدم مسجل الدخول؟
+  bool get isLoggedIn => currentUser != null;
+
+  /// هل المستخدم الحالي مدير؟
+  bool get isAdmin => _currentUserProfile?.isAdmin ?? false;
+
+  /// هل المستخدم الحالي طالب؟
+  bool get isStudent => _currentUserProfile?.isStudent ?? false;
+
+  /// هل الحساب الحالي نشط؟
+  bool get isAccountActive => _currentUserProfile?.isActive ?? false;
+
+  /// هل أكمل المستخدم الإعداد الأولي؟
+  bool get onboardingCompleted =>
+      _currentUserProfile?.onboardingCompleted ?? false;
+
+  /// حالة الإعداد الأولي المحفوظة في Firestore.
+  String get onboardingStatus =>
+      _currentUserProfile?.onboardingStatus ?? 'pending';
 
   void _setLoading(bool value) {
     _isLoading = value;
@@ -25,53 +55,112 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Clear errors
   void clearError() {
     _errorMessage = null;
     notifyListeners();
   }
 
-  // Handle Firebase Exceptions
-  String _mapFirebaseAuthException(FirebaseAuthException e) {
-    switch (e.code) {
+  String _mapFirebaseAuthException(FirebaseAuthException exception) {
+    switch (exception.code) {
       case 'user-not-found':
         return AppStrings.errorUserNotFound;
+
       case 'wrong-password':
-      case 'invalid-credential': // Modern Firebase Auth code for invalid logins
+      case 'invalid-credential':
         return AppStrings.loginErrorInvalid;
+
       case 'email-already-in-use':
         return AppStrings.errorEmailAlreadyInUse;
+
       case 'weak-password':
         return AppStrings.errorWeakPassword;
+
       case 'invalid-email':
         return AppStrings.errorInvalidEmail;
+
       case 'network-request-failed':
         return AppStrings.errorNetwork;
+
+      case 'too-many-requests':
+        return 'تم إجراء محاولات كثيرة. حاولي مرة أخرى لاحقًا.';
+
+      case 'user-disabled':
+        return 'تم تعطيل هذا الحساب.';
+
       default:
         return AppStrings.errorUnknown;
     }
   }
 
-  // Login Method
+  /// تحميل بيانات المستخدم الحالي من Firestore.
+  Future<bool> loadCurrentUserProfile() async {
+    try {
+      _currentUserProfile = await _authService.getCurrentUserProfile();
+
+      notifyListeners();
+
+      return _currentUserProfile != null;
+    } catch (_) {
+      _currentUserProfile = null;
+      _setError('تعذر تحميل بيانات الحساب من قاعدة البيانات.');
+
+      return false;
+    }
+  }
+
+  /// تحديث رابط الصورة الشخصية في النموذج المحمَّل بعد نجاح كتابته في
+  /// Firestore.
+  ///
+  /// استبدال في الذاكرة لا قراءة جديدة: المستند تغيّر في حقل واحد نعرف
+  /// قيمته، وإعادة تحميله كاملة قراءة زائدة. لا يُستدعى إلا بعد نجاح
+  /// الكتابة، فلا يعرض النموذج رابطًا لم يُحفظ.
+  void applyPhotoUrl(String? photoUrl) {
+    final profile = _currentUserProfile;
+    if (profile == null) return;
+
+    _currentUserProfile = profile.copyWith(photoUrl: photoUrl);
+    notifyListeners();
+  }
+
+  /// تسجيل الدخول وتحميل دور المستخدم وبياناته.
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     _setError(null);
 
     try {
       await _authService.signInWithEmailAndPassword(email, password);
-      _setLoading(false);
-      return true;
-    } on FirebaseAuthException catch (e) {
-      _setError(_mapFirebaseAuthException(e));
-    } catch (e) {
-      _setError(AppStrings.errorUnknown);
-    }
 
-    _setLoading(false);
-    return false;
+      final profileLoaded = await loadCurrentUserProfile();
+
+      if (!profileLoaded) {
+        await _authService.signOut();
+        _currentUserProfile = null;
+        return false;
+      }
+
+      if (!isAccountActive) {
+        await _authService.signOut();
+        _currentUserProfile = null;
+        _setError('هذا الحساب غير نشط.');
+        return false;
+      }
+
+      return true;
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
+
+      return false;
+    } catch (_) {
+      _setError(AppStrings.errorUnknown);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // Register Method
+  /// تسجيل طالب جديد.
+  ///
+  /// جميع الحسابات المنشأة من شاشة التسجيل تحصل على دور student.
   Future<bool> register({
     required String email,
     required String password,
@@ -81,90 +170,163 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     _setError(null);
 
+    User? createdUser;
+
     try {
-      // 1. Create Firebase User
       final credential = await _authService.createUserWithEmailAndPassword(
         email,
         password,
       );
-      final user = credential.user;
 
-      if (user != null) {
-        // 2. Save info in Firestore
-        await _firestore.collection('users').doc(user.uid).set({
-          'uid': user.uid,
-          'fullName': fullName,
-          'studentId': studentId,
-          'email': email,
-          'emailVerified': false,
-          'onboardingCompleted': false,
-          'onboardingStatus': 'pending',
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+      createdUser = credential.user;
 
-        // 3. Send Verification Email
-        await _authService.sendEmailVerification();
+      if (createdUser == null) {
+        _setError(AppStrings.errorUnknown);
+        return false;
       }
 
-      _setLoading(false);
+      await _authService.createStudentProfile(
+        uid: createdUser.uid,
+        fullName: fullName,
+        email: email,
+        studentId: studentId,
+      );
+
+      await _authService.sendEmailVerification();
+
+      await loadCurrentUserProfile();
+
       return true;
-    } on FirebaseAuthException catch (e) {
-      _setError(_mapFirebaseAuthException(e));
-    } catch (e) {
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
+
+      return false;
+    } catch (_) {
+      /*
+       * إذا تم إنشاء الحساب داخل Authentication لكن فشل إنشاء
+       * مستند Firestore، نسجل الخروج حتى لا يدخل المستخدم إلى
+       * التطبيق بدون ملف مستخدم.
+       */
+      if (createdUser != null) {
+        await _authService.signOut();
+      }
+
+      _currentUserProfile = null;
       _setError(AppStrings.errorUnknown);
+
+      return false;
+    } finally {
+      _setLoading(false);
     }
-
-    _setLoading(false);
-    return false;
   }
 
-  // Logout Method
-  Future<void> logout() async {
-    await _authService.signOut();
-    notifyListeners();
+  /// تسجيل الخروج ومسح بيانات المستخدم المحلية.
+  Future<bool> logout() async {
+    _setLoading(true);
+    _setError(null);
+
+    try {
+      await _authService.signOut();
+      _currentUserProfile = null;
+      return true;
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
+      return false;
+    } catch (_) {
+      _setError(AppStrings.errorUnknown);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // Send Email Verification
-  Future<void> sendEmailVerification() async {
+  /// إرسال رسالة تحقق جديدة.
+  Future<bool> sendEmailVerification() async {
+    _setError(null);
+
     try {
       await _authService.sendEmailVerification();
-    } catch (e) {
-      // Propagation if needed
+      return true;
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
+
+      return false;
+    } catch (_) {
+      _setError(AppStrings.errorUnknown);
+      return false;
     }
   }
 
-  // Send Password Reset Email Method
+  /// إرسال رابط استعادة كلمة المرور.
   Future<bool> sendPasswordResetEmail(String email) async {
     _setLoading(true);
     _setError(null);
 
     try {
       await _authService.sendPasswordResetEmail(email);
-      _setLoading(false);
       return true;
-    } on FirebaseAuthException catch (e) {
-      _setError(_mapFirebaseAuthException(e));
-    } catch (e) {
-      _setError(AppStrings.errorUnknown);
-    }
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
 
-    _setLoading(false);
-    return false;
+      return false;
+    } catch (_) {
+      _setError(AppStrings.errorUnknown);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // Check Email Verified status
+  /// التحقق من البريد ثم تحديث بيانات المستخدم المحملة.
   Future<bool> checkEmailVerified() async {
-    final isVerified = await _authService.checkEmailVerified();
-    if (isVerified && currentUser != null) {
-      // Update the verification status in Firestore
-      await _firestore
-          .collection('users')
-          .doc(currentUser!.uid)
-          .update({'emailVerified': true})
-          .catchError((_) {
-            // Ignore firestore write error in local check
-          });
+    _setError(null);
+
+    try {
+      final isVerified = await _authService.checkEmailVerified();
+
+      if (isVerified) {
+        await loadCurrentUserProfile();
+      }
+
+      return isVerified;
+    } on FirebaseAuthException catch (exception) {
+      _setError(_mapFirebaseAuthException(exception));
+
+      return false;
+    } catch (_) {
+      _setError(AppStrings.errorUnknown);
+      return false;
     }
-    return isVerified;
+  }
+
+  /// تستخدم عند تشغيل التطبيق والمستخدم مسجل مسبقًا.
+  Future<bool> initializeCurrentUser() async {
+    if (!isLoggedIn) {
+      _currentUserProfile = null;
+      notifyListeners();
+      return false;
+    }
+
+    _setLoading(true);
+    _setError(null);
+
+    try {
+      final loaded = await loadCurrentUserProfile();
+
+      if (!loaded || !isAccountActive) {
+        await _authService.signOut();
+        _currentUserProfile = null;
+
+        if (loaded && !isAccountActive) {
+          _setError('هذا الحساب غير نشط.');
+        }
+
+        return false;
+      }
+
+      return true;
+    } finally {
+      _setLoading(false);
+    }
   }
 }

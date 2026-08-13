@@ -1,5 +1,3 @@
-// lib/features/courses/widgets/student_course_header_card.dart
-
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_strings.dart';
@@ -9,15 +7,29 @@ import '../../../core/theme/app_sizes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../models/student_course.dart';
+import '../models/course_model.dart';
 
-class CourseHeaderCard extends StatelessWidget {
-  const CourseHeaderCard({super.key, required this.course});
+/// ترويسة شاشة تفاصيل المساق.
+///
+/// نفس تصميم فريق الواجهة (شارة الرمز، العنوان، سطر فرعي)، بلا شريط نسبة
+/// الإنجاز: لا توجد بيانات تقدّم في هذه المعمارية.
+class StudentCourseHeaderCard extends StatelessWidget {
+  const StudentCourseHeaderCard({
+    super.key,
+    required this.course,
+    this.instructorName,
+  });
 
-  final Course course;
+  final CourseModel course;
+
+  /// اسم المدرّس يأتي من الطرح لا من المساق الدائم، لذلك يُمرَّر اختياريًا:
+  /// لا يوجد مدرّس عند عرض مساق من الخطة دون تسجيل.
+  final String? instructorName;
 
   @override
   Widget build(BuildContext context) {
+    final instructor = instructorName;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -32,10 +44,39 @@ class CourseHeaderCard extends StatelessWidget {
             ),
             textAlign: TextAlign.right,
           ),
-          const SizedBox(height: AppSpacing.extraSmall),
-          _buildInstructorRow(),
-          const SizedBox(height: AppSpacing.medium),
-          _buildProgressSection(),
+          if (instructor != null && instructor.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.extraSmall),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.person_outline_rounded,
+                  size: AppSizes.iconExtraSmall,
+                  color: AppColors.textMuted,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    instructor,
+                    style: AppTextStyles.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.small),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '${course.creditHours} ${AppStrings.creditHoursSuffix}',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -49,63 +90,13 @@ class CourseHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.small),
       ),
       child: Text(
-        course.code,
+        course.courseCode,
         style: AppTextStyles.labelSmall.copyWith(
           color: AppColors.secondary,
           fontWeight: FontWeight.bold,
         ),
+        textDirection: TextDirection.ltr,
       ),
-    );
-  }
-
-  Widget _buildInstructorRow() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.person_outline_rounded,
-          size: AppSizes.iconExtraSmall,
-          color: AppColors.textMuted,
-        ),
-        const SizedBox(width: 4),
-        Text(course.instructorName, style: AppTextStyles.bodyMedium),
-      ],
-    );
-  }
-
-  Widget _buildProgressSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              AppStrings.courseProgressLabel,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-            Text(
-              '${(course.progress * 100).round()}%',
-              style: AppTextStyles.titleSmall.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.extraSmall),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          child: LinearProgressIndicator(
-            value: course.progress.clamp(0.0, 1.0),
-            minHeight: AppSizes.progressBarHeight,
-            backgroundColor: AppColors.surfaceSecondary,
-            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-          ),
-        ),
-      ],
     );
   }
 }

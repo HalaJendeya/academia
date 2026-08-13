@@ -1,41 +1,46 @@
-// lib/features/courses/widgets/student_course_status_tabs.dart
-
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../models/student_course.dart';
 
+/// أقسام شاشة مساقات الطالب.
+enum StudentCoursesTab { program, availableNow, current, history }
+
+/// شرائح التبويب بأسلوب فريق الواجهة نفسه (حبّات pill)، موسَّعة من قسمين
+/// إلى أربعة ومجعولة قابلة للتمرير أفقيًا حتى لا تتزاحم على شاشة ضيقة.
 class CourseStatusTabs extends StatelessWidget {
   const CourseStatusTabs({
     super.key,
-    required this.selectedStatus,
-    required this.onStatusChanged,
+    required this.selected,
+    required this.onChanged,
+    required this.labels,
   });
 
-  final String selectedStatus;
-  final ValueChanged<String> onStatusChanged;
+  final StudentCoursesTab selected;
+  final ValueChanged<StudentCoursesTab> onChanged;
+  final Map<StudentCoursesTab, String> labels;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Spacer(),
-        _StatusChip(
-          label: AppStrings.archivedCoursesFilter,
-          isSelected: selectedStatus == Course.statusArchived,
-          onTap: () => onStatusChanged(Course.statusArchived),
-        ),
-        const SizedBox(width: AppSpacing.small),
-        _StatusChip(
-          label: AppStrings.activeCoursesFilter,
-          isSelected: selectedStatus == Course.statusActive,
-          onTap: () => onStatusChanged(Course.statusActive),
-        ),
-      ],
+    // بلا reverse: في اتجاه RTL يبدأ التمرير الأفقي من اليمين أصلًا، وإضافة
+    // reverse تقلبه فيبدأ العرض من آخر تبويب بدل أوّله.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final tab in StudentCoursesTab.values) ...[
+            _StatusChip(
+              label: labels[tab] ?? '',
+              isSelected: selected == tab,
+              onTap: () => onChanged(tab),
+            ),
+            if (tab != StudentCoursesTab.values.last)
+              const SizedBox(width: AppSpacing.small),
+          ],
+        ],
+      ),
     );
   }
 }

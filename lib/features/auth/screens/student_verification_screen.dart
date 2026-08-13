@@ -29,8 +29,6 @@ class _StudentVerificationScreenState extends State<StudentVerificationScreen> {
   Timer? _timer;
   String _email = 'std@university.edu.sa';
 
-  bool _showMockInbox = false;
-  bool _emailOpened = false;
   bool _isVerifyingLink = false;
 
   @override
@@ -179,7 +177,6 @@ class _StudentVerificationScreenState extends State<StudentVerificationScreen> {
 
         setState(() {
           _isVerifyingLink = false;
-          _showMockInbox = false; // close the browser
         });
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -429,22 +426,7 @@ class _StudentVerificationScreenState extends State<StudentVerificationScreen> {
                               ),
                               label: const Text(AppStrings.verifyButton),
                             ),
-                      const SizedBox(height: 16),
-                      // Open Email Button (Secondary simulation)
-                      OutlinedButton.icon(
-                        key: const Key('open_email_btn'),
-                        onPressed: () {
-                          setState(() {
-                            _showMockInbox = true;
-                            _emailOpened = false;
-                          });
-                        },
-                        icon: const Icon(
-                          Icons.open_in_new,
-                          color: AppColors.primary,
-                        ),
-                        label: const Text(AppStrings.openEmailSim),
-                      ),
+
                       const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -508,198 +490,8 @@ class _StudentVerificationScreenState extends State<StudentVerificationScreen> {
     );
   }
 
-  Widget _buildMockInbox() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
-      appBar: AppBar(
-        backgroundColor: AppColors.secondary,
-        title: Row(
-          children: const [
-            Icon(Icons.lock, size: 16, color: Colors.white70),
-            SizedBox(width: 6),
-            Text(
-              'mail.university.edu',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-          ],
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () {
-            setState(() {
-              _showMockInbox = false;
-            });
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: _emailOpened ? _buildEmailDetails() : _buildEmailList(),
-    );
-  }
-
-  Widget _buildEmailList() {
-    return ListView(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Row(
-            children: const [
-              Icon(Icons.inbox, color: AppColors.secondary),
-              SizedBox(width: 12),
-              Text(
-                AppStrings.inboxTitle,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        GestureDetector(
-          key: const Key('inbox_email_item'),
-          onTap: () {
-            setState(() {
-              _emailOpened = true;
-            });
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.white,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary,
-                  ),
-                  child: const Text(
-                    'أ',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: const [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            AppStrings.inboxSenderName,
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            AppStrings.inboxTimeNow,
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        AppStrings.inboxEmailSubject,
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        AppStrings.inboxEmailSnippet,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-      ],
-    );
-  }
-
-  Widget _buildEmailDetails() {
-    return SingleChildScrollView(
-      child: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      _emailOpened = false;
-                    });
-                  },
-                ),
-                const Text(
-                  AppStrings.inboxBackToInbox,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              AppStrings.inboxEmailSubject,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: const [
-                Text(
-                  AppStrings.inboxFromLabel,
-                  style: TextStyle(color: Colors.grey),
-                ),
-                Text(
-                  AppStrings.inboxFromEmail,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              AppStrings.inboxEmailSalutation,
-              style: TextStyle(fontSize: 15),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              AppStrings.inboxEmailBody,
-              style: TextStyle(fontSize: 15, height: 1.4),
-            ),
-            const SizedBox(height: 32),
-            _isVerifyingLink
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  )
-                : ElevatedButton(
-                    key: const Key('verify_link_btn'),
-                    onPressed: _simulateVerifyLink,
-                    child: const Text(AppStrings.inboxVerifyButton),
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return _showMockInbox ? _buildMockInbox() : _buildVerificationScreen();
+    return _buildVerificationScreen();
   }
 }

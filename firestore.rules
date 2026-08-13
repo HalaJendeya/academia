@@ -1,0 +1,725 @@
+rules_version = '2';
+
+// =============================================================================
+//  Academia — Firestore Security Rules
+//  Phase 7B — version-controlled, NOT YET DEPLOYED.
+//
+//  Scope (9 collections):
+//    users · departments · majors · courses · curriculumCourses
+//    semesters · courseOfferings · enrollments · supportRequests
+//
+//  Replaces the open test ruleset (`allow read, write: if request.time <
+//  timestamp.date(2026, 8, 30)`) which grants unauthenticated read+write to
+//  every document and expires on 2026-08-30.
+//
+//  MODEL (Phase 7):
+//    courses         = permanent catalog subjects. NO semester, NO instructor.
+//    courseOfferings = one course × one semester × one section.
+//    enrollments     = one student attempt in one offering.
+//    curriculumCourses = one row of a major's study plan (a course OR an
+//                        unfilled requirement slot).
+//
+//  Phase 6E normalised every live user document, so the transitional
+//  fail-open defaults for missing `role` / `status` are GONE: both fields are
+//  now required and must hold an explicit valid value.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------
+    //  Identity, role and account-status helpers
+    // -------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDocExists() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Phase 6E backfilled role and status on every live user document, so a
+    // missing or unknown value is now a malformed document, not a legacy one.
+    // Both checks fail CLOSED.
+    function hasValidAccount() {
+      return userDocExists()
+        && userData().role in ['student', 'admin']
+        && userData().status == 'active';
+    }
+
+    function isActiveUser() {
+      return hasValidAccount();
+    }
+
+    function isActiveAdmin() {
+      return hasValidAccount() && userData().role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // A field is either absent or explicitly null.
+    function isAbsent(data, field) {
+      return !(field in data) || data[field] == null;
+    }
+
+    function isNonEmptyString(value) {
+      return value is string && value.size() > 0;
+    }
+
+    // ===================================================================
+    //  users/{userId}        document ID IS the Firebase Auth UID
+    // ===================================================================
+    match /users/{userId} {
+
+      // Fields a student may change about themselves.
+      // NOTE: role, status, email, studentId, majorId and createdAt are absent
+      // by design — majorId assigns an academic programme and is an
+      // administrative decision, not a self-service one.
+      function studentSelfEditable() {
+        return [
+          'fullName', 'major', 'academicLevel', 'photoUrl',
+          'onboardingCompleted', 'onboardingStatus',
+          'notificationPreferences', 'studyDays',
+          'preferredSessionDuration', 'quietHours',
+          'emailVerified', 'updatedAt'
+        ];
+      }
+
+      // Admins may additionally administer the account and assign the
+      // academic programme the study plan is built from.
+      // POLICY: 'role' is deliberately absent — NO client may change a role,
+      // including an admin. Role changes are out-of-band (Console/Admin SDK).
+      function adminEditable() {
+        return studentSelfEditable().concat(['status', 'studentId', 'majorId']);
+      }
+
+      // The Firestore mirror of emailVerified may only be written to the value
+      // actually present in the Firebase Auth token. Prevents forgery and
+      // prevents the FS/Auth drift found in the Phase 3 audit from recurring.
+      function emailVerifiedMatchesToken() {
+        return !('emailVerified' in changedKeys())
+          || request.resource.data.emailVerified == request.auth.token.email_verified;
+      }
+
+      allow get: if isOwner(userId) || isActiveAdmin();
+
+      // Admin-only. Supports  users.where('role', '==', 'student')
+      // POLICY: students cannot read other students' profiles.
+      allow list: if isActiveAdmin();
+
+      // Self-registration only. role and status are FORCED by the rule, so a
+      // client can never register itself as an admin.
+      // Email is compared case-insensitively: Firebase Auth lowercases token
+      // emails while createStudentProfile() writes email.trim().
+      allow create: if isOwner(userId)
+        && request.resource.data.role == 'student'
+        && request.resource.data.status == 'active'
+        && request.resource.data.emailVerified == false
+        && request.resource.data.email.lower() == request.auth.token.email.lower()
+        && request.resource.data.keys().hasAll(
+             ['fullName', 'email', 'role', 'status', 'emailVerified']);
+
+      allow update: if
+        // ---- student editing their own profile / preferences ----
+        ( isOwner(userId)
+          && isActiveUser()
+          && changedKeys().hasOnly(studentSelfEditable())
+          && emailVerifiedMatchesToken()
+        )
+        ||
+        // ---- active admin administering an account ----
+        ( isActiveAdmin()
+          && changedKeys().hasOnly(adminEditable())
+          && request.resource.data.status in ['active', 'disabled']
+          && request.resource.data.role == resource.data.role
+        );
+
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  departments/{departmentId}
+    //  Organisational unit that owns courses and to which majors belong.
+    // ===================================================================
+    match /departments/{departmentId} {
+
+      function validDepartment() {
+        return isNonEmptyString(request.resource.data.name)
+          && request.resource.data.status in ['active', 'archived']
+          && request.resource.data.get('source', 'manual') in ['manual', 'api'];
+      }
+
+      // Students browse the catalogue, so the whole academic structure is
+      // readable by any active account. None of it is personal data.
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validDepartment()
+        && request.resource.data.keys().hasAll(['name', 'status']);
+
+      allow update: if isActiveAdmin() && validDepartment();
+
+      // Archive over delete: a deleted department orphans its courses
+      // and majors, which nothing in the app can repair.
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  majors/{majorId}       a degree programme; owns a curriculum
+    // ===================================================================
+    match /majors/{majorId} {
+
+      function validMajor() {
+        return isNonEmptyString(request.resource.data.name)
+          && isNonEmptyString(request.resource.data.code)
+          && isNonEmptyString(request.resource.data.departmentId)
+          && exists(/databases/$(database)/documents/departments/$(request.resource.data.departmentId))
+          && request.resource.data.totalLevels is int
+          && request.resource.data.totalLevels > 0
+          && request.resource.data.status in ['active', 'archived']
+          && request.resource.data.get('source', 'manual') in ['manual', 'api'];
+      }
+
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validMajor()
+        && request.resource.data.keys().hasAll(
+             ['name', 'code', 'departmentId', 'totalLevels', 'status']);
+
+      allow update: if isActiveAdmin() && validMajor();
+
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  courses/{courseId}    PERMANENT CATALOG SUBJECT — auto-ID
+    //
+    //  A course is the academic subject itself. It has NO semester and NO
+    //  instructor: those belong to a courseOffering. courseCode is a unique
+    //  business field, enforced in CourseService — Firestore rules cannot
+    //  express uniqueness because they cannot run queries.
+    // ===================================================================
+    match /courses/{courseId} {
+
+      // The Phase 6C offering-shaped fields are actively rejected, not merely
+      // "not required". Re-adding them would silently recreate the modelling
+      // error that Phase 7 exists to undo.
+      function hasNoOfferingFields() {
+        return !('semesterId' in request.resource.data)
+          && !('instructorName' in request.resource.data)
+          && !('academicYear' in request.resource.data)
+          && !('semester' in request.resource.data);
+      }
+
+      function validCourse() {
+        return isNonEmptyString(request.resource.data.courseCode)
+          && isNonEmptyString(request.resource.data.title)
+          && request.resource.data.creditHours is int
+          && request.resource.data.creditHours > 0
+          && isNonEmptyString(request.resource.data.departmentId)
+          && exists(/databases/$(database)/documents/departments/$(request.resource.data.departmentId))
+          && request.resource.data.status in ['active', 'archived']
+          && request.resource.data.get('source', 'manual') in ['manual', 'api']
+          && hasNoOfferingFields();
+      }
+
+      // Catalog-style read. Keeping this unconditional (for active users) is a
+      // deliberate trade-off: per-document exists() checks would exceed the
+      // per-query document-access budget. Catalog data is not personal data.
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validCourse()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.keys().hasAll(
+             ['courseCode', 'title', 'departmentId',
+              'creditHours', 'status', 'createdBy']);
+
+      // createdBy is immutable — it records who introduced the subject, and
+      // one live course still points at the disabled tombstone admin.
+      allow update: if isActiveAdmin()
+        && validCourse()
+        && request.resource.data.createdBy == resource.data.createdBy;
+
+      // POLICY (approved Phase 5B, unchanged): archive-first. Removal is
+      // `status: 'archived'` via CourseService.archiveCourse(). A hard delete
+      // would orphan every offering and enrollment that references the course.
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  courseOfferings/{offeringId}   ID: {courseId}_{semesterId}_{section}
+    //
+    //  One course taught in one semester, one section. Carries the semester
+    //  and the instructor — the two things a permanent course must not.
+    // ===================================================================
+    match /courseOfferings/{offeringId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      // The document ID must encode the exact relationship it stores. This is
+      // what makes a duplicate offering structurally impossible and what makes
+      // "copy last semester's offerings" safe to re-run.
+      //
+      // NOTE: the ID is built from stored fields, never parsed back out —
+      // semesterId itself contains underscores (semester_2026_1).
+      function offeringIdMatches() {
+        return offeringId == d().courseId + '_' + d().semesterId + '_' + d().section;
+      }
+
+      function referencesExist() {
+        return exists(/databases/$(database)/documents/courses/$(d().courseId))
+          && exists(/databases/$(database)/documents/semesters/$(d().semesterId));
+      }
+
+      function validOffering() {
+        return isNonEmptyString(d().courseId)
+          && isNonEmptyString(d().semesterId)
+          && isNonEmptyString(d().instructorName)
+          && isNonEmptyString(d().section)
+          && d().status in ['active', 'archived', 'cancelled']
+          && d().get('source', 'manual') in ['manual', 'api'];
+      }
+
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validOffering()
+        && offeringIdMatches()
+        && referencesExist()
+        && d().createdBy == request.auth.uid
+        && d().keys().hasAll(
+             ['courseId', 'semesterId', 'instructorName', 'section',
+              'status', 'createdBy']);
+
+      // courseId, semesterId and section form the document ID, so they are
+      // immutable — changing one would desynchronise ID from content. To move
+      // a course to another semester you create another offering.
+      allow update: if isActiveAdmin()
+        && validOffering()
+        && d().courseId == resource.data.courseId
+        && d().semesterId == resource.data.semesterId
+        && d().section == resource.data.section
+        && d().createdBy == resource.data.createdBy;
+
+      // Archive (or cancel) over delete: enrollments point at offerings.
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  curriculumCourses/{entryId}
+    //    course row: {majorId}_{courseId}
+    //    slot row:   {majorId}_slot_{academicLevel}_{sequence}
+    //
+    //  One row of a major's study plan. A row is either a specific course or
+    //  an unfilled requirement slot ("متطلب جامعة اختياري (1)"). Slots are
+    //  NOT courses: no document is ever created for them in `courses`.
+    // ===================================================================
+    match /curriculumCourses/{entryId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      function validLevel() {
+        return d().academicLevel is int
+          && d().academicLevel >= 1
+          && d().academicLevel <= 8;
+      }
+
+      function validRequirementType() {
+        return d().requirementType in [
+          'major_required', 'major_elective',
+          'college_required', 'university_required',
+          'university_elective', 'free_elective'
+        ];
+      }
+
+      // Prerequisites are STORED but NOT ENFORCED anywhere in the MVP.
+      // prerequisiteText holds the official wording verbatim and is kept even
+      // when no course ID could be resolved with confidence.
+      function validPrerequisites() {
+        return (!('prerequisiteCourseIds' in d())
+                 || d().prerequisiteCourseIds is list)
+          && (isAbsent(d(), 'prerequisiteText')
+               || d().prerequisiteText is string);
+      }
+
+      // A row is a course OR a slot, never both and never neither.
+      function validCourseEntry() {
+        return d().entryType == 'course'
+          && isNonEmptyString(d().courseId)
+          && exists(/databases/$(database)/documents/courses/$(d().courseId))
+          && isAbsent(d(), 'slotLabel')
+          && entryId == d().majorId + '_' + d().courseId;
+      }
+
+      function validSlotEntry() {
+        return d().entryType == 'slot'
+          && isAbsent(d(), 'courseId')
+          && isNonEmptyString(d().slotLabel)
+          && d().creditHours is int
+          && d().creditHours > 0
+          && entryId == d().majorId + '_slot_' + string(d().academicLevel)
+                        + '_' + string(d().sequence);
+      }
+
+      function validEntry() {
+        return isNonEmptyString(d().majorId)
+          && exists(/databases/$(database)/documents/majors/$(d().majorId))
+          && validLevel()
+          && validRequirementType()
+          && validPrerequisites()
+          && d().sequence is int
+          && d().sequence >= 0
+          && ( validCourseEntry() || validSlotEntry() );
+      }
+
+      // Every student needs to read their own programme's plan.
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validEntry()
+        && d().keys().hasAll(
+             ['majorId', 'entryType', 'academicLevel',
+              'requirementType', 'sequence']);
+
+      // majorId and the entry identity are part of the document ID, so a
+      // valid update necessarily keeps them: validEntry() re-checks the ID.
+      allow update: if isActiveAdmin()
+        && validEntry()
+        && d().majorId == resource.data.majorId
+        && d().entryType == resource.data.entryType;
+
+      // A plan row has no status field, so removing a requirement from a plan
+      // is a real delete. Admin-only.
+      allow delete: if isActiveAdmin();
+    }
+
+    // ===================================================================
+    //  semesters/{semesterId}     ID: semester_{academicYear}_{number}
+    // ===================================================================
+    match /semesters/{semesterId} {
+
+      function validSemester() {
+        return request.resource.data.status in ['upcoming', 'current', 'completed']
+          && request.resource.data.semesterNumber is int
+          && request.resource.data.semesterNumber > 0
+          && request.resource.data.academicYear is string
+          && request.resource.data.semesterName is string;
+      }
+
+      // Every active user needs this to resolve the current semester.
+      allow read: if isActiveUser();
+
+      allow create: if isActiveAdmin()
+        && validSemester()
+        && request.resource.data.keys().hasAll(
+             ['academicYear', 'semesterNumber', 'semesterName', 'status']);
+
+      // academicYear and semesterNumber define the document ID, so they are
+      // immutable — letting them drift would desynchronise ID from content.
+      allow update: if isActiveAdmin()
+        && validSemester()
+        && request.resource.data.academicYear == resource.data.academicYear
+        && request.resource.data.semesterNumber == resource.data.semesterNumber;
+
+      allow delete: if isActiveAdmin();
+    }
+
+    // ===================================================================
+    //  enrollments/{enrollmentId}        ID: {userId}_{offeringId}
+    //
+    //  One student attempt in one offering. Retaking a subject in a later
+    //  semester is a different offering, therefore a different document —
+    //  the earlier attempt is never overwritten.
+    // ===================================================================
+    match /enrollments/{enrollmentId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      // The document ID must encode the exact relationship it stores. This is
+      // what makes a duplicate enrollment structurally impossible.
+      function enrollmentIdMatches() {
+        return enrollmentId == d().userId + '_' + d().offeringId;
+      }
+
+      function targetIsStudent() {
+        return exists(/databases/$(database)/documents/users/$(d().userId))
+          && get(/databases/$(database)/documents/users/$(d().userId))
+               .data.role == 'student';
+      }
+
+      function offeringData() {
+        return get(/databases/$(database)/documents/courseOfferings/$(d().offeringId)).data;
+      }
+
+      // courseId and semesterId are denormalised from the offering so that
+      // "current courses", "history" and "group by subject" are each a single
+      // equality query. They must therefore agree with the offering exactly.
+      function matchesOffering() {
+        return exists(/databases/$(database)/documents/courseOfferings/$(d().offeringId))
+          && d().courseId == offeringData().courseId
+          && d().semesterId == offeringData().semesterId;
+      }
+
+      function validAttemptNumber() {
+        return d().attemptNumber is int && d().attemptNumber >= 1;
+      }
+
+      function validCompletionStatus() {
+        return isAbsent(d(), 'completionStatus')
+          || d().completionStatus in ['passed', 'failed', 'incomplete'];
+      }
+
+      function validGrade() {
+        return isAbsent(d(), 'grade') || d().grade is string;
+      }
+
+      // Student: own rows only.  Admin: everything.
+      // Compatible with where('userId','==',uid) and, for admins,
+      // where('offeringId','==',id). An unfiltered student query is denied.
+      allow read: if ( isActiveUser() && resource.data.userId == request.auth.uid )
+        || isActiveAdmin();
+
+      // POLICY: students can NEVER enrol themselves, and can never author an
+      // academic outcome — completionStatus and grade must not exist yet.
+      allow create: if isActiveAdmin()
+        && enrollmentIdMatches()
+        && isNonEmptyString(d().userId)
+        && isNonEmptyString(d().offeringId)
+        && d().status == 'active'
+        && isAbsent(d(), 'completionStatus')
+        && isAbsent(d(), 'grade')
+        && validAttemptNumber()
+        && d().assignedBy == request.auth.uid
+        && d().keys().hasAll(
+             ['userId', 'offeringId', 'courseId', 'semesterId',
+              'attemptNumber', 'status', 'assignedBy'])
+        && targetIsStudent()
+        && matchesOffering();
+
+      /*
+       * The relationship is frozen after creation. userId, offeringId,
+       * courseId, semesterId and attemptNumber can never change: they are what
+       * the document IS. Only the outcome may move.
+       *
+       * Students are excluded entirely, which is what stops a student from
+       * writing their own status, completionStatus or grade.
+       */
+      allow update: if isActiveAdmin()
+        && d().userId == resource.data.userId
+        && d().offeringId == resource.data.offeringId
+        && d().courseId == resource.data.courseId
+        && d().semesterId == resource.data.semesterId
+        && d().attemptNumber == resource.data.attemptNumber
+        && d().status in ['active', 'completed', 'removed']
+        && validCompletionStatus()
+        && validGrade()
+        && changedKeys().hasOnly(
+             ['status', 'completionStatus', 'grade', 'updatedAt']);
+
+      // Kept admin-only for maintenance. Normal UI removal uses
+      // status: 'removed' so the row survives as admin audit history.
+      allow delete: if isActiveAdmin();
+    }
+
+    // ===================================================================
+    //  courseFiles/{fileId}
+    //
+    //  Metadata for a file uploaded to a course OFFERING. The binary itself
+    //  lives in Cloudinary; this document is what makes it queryable and
+    //  what controls who may see it.
+    //
+    //  A file belongs to an offering, not to a permanent course: material
+    //  taught this term is not automatically the material of another term.
+    // ===================================================================
+    match /courseFiles/{fileId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      // Enrollment IDs are deterministic ({userId}_{offeringId}), so a
+      // student's enrollment in an offering is a single document lookup —
+      // no query needed, which is what makes this expressible in rules.
+      function enrollmentPath(offeringId) {
+        return /databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + offeringId);
+      }
+
+      // Active enrollment = currently studying it.
+      // Completed enrollment = studied it before; historical material stays
+      // readable, otherwise a student loses their own past course files.
+      // Removed enrollment grants nothing.
+      function isEnrolledInOffering(offeringId) {
+        return isSignedIn()
+          && exists(enrollmentPath(offeringId))
+          && get(enrollmentPath(offeringId)).data.status in ['active', 'completed'];
+      }
+
+      function offeringData() {
+        return get(/databases/$(database)/documents/courseOfferings/$(d().offeringId)).data;
+      }
+
+      // courseId and semesterId are denormalised from the offering, so they
+      // must agree with it. Unverified copies drift from their source.
+      function matchesOffering() {
+        return exists(/databases/$(database)/documents/courseOfferings/$(d().offeringId))
+          && d().courseId == offeringData().courseId
+          && d().semesterId == offeringData().semesterId;
+      }
+
+      function validFile() {
+        return isNonEmptyString(d().offeringId)
+          && isNonEmptyString(d().title)
+          && isNonEmptyString(d().cloudinaryUrl)
+          && isNonEmptyString(d().cloudinaryPublicId)
+          && d().category in ['lecture', 'summary', 'assignment_material',
+                              'reference', 'other']
+          && d().status in ['active', 'archived']
+          && d().fileSize is int
+          && d().fileSize > 0
+          // Mirrors the 10 MB client-side limit; a client can lie about the
+          // number, but the rule keeps an obviously wrong value out.
+          && d().fileSize <= 10485760;
+      }
+
+      // Admins see everything; a student sees a file only for an offering
+      // they are (or were) enrolled in.
+      allow read: if isActiveAdmin()
+        || ( isActiveUser() && isEnrolledInOffering(resource.data.offeringId) );
+
+      // POLICY: students never upload course material. Files are course
+      // content authored by staff, not student submissions.
+      allow create: if isActiveAdmin()
+        && validFile()
+        && matchesOffering()
+        && d().uploadedBy == request.auth.uid
+        && d().keys().hasAll(
+             ['offeringId', 'courseId', 'semesterId', 'title', 'category',
+              'fileName', 'fileSize', 'cloudinaryUrl', 'cloudinaryPublicId',
+              'cloudinaryResourceType', 'uploadedBy', 'status']);
+
+      /*
+       * Only the descriptive fields may change. The offering it belongs to,
+       * the Cloudinary references and the uploader are frozen: changing any
+       * of them would make the document describe a different file, which is
+       * what a new upload is for.
+       */
+      allow update: if isActiveAdmin()
+        && d().offeringId == resource.data.offeringId
+        && d().courseId == resource.data.courseId
+        && d().semesterId == resource.data.semesterId
+        && d().cloudinaryUrl == resource.data.cloudinaryUrl
+        && d().cloudinaryPublicId == resource.data.cloudinaryPublicId
+        && d().cloudinaryResourceType == resource.data.cloudinaryResourceType
+        && d().uploadedBy == resource.data.uploadedBy
+        && d().status in ['active', 'archived']
+        && d().category in ['lecture', 'summary', 'assignment_material',
+                            'reference', 'other']
+        && isNonEmptyString(d().title)
+        && changedKeys().hasOnly(
+             ['title', 'description', 'category', 'status', 'updatedAt']);
+
+      /*
+       * Archive over delete, and here it is not merely a preference: the
+       * upload preset is unsigned, so the client cannot delete the binary
+       * from Cloudinary. Deleting the metadata would leave a file nothing
+       * in the system knows about.
+       */
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  supportRequests/{requestId}
+    //  Outside the academic scope, but required: SupportService already
+    //  writes here and default-deny would break the Help & FAQ form.
+    //  Field names verified against SupportRequest.toFirestore(): uses `uid`.
+    // ===================================================================
+    match /supportRequests/{requestId} {
+
+      allow create: if isActiveUser()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.keys().hasAll(
+             ['uid', 'subject', 'message', 'status']);
+
+      allow read: if isActiveAdmin();
+
+      allow update: if isActiveAdmin()
+        && request.resource.data.uid == resource.data.uid;
+
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  tasks/{taskId}
+    //  Personal tasks for students.
+    // ===================================================================
+    match /tasks/{taskId} {
+
+      function isActiveStudent() {
+        return hasValidAccount() && userData().role == 'student';
+      }
+
+      function validTask() {
+        return isNonEmptyString(request.resource.data.userId)
+          && isNonEmptyString(request.resource.data.title)
+          && request.resource.data.priority in ['high', 'medium', 'low']
+          && request.resource.data.status in ['pending', 'completed']
+          && request.resource.data.type in ['assignment', 'lecture', 'study', 'exam']
+          && validCourseLink();
+      }
+
+      function validCourseLink() {
+        return (isAbsent(request.resource.data, 'enrollmentId')
+                 && isAbsent(request.resource.data, 'offeringId')
+                 && isAbsent(request.resource.data, 'courseId'))
+          || (isNonEmptyString(request.resource.data.enrollmentId)
+               && isNonEmptyString(request.resource.data.offeringId)
+               && isNonEmptyString(request.resource.data.courseId)
+               && exists(/databases/$(database)/documents/enrollments/$(request.resource.data.enrollmentId))
+               && get(/databases/$(database)/documents/enrollments/$(request.resource.data.enrollmentId)).data.userId == request.auth.uid);
+      }
+
+      allow read, delete: if isActiveStudent() && isOwner(resource.data.userId);
+
+      allow create: if isActiveStudent()
+        && isOwner(request.resource.data.userId)
+        && validTask()
+        && request.resource.data.keys().hasAll(['userId', 'title', 'priority', 'status', 'type', 'createdAt', 'updatedAt']);
+
+      allow update: if isActiveStudent()
+        && isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId // userId immutable
+        && validTask();
+    }
+
+    // ===================================================================
+    //  Explicit default deny for every unmatched path.
+    //  Firestore already denies by default; this documents the intent and
+    //  covers any collection created before its rules are written.
+    //  (This does not revoke grants from the more specific matches above.)
+    // ===================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -76,45 +76,68 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        if (user.emailVerified) {
-          setState(() {
-            _isResolvingDestination = true;
-          });
-          try {
-            final onboardingCompleted = await OnboardingService()
-                .isOnboardingCompleted();
-            if (mounted) {
-              // Initialize OnboardingProvider for the UID
-              Provider.of<OnboardingProvider>(
-                context,
-                listen: false,
-              ).initializeForUser(user.uid);
+      setState(() {
+        _isResolvingDestination = true;
+      });
 
-              if (onboardingCompleted) {
-                Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
-              } else {
-                Navigator.pushReplacementNamed(
-                  context,
-                  AppRoutes.onboardingWelcome,
-                );
-              }
-            }
-          } catch (_) {
-            if (mounted) {
-              setState(() {
-                _isResolvingDestination = false;
-                _passwordError = AppStrings.onboardingStatusError;
-              });
-            }
-          }
-        } else {
-          Navigator.pushReplacementNamed(
+      try {
+        // Admin goes directly to the admin dashboard.
+        if (authProvider.isAdmin) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.adminShell,
+            (route) => false,
+          );
+          return;
+        }
+
+        // Only students continue through verification and onboarding.
+        final user = FirebaseAuth.instance.currentUser;
+
+        if (user == null) {
+          throw StateError('No authenticated user found.');
+        }
+
+        if (!user.emailVerified) {
+          Navigator.pushNamedAndRemoveUntil(
             context,
             AppRoutes.studentVerification,
+            (route) => false,
             arguments: email,
           );
+          return;
+        }
+
+        final onboardingCompleted =
+            authProvider.onboardingCompleted ||
+            await OnboardingService().isOnboardingCompleted();
+
+        if (!mounted) return;
+
+        Provider.of<OnboardingProvider>(
+          context,
+          listen: false,
+        ).initializeForUser(user.uid);
+
+        if (onboardingCompleted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.dashboard,
+            (route) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.onboardingWelcome,
+            (route) => false,
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _isResolvingDestination = false;
+            _passwordError = AppStrings.onboardingStatusError;
+          });
         }
       }
     } else if (mounted) {

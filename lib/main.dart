@@ -1,29 +1,21 @@
-// lib/main.dart
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import 'app/akademia_app.dart';
-import 'features/auth/providers/auth_provider.dart';
-import 'features/onboarding/providers/onboarding_provider.dart';
-import 'features/profile/providers/profile_provider.dart';
-import 'features/profile/services/profile_service.dart';
-import 'features/profile/providers/study_preferences_provider.dart';
-import 'features/profile/services/study_preferences_service.dart';
-import 'features/profile/providers/support_provider.dart';
-import 'features/profile/services/support_service.dart';
-import 'features/notifications/providers/notification_settings_provider.dart';
-import 'features/notifications/services/notification_settings_service.dart';
-import 'features/courses/providers/student_course_provider.dart';
-import 'features/courses/services/student_course_service.dart';
-import 'features/courses/providers/student_course_file_provider.dart';
-import 'features/courses/services/student_course_file_service.dart';
+import 'app/app_providers.dart';
 import 'firebase_options.dart';
-import 'features/files/providers/student_file_provider.dart';
-import 'features/files/services/student_file_service.dart';
 
+/*
+ * لا تهيئة عامة لـ Cloudinary هنا.
+ *
+ * الرفع في هذه المرحلة طلب multipart غير موقَّع إلى preset معلن، ولا يمر
+ * بحزم Cloudinary إطلاقًا؛ واسم السحابة يعيش في CloudinaryConfig. الحاوية
+ * العامة CloudinaryContext مهملة في الحزمة ولم يكن يقرأها أي شيء، فوجودها
+ * كان إعدادًا ميتًا. عند الحاجة إلى عرض وسائط عبر CldImageWidget يُنشأ
+ * CloudinaryObject عند نقطة الاستخدام.
+ */
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -44,37 +36,5 @@ Future<void> main() async {
     ),
   );
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => OnboardingProvider()),
-        ChangeNotifierProvider(
-          create: (_) => ProfileProvider(ProfileService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => SupportProvider(SupportService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) =>
-              NotificationSettingsProvider(NotificationSettingsService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => CourseProvider(CourseService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => CourseFileProvider(CourseFileService()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => StudentFileProvider(StudentFileService()),
-        ),
-
-      ],
-
-      child: const AkademiaApp(),
-    ),
-  );
+  runApp(MultiProvider(providers: appProviders, child: const AkademiaApp()));
 }

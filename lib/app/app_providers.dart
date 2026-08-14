@@ -11,6 +11,7 @@ import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
+import '../features/admin/providers/admin_support_provider.dart';
 import '../features/academics/providers/academic_structure_provider.dart';
 import '../features/academics/services/department_service.dart';
 import '../features/academics/services/major_service.dart';
@@ -47,6 +48,14 @@ final List<SingleChildWidget> appProviders = [
     create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
   ),
   ChangeNotifierProvider(create: (_) => SupportProvider(SupportService())),
+  /*
+   * صندوق وارد الدعم للمشرف. مزوّد منفصل عن SupportProvider لأن ذاك يملك
+   * حالة إرسال الطالب وحدها، لكن الخدمة مشتركة: مجموعة supportRequests
+   * واحدة، لا مجموعة ثانية ولا خدمة ثانية.
+   */
+  ChangeNotifierProvider(
+    create: (_) => AdminSupportProvider(SupportService()),
+  ),
   ChangeNotifierProvider(
     create: (_) => NotificationSettingsProvider(NotificationSettingsService()),
   ),

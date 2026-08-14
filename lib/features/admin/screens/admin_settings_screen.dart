@@ -218,6 +218,18 @@ class AdminSettingsScreen extends StatelessWidget {
                         ).pushNamed(AppRoutes.adminSemesters);
                       },
                     ),
+                    // صندوق وارد ما يرسله الطلاب من شاشة المساعدة. كان
+                    // يُكتب إلى مجموعة لا تقرأها أي شاشة.
+                    AppMenuTile(
+                      icon: Icons.support_agent_rounded,
+                      title: AppStrings.supportRequestsTitle,
+                      subtitle: AppStrings.supportRequestsTileDesc,
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.adminSupportRequests);
+                      },
+                    ),
                     AppMenuTile(
                       icon: Icons.help_outline_rounded,
                       title: AppStrings.helpSupportTitle,

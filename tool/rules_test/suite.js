@@ -895,6 +895,92 @@ t('23d. unmatched collection denied for admin', {
   method: 'get',
 });
 
+// --- 23e-23l. supportRequests admin inbox (Phase 7H5) -------------------------
+//
+// The inbox may move a request through open <-> resolved and nothing else.
+// What the student wrote is the record; only its handling state is the
+// admin's to change.
+const SUPPORT_OPEN = {
+  uid: 'student1',
+  fullName: 'حلا جندية',
+  email: 's@test.com',
+  subject: 'مشكلة في تسجيل المساقات',
+  message: 'لا أستطيع رؤية مساقات الفصل الحالي.',
+  status: 'open',
+  source: 'mobile_app',
+};
+
+t('23e. admin reads a supportRequest allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'get',
+  existing: SUPPORT_OPEN,
+});
+t('23f. admin marks a request resolved allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved' },
+  existing: SUPPORT_OPEN,
+});
+t('23g. admin reopens a resolved request allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'open' },
+  existing: { ...SUPPORT_OPEN, status: 'resolved' },
+});
+t('23h. student updating a request status denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved' },
+  existing: SUPPORT_OPEN,
+});
+t('23i. admin rewriting the student message denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', message: 'نص مختلف' },
+  existing: SUPPORT_OPEN,
+});
+t('23j. admin rewriting the subject denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, subject: 'موضوع آخر' },
+  existing: SUPPORT_OPEN,
+});
+t('23k. admin reassigning the request owner denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', uid: 'student2' },
+  existing: SUPPORT_OPEN,
+});
+t('23l. an unknown status value denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'escalated' },
+  existing: SUPPORT_OPEN,
+});
+t('23m. supportRequest hard delete denied for admin', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'delete',
+  existing: SUPPORT_OPEN,
+});
+
 // --- 24. student tasks (Phase 7T1A) --------------------
 t('24a. active student reads own task allowed', {
   expect: 'ALLOW',

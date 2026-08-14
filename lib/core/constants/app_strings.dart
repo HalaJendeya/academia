@@ -391,6 +391,47 @@ abstract final class AppStrings {
   static const String feedbackDetailsHint = 'اشرح لنا ما تواجهه...';
   static const String sendFeedback = 'إرسال الملاحظة';
 
+  // ===== المرحلة 7H5: صندوق وارد طلبات الدعم للمشرف =====
+
+  static const String supportRequestsTitle = 'طلبات الدعم';
+  static const String supportRequestsTileDesc =
+      'عرض طلبات الدعم الواردة من الطلاب ومتابعتها';
+
+  static const String supportFilterAll = 'الكل';
+  static const String supportFilterOpen = 'مفتوحة';
+  static const String supportFilterResolved = 'محلولة';
+
+  static const String supportStatusOpen = 'مفتوح';
+  static const String supportStatusResolved = 'محلول';
+
+  static const String supportRequestDetailsTitle = 'تفاصيل الطلب';
+  static const String supportRequesterLabel = 'مقدّم الطلب';
+  static const String supportRequestSubjectLabel = 'الموضوع';
+  static const String supportRequestMessageLabel = 'نص الطلب';
+  static const String supportRequestDateLabel = 'تاريخ الإرسال';
+
+  /// بديل موحّد للحقول الناقصة في المستندات القديمة.
+  static const String supportRequestUnknownValue = 'غير محدد';
+
+  static const String supportMarkResolvedAction = 'تحديد كمحلول';
+  static const String supportReopenAction = 'إعادة فتح';
+  static const String closeAction = 'إغلاق';
+
+  static const String supportRequestResolvedSuccess = 'تم تحديد الطلب كمحلول';
+  static const String supportRequestReopenedSuccess = 'تمت إعادة فتح الطلب';
+
+  static const String supportRequestsEmptyTitle = 'لا توجد طلبات دعم';
+  static const String supportRequestsEmptyDesc =
+      'لم يرسل الطلاب أي طلب دعم حتى الآن.';
+  static const String supportRequestsEmptyFilteredTitle = 'لا توجد نتائج';
+  static const String supportRequestsEmptyFilteredDesc =
+      'لا توجد طلبات تطابق التصفية المحددة.';
+
+  static const String supportRequestsLoadError = 'تعذر تحميل طلبات الدعم';
+  static const String supportRequestStatusError = 'تعذر تحديث حالة الطلب';
+  static const String supportRequestStatusInvalid = 'حالة الطلب غير صالحة';
+  static const String supportRequestNotFound = 'طلب الدعم غير موجود';
+
   static const String supportRequestSuccess = 'تم إرسال ملاحظتك بنجاح';
   static const String supportRequestError = 'تعذر إرسال ملاحظتك، حاول مرة أخرى';
   static const String supportRequestSubjectRequired =

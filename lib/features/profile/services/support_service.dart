@@ -20,6 +20,60 @@ class SupportService {
     : _auth = auth ?? FirebaseAuth.instance,
       _firestore = firestore ?? FirebaseFirestore.instance;
 
+  CollectionReference<Map<String, dynamic>> get _requests =>
+      _firestore.collection('supportRequests');
+
+  /// كل طلبات الدعم، للمشرف.
+  ///
+  /// بلا شرط ولا ترتيب في الاستعلام: القواعد تسمح بالقراءة للمشرف وحده،
+  /// والترتيب محليًا فلا يحتاج فهرسًا. التصفية حسب الحالة تتم في الواجهة
+  /// لأن الشاشة تعرض عدّاد كل تبويب في الوقت نفسه.
+  Stream<List<SupportRequest>> watchSupportRequests() {
+    return _requests.snapshots().map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => SupportRequest.fromFirestore(doc.data(), doc.id))
+          .toList();
+
+      // الأحدث أولًا. المستندات القديمة بلا createdAt تنزل إلى الآخر بدل
+      // أن تتصدّر القائمة بترتيب عشوائي.
+      list.sort((a, b) {
+        if (a.createdAt == null && b.createdAt == null) return 0;
+        if (a.createdAt == null) return 1;
+        if (b.createdAt == null) return -1;
+        return b.createdAt!.compareTo(a.createdAt!);
+      });
+      return list;
+    });
+  }
+
+  /// تغيير حالة الطلب. لا يمس ما كتبه الطالب.
+  ///
+  /// الحقلان المكتوبان status و updatedAt وحدهما، وهو بالضبط ما تسمح به
+  /// القاعدة: أي حقل إضافي هنا يجعل الكتابة كلها مرفوضة.
+  Future<void> setRequestStatus({
+    required String requestId,
+    required String status,
+  }) async {
+    if (_auth.currentUser == null) {
+      throw const SupportException(AppStrings.authenticationRequired);
+    }
+    if (requestId.trim().isEmpty) {
+      throw const SupportException(AppStrings.supportRequestNotFound);
+    }
+    if (!SupportRequest.allowedStatuses.contains(status)) {
+      throw const SupportException(AppStrings.supportRequestStatusInvalid);
+    }
+
+    try {
+      await _requests.doc(requestId).update({
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw const SupportException(AppStrings.supportRequestStatusError);
+    }
+  }
+
   Future<void> submitSupportRequest({
     required String subject,
     required String message,
@@ -82,10 +136,10 @@ class SupportService {
         email: resolvedEmail,
         subject: normalizedSubject,
         message: normalizedMessage,
-        status: 'open',
+        status: SupportRequest.statusOpen,
       );
 
-      await _firestore.collection('supportRequests').add({
+      await _requests.add({
         ...supportRequest.toFirestore(),
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),

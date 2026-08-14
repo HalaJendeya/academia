@@ -661,10 +661,22 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(
              ['uid', 'subject', 'message', 'status']);
 
+      // POLICY: admin-only inbox. A student writes a request and never reads
+      // it back — not their own, and not anyone else's.
       allow read: if isActiveAdmin();
 
+      /*
+       * Phase 7H5: the admin inbox may move a request through its lifecycle
+       * and nothing else.
+       *
+       * Previously any admin write was accepted as long as `uid` survived,
+       * which allowed silently rewriting the subject or the message a student
+       * had sent. What the student wrote is the record; only its handling
+       * state belongs to the admin.
+       */
       allow update: if isActiveAdmin()
-        && request.resource.data.uid == resource.data.uid;
+        && request.resource.data.status in ['open', 'resolved']
+        && changedKeys().hasOnly(['status', 'updatedAt']);
 
       allow delete: if false;
     }

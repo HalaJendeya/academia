@@ -56,6 +56,10 @@ abstract final class AppRoutes {
   static const String adminAddAnnouncement = '/admin/announcements/add';
   static const String adminReportedPosts = '/admin/reported-posts';
   static const String adminSettings = '/admin/settings';
+
+  /// صندوق وارد طلبات الدعم (المرحلة 7H5).
+  static const String adminSupportRequests = '/admin/support-requests';
+
   static const String adminProfile = '/admin/profile';
 
   // Semesters (Phase 6B).

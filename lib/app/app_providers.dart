@@ -12,6 +12,8 @@ import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
 import '../features/admin/providers/admin_support_provider.dart';
+import '../features/admin/providers/admin_user_provider.dart';
+import '../features/admin/services/admin_user_service.dart';
 import '../features/academics/providers/academic_structure_provider.dart';
 import '../features/academics/services/department_service.dart';
 import '../features/academics/services/major_service.dart';
@@ -55,6 +57,13 @@ final List<SingleChildWidget> appProviders = [
    */
   ChangeNotifierProvider(
     create: (_) => AdminSupportProvider(SupportService()),
+  ),
+  /*
+   * إدارة حالة حسابات الطلاب. مزوّد كتابة فقط: قائمة الطلاب تصل من
+   * EnrollmentProvider ببثّ مباشر، فلا نحتفظ بنسخة ثانية منها هنا.
+   */
+  ChangeNotifierProvider(
+    create: (_) => AdminUserProvider(AdminUserService()),
   ),
   ChangeNotifierProvider(
     create: (_) => NotificationSettingsProvider(NotificationSettingsService()),

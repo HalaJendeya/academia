@@ -12,6 +12,8 @@ import 'package:academia/features/courses/models/course_model.dart';
 import 'package:academia/features/courses/models/course_offering_model.dart';
 import 'package:academia/features/courses/models/student_course_view.dart';
 import 'package:academia/features/enrollments/models/enrollment_model.dart';
+import 'package:academia/features/admin/providers/admin_user_provider.dart';
+import 'package:academia/features/admin/services/admin_user_service.dart';
 import 'package:academia/features/enrollments/providers/admin_student_record_provider.dart';
 import 'package:academia/features/semesters/models/semester_model.dart';
 
@@ -165,26 +167,91 @@ class _RouteRecorder extends NavigatorObserver {
   }
 }
 
-Widget _wrap(FakeRecordProvider record, {List<Route<dynamic>>? pushed}) {
+/// Records exactly what the screen asks to be written, without Firestore.
+class FakeAdminUserProvider extends ChangeNotifier
+    implements AdminUserProvider {
+  FakeAdminUserProvider({this.succeeds = true, this.isSavingValue = false});
+
+  final bool succeeds;
+  final bool isSavingValue;
+
+  final List<({String userId, String status})> calls = [];
+  String? errorValue;
+
+  @override
+  bool get isSaving => isSavingValue;
+
+  @override
+  String? get errorMessage => errorValue;
+
+  @override
+  Future<bool> setAccountStatus({
+    required String userId,
+    required String status,
+  }) async {
+    calls.add((userId: userId, status: status));
+    if (!succeeds) errorValue = AppStrings.accountStatusUpdateError;
+    return succeeds;
+  }
+
+  @override
+  Future<bool> disableStudent(String userId) =>
+      setAccountStatus(userId: userId, status: AdminUserService.statusDisabled);
+
+  @override
+  Future<bool> activateStudent(String userId) =>
+      setAccountStatus(userId: userId, status: AdminUserService.statusActive);
+
+  @override
+  void clearError() {
+    errorValue = null;
+    notifyListeners();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Widget _wrap(
+  FakeRecordProvider record, {
+  List<Route<dynamic>>? pushed,
+  AdminStudentModel student = _student,
+  FakeAdminUserProvider? users,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuthProvider()),
       ChangeNotifierProvider<AdminStudentRecordProvider>.value(value: record),
+      ChangeNotifierProvider<AdminUserProvider>.value(
+        value: users ?? FakeAdminUserProvider(),
+      ),
     ],
     child: MaterialApp(
       navigatorObservers: [if (pushed != null) _RouteRecorder(pushed)],
       onGenerateRoute: (settings) => MaterialPageRoute<void>(
         settings: settings,
         builder: (_) => settings.name == '/'
-            ? const Directionality(
+            ? Directionality(
                 textDirection: TextDirection.rtl,
-                child: AdminStudentDetailsScreen(student: _student),
+                child: AdminStudentDetailsScreen(student: student),
               )
             : const Scaffold(body: Text('assign-screen')),
       ),
     ),
   );
 }
+
+const _disabledStudent = AdminStudentModel(
+  uid: '9psSX1ZO4cWD2z7c7HXVZTSnvAq2',
+  fullName: 'حلا جندية',
+  email: 'hala@test.com',
+  studentId: '2320220914',
+  major: 'نظم المعلومات',
+  majorId: _majorId,
+  academicLevel: 4,
+  status: 'disabled',
+  onboardingCompleted: true,
+);
 
 void _useNarrowScreen(WidgetTester tester) {
   tester.view.physicalSize = const Size(360, 800);
@@ -368,6 +435,177 @@ void main() {
     });
   });
 
+  group('account status management', () {
+    testWidgets('an active student offers only the disable action', (
+      tester,
+    ) async {
+      _useNarrowScreen(tester);
+      await tester.pumpWidget(_wrap(FakeRecordProvider()));
+      await tester.pumpAndSettle();
+
+      expect(find.text(AppStrings.accountActionsTitle), findsOneWidget);
+      expect(find.text(AppStrings.disableAccountAction), findsOneWidget);
+      expect(find.text(AppStrings.activateAccountAction), findsNothing);
+      expect(find.text(AppStrings.activeStatus), findsOneWidget);
+    });
+
+    testWidgets('a disabled student offers only the activate action', (
+      tester,
+    ) async {
+      _useNarrowScreen(tester);
+      await tester.pumpWidget(
+        _wrap(FakeRecordProvider(), student: _disabledStudent),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(AppStrings.activateAccountAction), findsOneWidget);
+      expect(find.text(AppStrings.disableAccountAction), findsNothing);
+      expect(find.text(AppStrings.disabledStatus), findsOneWidget);
+    });
+
+    testWidgets('disabling asks for confirmation first', (tester) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider();
+      await tester.pumpWidget(_wrap(FakeRecordProvider(), users: users));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(AppStrings.disableAccountAction));
+      await tester.pumpAndSettle();
+
+      expect(find.text(AppStrings.disableAccountConfirmBody), findsOneWidget);
+      // Nothing is written until the admin confirms.
+      expect(users.calls, isEmpty);
+    });
+
+    testWidgets('cancelling the confirmation writes nothing', (tester) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider();
+      await tester.pumpWidget(_wrap(FakeRecordProvider(), users: users));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(AppStrings.disableAccountAction));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.cancelAction));
+      await tester.pumpAndSettle();
+
+      expect(users.calls, isEmpty);
+      // The status is untouched.
+      expect(find.text(AppStrings.activeStatus), findsOneWidget);
+    });
+
+    testWidgets('confirming disable writes status: disabled', (tester) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider();
+      await tester.pumpWidget(_wrap(FakeRecordProvider(), users: users));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(AppStrings.disableAccountAction));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.confirmAction));
+      await tester.pumpAndSettle();
+
+      expect(users.calls, hasLength(1));
+      expect(users.calls.single.userId, _student.uid);
+      expect(users.calls.single.status, AdminUserService.statusDisabled);
+
+      // Visible status flips and the action becomes activate.
+      expect(find.text(AppStrings.disabledStatus), findsOneWidget);
+      expect(find.text(AppStrings.activateAccountAction), findsOneWidget);
+      expect(find.text(AppStrings.accountDisabledSuccess), findsOneWidget);
+    });
+
+    testWidgets('confirming activate writes status: active', (tester) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider();
+      await tester.pumpWidget(
+        _wrap(FakeRecordProvider(), student: _disabledStudent, users: users),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(AppStrings.activateAccountAction));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.confirmAction));
+      await tester.pumpAndSettle();
+
+      expect(users.calls.single.status, AdminUserService.statusActive);
+      expect(find.text(AppStrings.activeStatus), findsOneWidget);
+      expect(find.text(AppStrings.disableAccountAction), findsOneWidget);
+      expect(find.text(AppStrings.accountActivatedSuccess), findsOneWidget);
+    });
+
+    testWidgets('a failed write preserves the previous status', (tester) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider(succeeds: false);
+      await tester.pumpWidget(_wrap(FakeRecordProvider(), users: users));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(AppStrings.disableAccountAction));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.confirmAction));
+      await tester.pumpAndSettle();
+
+      // The write was attempted and refused; nothing may claim otherwise.
+      expect(users.calls, hasLength(1));
+      expect(find.text(AppStrings.activeStatus), findsOneWidget);
+      expect(find.text(AppStrings.disabledStatus), findsNothing);
+      expect(find.text(AppStrings.disableAccountAction), findsOneWidget);
+      expect(find.text(AppStrings.accountStatusUpdateError), findsWidgets);
+    });
+
+    testWidgets('the action is disabled while a write is in flight', (
+      tester,
+    ) async {
+      _useNarrowScreen(tester);
+      final users = FakeAdminUserProvider(isSavingValue: true);
+      await tester.pumpWidget(_wrap(FakeRecordProvider(), users: users));
+      // pump, not pumpAndSettle: the in-flight spinner never settles.
+      await tester.pump();
+
+      final button = tester.widget<ElevatedButton>(
+        find.ancestor(
+          of: find.text(AppStrings.disableAccountAction),
+          matching: find.byType(ElevatedButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+
+      // Tapping it cannot start a second write.
+      await tester.tap(
+        find.text(AppStrings.disableAccountAction),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(users.calls, isEmpty);
+    });
+
+    testWidgets('no overflow at 360px with the account actions card', (
+      tester,
+    ) async {
+      _useNarrowScreen(tester);
+      await tester.pumpWidget(
+        _wrap(FakeRecordProvider(), student: _disabledStudent),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('status model', () {
+    test('only active and disabled are accepted', () {
+      expect(AdminUserService.allowedStatuses, ['active', 'disabled']);
+      for (final invalid in [
+        'suspended',
+        'banned',
+        'blocked',
+        'inactive',
+        'deleted',
+      ]) {
+        expect(AdminUserService.allowedStatuses.contains(invalid), isFalse);
+      }
+    });
+  });
+
   testWidgets('the assign action navigates to the assignment flow', (
     tester,
   ) async {
@@ -377,6 +615,9 @@ void main() {
     await tester.pumpAndSettle();
     pushed.clear();
 
+    // The account-actions card sits above this one, so scroll it into view.
+    await tester.ensureVisible(find.text(AppStrings.assignCourseLabel));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(AppStrings.assignCourseLabel));
     await tester.pumpAndSettle();
 

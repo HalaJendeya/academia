@@ -623,11 +623,28 @@ abstract final class AppStrings {
   static const String searchStudentHint = 'ابحث باسم أو رقم الطالب...';
   static const String searchCourseToAssignHint = 'ابحث عن مساق لتسجيله...';
 
-  static const String accountActionsTitle = 'إجراءات الحساب (قريباً)';
+  // ===== المرحلة 7H6: إدارة حالة حساب الطالب =====
+
+  static const String accountActionsTitle = 'إجراءات الحساب';
   static const String accountActionsDesc =
-      'هذه الخيارات معطلة حالياً وسيتم ربطها بآلية التحكم بالدخول لاحقاً.';
+      'التعطيل يمنع الطالب من استخدام التطبيق، ولا يحذف حسابه ولا بياناته.';
   static const String disableAccountAction = 'تعطيل الحساب';
-  static const String activateAccountAction = 'تنشيط الحساب';
+  static const String activateAccountAction = 'تفعيل الحساب';
+
+  static const String disableAccountConfirmTitle = 'تعطيل الحساب';
+  static const String disableAccountConfirmBody =
+      'هل تريد تعطيل حساب هذا الطالب؟ لن يتمكن من استخدام التطبيق حتى تتم '
+      'إعادة تفعيله. لن يُحذف الحساب ولا أي من بياناته.';
+
+  static const String activateAccountConfirmTitle = 'تفعيل الحساب';
+  static const String activateAccountConfirmBody =
+      'هل تريد إعادة تفعيل حساب هذا الطالب؟ سيتمكن من استخدام التطبيق مرة '
+      'أخرى.';
+
+  static const String accountDisabledSuccess = 'تم تعطيل حساب الطالب';
+  static const String accountActivatedSuccess = 'تم تفعيل حساب الطالب';
+  static const String accountStatusUpdateError = 'تعذر تحديث حالة الحساب';
+  static const String accountStatusInvalid = 'حالة الحساب غير صالحة';
   static const String studentNotFound = 'تعذر تحميل بيانات الطالب.';
   static const String studentDetailsTitle = 'تفاصيل الطالب';
 

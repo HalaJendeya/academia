@@ -33,6 +33,33 @@ class SemesterProvider extends ChangeNotifier {
   bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
 
+  bool _isAdminSession = false;
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// شاشات الفصول الدراسية إدارية. المزوّد عالمي، فيبقى اشتراكه حيًّا بعد
+  /// الخروج ما لم يُوقَف صراحةً.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState =
+        _isAdminSession || _subscription != null || _semesters.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListening();
+    _semesters = [];
+    _byId = {};
+    _currentSemester = null;
+    _isLoading = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
   bool get hasSemesters => _semesters.isNotEmpty;
 
   /// اسم الفصل الدراسي للعرض، مع قيمة بديلة آمنة للمساقات القديمة التي

@@ -1,6 +1,7 @@
 // lib/features/courses/widgets/student_file_list_item_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,21 +10,32 @@ import '../../../core/theme/app_sizes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../models/student_course_file.dart';
+import '../../files/models/course_file_model.dart';
 
+/// صف ملف داخل تبويب ملفات المساق.
+///
+/// التصميم كما هو من عمل الواجهة؛ المصدر صار [CourseFileModel] الحقيقي.
+/// زر التنزيل استُبدل بفتح الملف: التنزيل غير المتصل مؤجَّل، والفتح يعمل
+/// فعلًا عبر رابط Cloudinary.
 class FileListItemCard extends StatelessWidget {
-  const FileListItemCard({
-    super.key,
-    required this.file,
-    this.onDownloadTap,
-  });
+  const FileListItemCard({super.key, required this.file, this.onTap, this.now});
 
-  final CourseFile file;
-  final VoidCallback? onDownloadTap;
+  final CourseFileModel file;
+  final VoidCallback? onTap;
+
+  /// اللحظة المرجعية لشارة «جديد». تُحقن في الاختبارات.
+  final DateTime? now;
+
+  String get _dateLabel {
+    final createdAt = file.createdAt;
+    if (createdAt == null) return AppStrings.notProvidedValue;
+    return DateFormat('yyyy/MM/dd', 'ar').format(createdAt);
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
+      onTap: onTap,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.medium,
         vertical: AppSpacing.small,
@@ -34,20 +46,14 @@ class FileListItemCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.medium),
           Expanded(child: _buildInfo()),
           const SizedBox(width: AppSpacing.small),
-          IconButton(
-            onPressed: onDownloadTap,
-            icon: const Icon(
-              Icons.download_rounded,
-              color: AppColors.primary,
-            ),
-          ),
+          const Icon(Icons.open_in_new_rounded, color: AppColors.primary),
         ],
       ),
     );
   }
 
   Widget _buildTypeIcon() {
-    final isPdf = file.type == CourseFile.typePdf;
+    final isPdf = file.typeGroup == CourseFileModel.typePdf;
     final color = isPdf ? AppColors.error : AppColors.secondary;
     final icon = isPdf
         ? Icons.picture_as_pdf_rounded
@@ -71,7 +77,10 @@ class FileListItemCard extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (file.isNew) ...[_buildNewBadge(), const SizedBox(width: 6)],
+            if (file.isRecent(now: now)) ...[
+              _buildNewBadge(),
+              const SizedBox(width: 6),
+            ],
             Flexible(
               child: Text(
                 file.title,
@@ -88,10 +97,8 @@ class FileListItemCard extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         Text(
-          '${file.dateLabel} • ${file.sizeLabel}',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textMuted,
-          ),
+          '$_dateLabel • ${file.readableSize}',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
           textAlign: TextAlign.right,
         ),
       ],

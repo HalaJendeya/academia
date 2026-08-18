@@ -31,10 +31,12 @@ abstract final class AppRoutes {
   static const String courseDetail = '/courses/detail';
   static const String coursesArchive = '/courses/archive';
 
-  // Files feature
+  // Files feature.
+  //
+  // لا مسار للملفات غير المتصلة: التنزيل مؤجَّل، ومسار بلا شاشة قابلة
+  // للوصول هو دَين لا ميزة.
   static const String allFiles = '/files';
   static const String filePreview = '/files/preview';
-  static const String offlineFiles = '/files/offline';
 
   // Student tasks (Phase 7T1B).
   static const String tasks = '/tasks';

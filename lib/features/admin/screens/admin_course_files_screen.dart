@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../files/services/course_file_opener.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../core/constants/app_strings.dart';
@@ -88,22 +88,13 @@ class _AdminCourseFilesScreenState extends State<AdminCourseFilesScreen> {
 
   Future<void> _openFile(CourseFileModel file) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final uri = Uri.tryParse(file.cloudinaryUrl);
 
-    if (uri == null) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text(AppStrings.fileOpenError)),
-      );
-      return;
-    }
+    final result = await openCourseFileUrl(file.cloudinaryUrl);
+    if (!mounted || result == CourseFileOpenResult.opened) return;
 
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!mounted) return;
-    if (!launched) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text(AppStrings.fileOpenError)),
-      );
-    }
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text(AppStrings.fileOpenError)),
+    );
   }
 
   Future<void> _editFile(CourseFileModel file) async {

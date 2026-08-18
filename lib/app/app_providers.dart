@@ -32,6 +32,13 @@ import '../features/semesters/services/semester_service.dart';
 import '../features/tasks/providers/task_provider.dart';
 import '../features/tasks/services/task_service.dart';
 
+/// مشرف نشط ومسجَّل الدخول فعلًا.
+///
+/// شرط واحد لكل المزوّدات الإدارية: أي شيء دون ذلك — خروج، أو حساب طالب،
+/// أو حساب غير نشط — يعني إيقاف الاستماع.
+bool _isActiveAdmin(AuthProvider auth) =>
+    auth.isLoggedIn && auth.isAdmin && auth.isAccountActive;
+
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
   ChangeNotifierProvider(create: (_) => OnboardingProvider()),
@@ -56,18 +63,45 @@ final List<SingleChildWidget> appProviders = [
    * المساقات، فالطروحات التي تربط مساقًا بفصل، فالخطة الدراسية، ثم
    * التسجيلات التي تشير إلى طرح.
    */
-  ChangeNotifierProvider(create: (_) => SemesterProvider(SemesterService())),
-  ChangeNotifierProvider(
+  /*
+   * كل مزوّد إداري يستمع إلى Firestore مربوط بـ AuthProvider.
+   *
+   * هذه المزوّدات مركَّبة عالميًا فوق MaterialApp، فلا يُستدعى dispose
+   * أثناء عمل التطبيق. قبل هذا الربط كان الاستماع إلى courses و users و
+   * departments يبقى حيًّا بعد تسجيل الخروج، فتعيد القواعد المشدَّدة تقييمه
+   * بلا مصادقة وتظهر PERMISSION_DENIED متكررة. الحل إيقاف المستمع لا
+   * إضعاف القاعدة.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, SemesterProvider>(
+    create: (_) => SemesterProvider(SemesterService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
+  ),
+  ChangeNotifierProxyProvider<AuthProvider, AcademicStructureProvider>(
     create: (_) =>
         AcademicStructureProvider(DepartmentService(), MajorService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
-  ChangeNotifierProvider(create: (_) => CourseProvider(CourseService())),
-  ChangeNotifierProvider(
+  ChangeNotifierProxyProvider<AuthProvider, CourseProvider>(
+    create: (_) => CourseProvider(CourseService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
+  ),
+  ChangeNotifierProxyProvider<AuthProvider, CourseOfferingProvider>(
     create: (_) => CourseOfferingProvider(CourseOfferingService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
-  ChangeNotifierProvider(create: (_) => CurriculumProvider(CurriculumService())),
-  ChangeNotifierProvider(
+  ChangeNotifierProxyProvider<AuthProvider, CurriculumProvider>(
+    create: (_) => CurriculumProvider(CurriculumService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
+  ),
+  ChangeNotifierProxyProvider<AuthProvider, EnrollmentProvider>(
     create: (_) => EnrollmentProvider(EnrollmentService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
   /*
    * السجل الأكاديمي لطالب واحد في شاشة المشرف، منفصل عن EnrollmentProvider:
@@ -79,9 +113,16 @@ final List<SingleChildWidget> appProviders = [
    * Cloudinary. المزوّد يجمع الخدمتين ليضمن الترتيب — الرفع أولًا، ثم
    * كتابة البيانات الوصفية — فلا يوجد مستند يشير إلى ملف غير مرفوع.
    */
-  ChangeNotifierProvider(
+  /*
+   * ملفات المساقات يخدم الدورين: المشرف يرفع ويدير، والطالب يقرأ ملفات
+   * الطروح المسجَّل فيها. لذلك شرطه "مستخدم نشط" لا "مشرف" — وإلا لأفرغنا
+   * ملفات الطالب فور تحميلها.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, CourseFileProvider>(
     create: (_) =>
         CourseFileProvider(CourseFileService(), CloudinaryUploadService()),
+    update: (_, auth, provider) => provider!
+      ..syncWithAuth(isActiveUser: auth.isLoggedIn && auth.isAccountActive),
   ),
   ChangeNotifierProvider(
     create: (_) => AdminStudentRecordProvider(

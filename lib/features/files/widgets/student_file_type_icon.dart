@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
-import '../models/student_app_file.dart';
+import '../models/course_file_model.dart';
 
 /// Colored, rounded icon representing a file's type
 /// (PDF, DOC, PPT, image, or other).
@@ -35,22 +35,22 @@ class FileTypeIcon extends StatelessWidget {
 
   _FileTypeConfig _configFor(String type) {
     switch (type) {
-      case StudentAppFile.typePdf:
+      case CourseFileModel.typePdf:
         return const _FileTypeConfig(
           icon: Icons.picture_as_pdf_rounded,
           color: AppColors.error,
         );
-      case StudentAppFile.typeDoc:
+      case CourseFileModel.typeDoc:
         return const _FileTypeConfig(
           icon: Icons.description_rounded,
           color: AppColors.secondary,
         );
-      case StudentAppFile.typePpt:
+      case CourseFileModel.typePpt:
         return const _FileTypeConfig(
           icon: Icons.slideshow_rounded,
           color: AppColors.primary,
         );
-      case StudentAppFile.typeImage:
+      case CourseFileModel.typeImage:
         return const _FileTypeConfig(
           icon: Icons.image_rounded,
           color: AppColors.secondary,

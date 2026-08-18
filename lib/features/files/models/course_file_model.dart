@@ -85,6 +85,51 @@ class CourseFileModel {
   bool get isActive => status == statusActive;
   bool get isArchived => status == statusArchived;
 
+  // ---- مساعدات عرض ----
+  //
+  // مشتقة من الحقول المخزَّنة وقت العرض، ولا يُخزَّن أي منها. وجودها هنا
+  // يغني عن نموذج عرض ثانٍ للملفات.
+
+  static const String typePdf = 'pdf';
+  static const String typeDoc = 'doc';
+  static const String typePpt = 'ppt';
+  static const String typeImage = 'image';
+  static const String typeOther = 'other';
+
+  /// تصنيف نوع الملف للأيقونة والتصفية، مشتقّ من الامتداد المخزَّن.
+  ///
+  /// التصفية في الواجهة تعتمد هذا لا حقلًا جديدًا في قاعدة البيانات.
+  String get typeGroup {
+    switch (fileExtension.trim().toLowerCase()) {
+      case 'pdf':
+        return typePdf;
+      case 'doc':
+      case 'docx':
+      case 'txt':
+        return typeDoc;
+      case 'ppt':
+      case 'pptx':
+        return typePpt;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'webp':
+        return typeImage;
+      default:
+        return typeOther;
+    }
+  }
+
+  /// رُفع حديثًا، لشارة «جديد».
+  ///
+  /// مشتق من createdAt لا من علم مخزَّن: العلم المخزَّن يبقى صحيحًا للأبد
+  /// ما لم يحدّثه أحد.
+  bool isRecent({DateTime? now, Duration window = const Duration(days: 7)}) {
+    final created = createdAt;
+    if (created == null) return false;
+    return (now ?? DateTime.now()).difference(created) <= window;
+  }
+
   /// حجم الملف بصيغة مقروءة. يُبنى وقت العرض ولا يُخزَّن.
   String get readableSize {
     if (fileSize <= 0) return '';

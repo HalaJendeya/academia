@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../files/services/course_file_opener.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/navigation/main_navigation.dart';
@@ -11,8 +12,13 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
+import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/error_state.dart';
 import '../../curriculum/models/curriculum_course_model.dart';
+import '../../files/models/course_file_model.dart';
+import '../../files/providers/course_file_provider.dart';
+import '../widgets/student_file_list_item_card.dart';
 import '../models/course_model.dart';
 import '../models/student_course_view.dart';
 import '../providers/student_courses_provider.dart';
@@ -102,7 +108,8 @@ class StudentCourseDetailScreen extends StatelessWidget {
                     curriculumEntry: curriculumEntry,
                   ),
                   _buildNotAvailableTab(),
-                  _buildNotAvailableTab(),
+                  // الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
+                  _CourseFilesTab(offeringId: args.offeringId),
                   _buildNotAvailableTab(),
                 ],
               ),
@@ -303,6 +310,109 @@ class StudentCourseDetailScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// ملفات طرح واحد داخل تفاصيل المساق.
+///
+/// المسار: تسجيل الطالب ← offeringId ← courseFiles حيث offeringId يطابق.
+/// بلا طرح لا ملفات: مساق من الخطة لم يُسجَّل فيه الطالب لا يملك طرحًا،
+/// وقاعدة القراءة لا تمنحه شيئًا.
+class _CourseFilesTab extends StatefulWidget {
+  const _CourseFilesTab({required this.offeringId});
+
+  final String? offeringId;
+
+  @override
+  State<_CourseFilesTab> createState() => _CourseFilesTabState();
+}
+
+class _CourseFilesTabState extends State<_CourseFilesTab> {
+  CourseFileProvider? _fileProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fileProvider = context.read<CourseFileProvider>();
+
+    final offeringId = widget.offeringId;
+    if (offeringId == null || offeringId.trim().isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CourseFileProvider>().listenToOfferingFiles(offeringId);
+    });
+  }
+
+  @override
+  void dispose() {
+    // مرجع محفوظ: لا يمكن قراءة المزوّد من context أثناء dispose.
+    _fileProvider?.stopListening();
+    super.dispose();
+  }
+
+  Future<void> _openFile(CourseFileModel file) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final result = await openCourseFileUrl(file.cloudinaryUrl);
+    if (!mounted || result == CourseFileOpenResult.opened) return;
+
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text(AppStrings.fileOpenError)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offeringId = widget.offeringId;
+
+    if (offeringId == null || offeringId.trim().isEmpty) {
+      return const AppEmptyState(
+        title: AppStrings.courseFilesNoOfferingTitle,
+        description: AppStrings.courseFilesNoOfferingDesc,
+        icon: Icons.folder_off_outlined,
+      );
+    }
+
+    final provider = context.watch<CourseFileProvider>();
+
+    if (provider.isLoading && provider.files.isEmpty) {
+      return const AppLoadingState();
+    }
+
+    if (provider.errorMessage != null && provider.files.isEmpty) {
+      return AppErrorState(
+        message: provider.errorMessage!,
+        onRetry: () {
+          final fileProvider = context.read<CourseFileProvider>();
+          fileProvider.stopListening();
+          fileProvider.listenToOfferingFiles(offeringId);
+        },
+      );
+    }
+
+    // النشطة وحدها: المؤرشف إزالة لا تُعرض للطالب.
+    final files = provider.activeFiles;
+
+    if (files.isEmpty) {
+      return const AppEmptyState(
+        title: AppStrings.noFilesUploadedTitle,
+        description: AppStrings.courseFilesEmptyDesc,
+        icon: Icons.folder_open_outlined,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+      itemCount: files.length,
+      itemBuilder: (context, index) {
+        final file = files[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.small),
+          child: FileListItemCard(file: file, onTap: () => _openFile(file)),
+        );
+      },
     );
   }
 }

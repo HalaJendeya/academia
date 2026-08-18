@@ -36,6 +36,33 @@ class CurriculumProvider extends ChangeNotifier {
 
   bool get hasCurriculum => _entries.isNotEmpty;
 
+  bool _isAdminSession = false;
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// شاشة الخطة الدراسية إدارية؛ الطالب يقرأ خطته عبر StudentCoursesProvider
+  /// لا عبر هذا المزوّد.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState =
+        _isAdminSession || _subscription != null || _entries.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListening();
+    _entries = [];
+    _byLevel = {};
+    _majorId = null;
+    _isLoading = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
   /// المستويات التي تحتوي فعلًا على صفوف، مرتبة تصاعديًا.
   List<int> get levels {
     final list = _byLevel.keys.toList()..sort();

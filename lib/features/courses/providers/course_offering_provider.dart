@@ -38,6 +38,34 @@ class CourseOfferingProvider extends ChangeNotifier {
   List<CourseOfferingModel> get activeOfferings =>
       _offerings.where((offering) => offering.isActive).toList();
 
+  bool _isAdminSession = false;
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// مزوّد عالمي لا يُستدعى dispose أثناء الجلسة، فلا بد من إيقاف الاستماع
+  /// صراحةً عند الخروج بدل ترك الاشتراك حيًّا.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState =
+        _isAdminSession || _subscription != null || _offerings.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListening();
+    _offerings = [];
+    _byId = {};
+    _byCourseId = {};
+    _semesterId = null;
+    _isLoading = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
   /// كل شعب مساق دائم داخل الفصل المحمَّل.
   List<CourseOfferingModel> offeringsOfCourse(String courseId) =>
       _byCourseId[courseId] ?? const <CourseOfferingModel>[];

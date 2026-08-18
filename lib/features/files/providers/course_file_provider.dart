@@ -7,15 +7,19 @@ import '../models/course_file_model.dart';
 import '../services/cloudinary_upload_service.dart';
 import '../services/course_file_service.dart';
 
-/// ملفات طرح واحد في كل مرة، وعدّاد إجمالي منفصل للوحة المشرف.
+/// المزوّد الوحيد لملفات المساقات — للمشرف وللطالب معًا.
 ///
-/// القائمة دائمًا مقيَّدة بطرح: "ما ملفات هذا الطرح؟" هو السؤال الذي تطرحه
-/// شاشات الملفات، ولا معنى لقائمة ملفات عابرة للفصول.
+/// كل قراءة مقيَّدة بطرح: الاستعلام دائمًا `offeringId == X`. لا يوجد
+/// استعلام عام على courseFiles، ولا يمكن أن يوجد: قاعدة القراءة تمنح
+/// الطالب حق قراءة ملف طرح مسجَّل فيه فقط، فاستعلام غير مقيَّد يُرفض كله.
+///
+/// من هنا شكل الاستماع: طرح واحد لشاشة تفاصيل المساق وشاشات المشرف،
+/// وعدة طروح — مستمع لكل طرح مصرَّح به — لشاشة "كل الملفات". الدمج يتم في
+/// الذاكرة لا في الاستعلام.
 ///
 /// [activeFileCount] استثناء مقصود ومحدود: لوحة المشرف تحتاج رقمًا واحدًا
 /// لا قائمة، ويُقرأ باستعلام تجميعي منفصل لا يمسّ [files] ولا يُحمّل أي
-/// مستند. لذلك لا يمسحه [clearFiles]: الخروج من شاشة ملفات طرح لا يعني أن
-/// إجمالي ملفات النظام تغيّر.
+/// مستند.
 class CourseFileProvider extends ChangeNotifier {
   final CourseFileService _fileService;
   final CloudinaryUploadService _uploadService;
@@ -33,7 +37,13 @@ class CourseFileProvider extends ChangeNotifier {
   int? _activeFileCount;
   bool _isLoadingActiveFileCount = false;
 
-  StreamSubscription<List<CourseFileModel>>? _subscription;
+  /// مستمع لكل طرح مصرَّح به. طرح واحد في معظم الشاشات، وعدة طروح في
+  /// شاشة "كل الملفات".
+  final Map<String, StreamSubscription<List<CourseFileModel>>> _subscriptions =
+      {};
+
+  /// نتائج كل طرح على حدة، تُدمج في [_files] بعد كل تحديث.
+  final Map<String, List<CourseFileModel>> _filesByOffering = {};
 
   List<CourseFileModel> get files => _files;
 
@@ -83,8 +93,13 @@ class CourseFileProvider extends ChangeNotifier {
   List<CourseFileModel> filesByCategory(String category) =>
       _files.where((file) => file.category == category).toList();
 
+  /// ملفات طرح واحد: شاشة تفاصيل المساق للطالب، وشاشات الملفات للمشرف.
   void listenToOfferingFiles(String offeringId) {
-    if (_offeringId == offeringId && _subscription != null) return;
+    if (_offeringId == offeringId &&
+        _subscriptions.length == 1 &&
+        _subscriptions.containsKey(offeringId)) {
+      return;
+    }
 
     stopListening();
     _offeringId = offeringId;
@@ -92,24 +107,135 @@ class CourseFileProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    _subscription = _fileService.watchOfferingFiles(offeringId).listen(
-      (data) {
-        _files = data;
-        _isLoading = false;
-        _errorMessage = null;
-        notifyListeners();
-      },
-      onError: (error) {
-        _isLoading = false;
-        _errorMessage = AppStrings.fileLoadError;
-        notifyListeners();
-      },
-    );
+    _subscribe(offeringId);
   }
 
+  /// ملفات عدة طروح مصرَّح بها — شاشة "كل الملفات" للطالب.
+  ///
+  /// [offeringIds] تأتي من تسجيلات الطالب نفسها (الحالية والسابقة). لا
+  /// يُشتق شيء هنا: ما لا يرد في القائمة لا يُستمع إليه أصلًا، والتسجيل
+  /// المُزال لا ينتج معرّف طرح فلا ملفات له. وحتى لو ورد معرّف غير مصرَّح
+  /// به، فإن القاعدة ترفض استعلامه ويظل الطرح فارغًا.
+  void listenToOfferingsFiles(List<String> offeringIds) {
+    final wanted = offeringIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    // نفس المجموعة: لا داعي لإعادة بناء المستمعين عند كل إعادة بناء للشاشة.
+    if (wanted.length == _subscriptions.length &&
+        wanted.every(_subscriptions.containsKey)) {
+      return;
+    }
+
+    // نلغي ما لم يعد مصرَّحًا به فقط، ونبقي المستمعين القائمين كما هم.
+    for (final id in _subscriptions.keys.toList()) {
+      if (wanted.contains(id)) continue;
+      _subscriptions.remove(id)?.cancel();
+      _filesByOffering.remove(id);
+    }
+
+    _offeringId = null;
+
+    if (wanted.isEmpty) {
+      _isLoading = false;
+      _files = const <CourseFileModel>[];
+      _errorMessage = null;
+      notifyListeners();
+      return;
+    }
+
+    /*
+     * إعادة الدمج فورًا بعد الإلغاء.
+     *
+     * بدونها تبقى ملفات طرح لم يعد مصرَّحًا به معروضةً حتى يبثّ طرح آخر
+     * تحديثًا — أي أن سحب الصلاحية لا يُخفي الملفات مباشرة.
+     */
+    _mergeFiles();
+
+    _isLoading = _filesByOffering.isEmpty;
+    _errorMessage = null;
+    notifyListeners();
+
+    for (final id in wanted) {
+      if (_subscriptions.containsKey(id)) continue;
+      _subscribe(id);
+    }
+  }
+
+  void _subscribe(String offeringId) {
+    _subscriptions[offeringId] =
+        _fileService.watchOfferingFiles(offeringId).listen(
+          (data) {
+            _filesByOffering[offeringId] = data;
+            _mergeFiles();
+            _isLoading = false;
+            _errorMessage = null;
+            notifyListeners();
+          },
+          onError: (error) {
+            /*
+             * فشل طرح واحد لا يُفرغ الباقي: الطالب قد يكون مصرَّحًا له
+             * بخمسة طروح وممنوعًا من سادس، وإخفاء الخمسة عقابًا على السادس
+             * خسارة بلا سبب.
+             */
+            _filesByOffering[offeringId] = const <CourseFileModel>[];
+            _mergeFiles();
+            _isLoading = false;
+            if (_files.isEmpty) _errorMessage = AppStrings.fileLoadError;
+            notifyListeners();
+          },
+        );
+  }
+
+  /// الأحدث أولًا عبر كل الطروح. الترتيب محليًا: الاستعلامات مساواة فقط.
+  void _mergeFiles() {
+    final merged = <CourseFileModel>[
+      for (final list in _filesByOffering.values) ...list,
+    ];
+    merged.sort((a, b) {
+      if (a.createdAt == null && b.createdAt == null) return 0;
+      if (a.createdAt == null) return 1;
+      if (b.createdAt == null) return -1;
+      return b.createdAt!.compareTo(a.createdAt!);
+    });
+    _files = merged;
+  }
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// الشرط هنا "مستخدم نشط" لا "مشرف": هذا المزوّد يخدم الطالب أيضًا،
+  /// ومسحه لكل غير مشرف كان يفرغ ملفات الطالب فور تحميلها. ما يجب أن يوقف
+  /// الاستماع هو الخروج من الحساب، وهو ما ينتج PERMISSION_DENIED.
+  void syncWithAuth({required bool isActiveUser}) {
+    if (isActiveUser) {
+      _hadSession = true;
+      return;
+    }
+
+    final hadState =
+        _hadSession || _subscriptions.isNotEmpty || _files.isNotEmpty;
+    _hadSession = false;
+    if (!hadState) return;
+
+    stopListening();
+    _offeringId = null;
+    _files = const <CourseFileModel>[];
+    _activeFileCount = null;
+    _isLoading = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
+  bool _hadSession = false;
+
   void stopListening() {
-    _subscription?.cancel();
-    _subscription = null;
+    for (final subscription in _subscriptions.values) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    _filesByOffering.clear();
   }
 
   void clearFiles() {

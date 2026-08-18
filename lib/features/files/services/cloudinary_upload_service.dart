@@ -13,9 +13,6 @@ class CloudinaryUploadException implements Exception {
   String toString() => message;
 }
 
-/// نتيجة رفع ناجح إلى Cloudinary.
-///
-/// لا تُخزَّن في Firestore كما هي؛ تُبنى منها البيانات الوصفية.
 class CloudinaryUploadResult {
   const CloudinaryUploadResult({
     required this.secureUrl,

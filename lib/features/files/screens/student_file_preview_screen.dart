@@ -1,120 +1,84 @@
 // lib/features/files/screens/student_file_preview_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../services/course_file_opener.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_top_bar.dart';
-import '../../../core/widgets/error_state.dart';
-import '../models/student_app_file.dart';
-import '../providers/student_file_provider.dart';
+import '../models/course_file_model.dart';
 import '../widgets/student_file_info_card.dart';
 import '../widgets/student_file_type_icon.dart';
 
-class FilePreviewScreen extends StatefulWidget {
-  const FilePreviewScreen({super.key});
+/// وسيطات شاشة المعاينة.
+///
+/// الملف يُمرَّر كاملًا لا بمعرّفه: الشاشة السابقة قرأته أصلًا من طرح
+/// مصرَّح به، وإعادة قراءته بمعرّفه وحده تحتاج استعلامًا غير مقيَّد بطرح —
+/// وهو ما ترفضه القواعد بحق.
+class FilePreviewArgs {
+  const FilePreviewArgs({required this.file, this.subjectLabel = ''});
 
-  @override
-  State<FilePreviewScreen> createState() => _FilePreviewScreenState();
+  final CourseFileModel file;
+  final String subjectLabel;
 }
 
-class _FilePreviewScreenState extends State<FilePreviewScreen> {
-  String? _fileId;
+class FilePreviewScreen extends StatelessWidget {
+  const FilePreviewScreen({super.key});
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final fileId = ModalRoute.of(context)?.settings.arguments as String?;
-    if (fileId != null && fileId != _fileId) {
-      _fileId = fileId;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        context.read<StudentFileProvider>().loadFileById(fileId);
-      });
-    }
-  }
+  Future<void> _openExternally(
+    BuildContext context,
+    CourseFileModel file,
+  ) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-  @override
-  void dispose() {
-    context.read<StudentFileProvider>().clearSelectedFile();
-    super.dispose();
-  }
+    // نفس آلية الفتح المستعملة في شاشة ملفات المشرف وتبويب ملفات المساق.
+    final result = await openCourseFileUrl(file.cloudinaryUrl);
+    if (result == CourseFileOpenResult.opened) return;
 
-  void _showUnderDevelopment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(AppStrings.screenUnderDevelopment),
-        backgroundColor: AppColors.primary,
-        duration: Duration(seconds: 2),
-      ),
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text(AppStrings.fileOpenError)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final fileProvider = context.watch<StudentFileProvider>();
-    final file = fileProvider.selectedFile;
+    final args = ModalRoute.of(context)?.settings.arguments as FilePreviewArgs?;
 
-    if (fileProvider.isLoadingSelectedFile && file == null) {
-      return _buildScaffold(
-        title: '',
-        body: const AppLoadingState(message: AppStrings.fileDetailLoadError),
+    if (args == null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const AcademiaSubAppBar(title: AppStrings.filePreviewTitle),
+        body: const Center(child: Text(AppStrings.fileNotFound)),
       );
     }
 
-    if (fileProvider.selectedFileErrorMessage != null && file == null) {
-      return _buildScaffold(
-        title: '',
-        body: AppErrorState(
-          message: fileProvider.selectedFileErrorMessage!,
-          onRetry: () {
-            if (_fileId != null) {
-              context.read<StudentFileProvider>().loadFileById(
-                _fileId!,
-                forceRefresh: true,
-              );
-            }
-          },
-        ),
-      );
-    }
+    final file = args.file;
 
-    if (file == null) {
-      return _buildScaffold(title: '', body: const SizedBox.shrink());
-    }
-
-    return _buildScaffold(
-      title: file.title,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildPreviewArea(file),
-            const SizedBox(height: AppSpacing.large),
-            _buildActionButtons(),
-            const SizedBox(height: AppSpacing.large),
-            FileInfoCard(file: file),
-          ],
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AcademiaSubAppBar(title: file.title),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPreviewArea(file),
+              const SizedBox(height: AppSpacing.large),
+              _buildOpenAction(context, file),
+              const SizedBox(height: AppSpacing.large),
+              FileInfoCard(file: file, subjectLabel: args.subjectLabel),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildScaffold({required String title, required Widget body}) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AcademiaSubAppBar(title: title),
-      body: SafeArea(child: body),
-    );
-  }
-
-  Widget _buildPreviewArea(StudentAppFile file) {
+  Widget _buildPreviewArea(CourseFileModel file) {
     return Container(
       height: 320,
       decoration: BoxDecoration(
@@ -122,54 +86,44 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: AppColors.borderLight, width: 1),
       ),
-      child: Center(
-        child: FileTypeIcon(type: file.type, size: 72),
-      ),
+      child: Center(child: FileTypeIcon(type: file.typeGroup, size: 72)),
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildActionButton(
-          icon: Icons.open_in_new_rounded,
-          label: AppStrings.fileOpenExternalAction,
-        ),
-        _buildActionButton(
-          icon: Icons.share_rounded,
-          label: AppStrings.fileShareAction,
-        ),
-        _buildActionButton(
-          icon: Icons.download_rounded,
-          label: AppStrings.fileDownloadAction,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton({required IconData icon, required String label}) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: _showUnderDevelopment,
-          borderRadius: BorderRadius.circular(28),
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+  /// إجراء واحد يعمل فعلًا.
+  ///
+  /// المشاركة والتنزيل غير المتصل مؤجَّلان، وعرض أزرار لهما يوهم بوظائف
+  /// غير موجودة.
+  Widget _buildOpenAction(BuildContext context, CourseFileModel file) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            onTap: () => _openExternally(context, file),
+            borderRadius: BorderRadius.circular(28),
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.open_in_new_rounded,
+                color: AppColors.primary,
+              ),
             ),
-            child: Icon(icon, color: AppColors.primary),
           ),
-        ),
-        const SizedBox(height: AppSpacing.extraSmall),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-        ),
-      ],
+          const SizedBox(height: AppSpacing.extraSmall),
+          Text(
+            AppStrings.fileOpenExternalAction,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

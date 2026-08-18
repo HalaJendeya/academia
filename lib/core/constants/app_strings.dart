@@ -1185,6 +1185,17 @@ abstract final class AppStrings {
       'حذف النسخة الزائدة من لوحة التخزين.';
 
   static const String fileLoadError = 'تعذر تحميل ملفات المساق';
+
+  // ===== ملفات الطالب =====
+
+  static const String courseFilesNoOfferingTitle = 'لا توجد ملفات لهذا المساق';
+  static const String courseFilesNoOfferingDesc =
+      'ملفات المساق تُتاح بعد تسجيلك في طرحه ضمن فصل دراسي.';
+  static const String courseFilesEmptyDesc =
+      'لم يرفع المشرف أي ملف لهذا الطرح بعد.';
+  static const String noEnrolledCoursesForFiles =
+      'لا توجد مساقات مسجَّلة، لذلك لا توجد ملفات لعرضها.';
+  static const String filePreviewTitle = 'معاينة الملف';
   static const String fileSaveError = 'تعذر حفظ بيانات الملف';
   static const String fileNotFound = 'الملف غير موجود';
 

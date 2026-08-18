@@ -48,6 +48,39 @@ class AcademicStructureProvider extends ChangeNotifier {
   bool get hasDepartments => _departments.isNotEmpty;
   bool get hasMajors => _majors.isNotEmpty;
 
+  bool _isAdminSession = false;
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// الأقسام والتخصصات يقرأها المشرف من شاشات الإدارة. المزوّد عالمي ولا
+  /// يُستدعى dispose أثناء الجلسة، فبقاء الاستماع بعد الخروج ينتج
+  /// PERMISSION_DENIED على departments. القواعد صحيحة؛ الخلل في دورة الحياة.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState = _isAdminSession ||
+        _departmentsSubscription != null ||
+        _majorsSubscription != null ||
+        _departments.isNotEmpty ||
+        _majors.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListening();
+    _departments = [];
+    _majors = [];
+    _departmentsById = {};
+    _majorsById = {};
+    _isLoadingDepartments = false;
+    _isLoadingMajors = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
   /// اسم القسم للعرض، مع قيمة بديلة آمنة للمساقات التي لم تُربط بقسم بعد.
   String departmentNameFor(String? departmentId) {
     if (departmentId == null || departmentId.trim().isEmpty) {

@@ -1,6 +1,7 @@
 // lib/features/files/widgets/student_file_info_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
@@ -9,14 +10,28 @@ import '../../../core/theme/app_sizes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../models/student_app_file.dart';
+import '../models/course_file_model.dart';
 
 /// Card shown on the File Preview screen, listing the file's
 /// subject, size, and upload date.
+///
+/// القيم المعروضة مشتقة من [CourseFileModel] وقت العرض. اسم المساق يُمرَّر
+/// من الشاشة لأنه يخص الطرح لا الملف، ولا يُخزَّن في مستند الملف.
 class FileInfoCard extends StatelessWidget {
-  const FileInfoCard({super.key, required this.file});
+  const FileInfoCard({
+    super.key,
+    required this.file,
+    required this.subjectLabel,
+  });
 
-  final StudentAppFile file;
+  final CourseFileModel file;
+  final String subjectLabel;
+
+  String get _dateLabel {
+    final createdAt = file.createdAt;
+    if (createdAt == null) return AppStrings.notProvidedValue;
+    return DateFormat('yyyy/MM/dd', 'ar').format(createdAt);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +52,25 @@ class FileInfoCard extends StatelessWidget {
             icon: Icons.menu_book_rounded,
             iconColor: AppColors.primary,
             label: AppStrings.fileInfoSubjectLabel,
-            value: file.subjectLabel,
+            value: subjectLabel.trim().isEmpty
+                ? AppStrings.notProvidedValue
+                : subjectLabel,
           ),
           const SizedBox(height: AppSpacing.medium),
           _buildInfoRow(
             icon: Icons.folder_zip_rounded,
             iconColor: AppColors.primaryDark,
             label: AppStrings.fileInfoSizeLabel,
-            value: file.sizeLabel,
+            value: file.readableSize.isEmpty
+                ? AppStrings.notProvidedValue
+                : file.readableSize,
           ),
           const SizedBox(height: AppSpacing.medium),
           _buildInfoRow(
             icon: Icons.calendar_today_rounded,
             iconColor: AppColors.primary,
             label: AppStrings.fileInfoDateLabel,
-            value: file.dateLabel,
+            value: _dateLabel,
           ),
         ],
       ),

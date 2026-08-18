@@ -33,6 +33,41 @@ class EnrollmentProvider extends ChangeNotifier {
   bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
 
+  bool _isAdminSession = false;
+
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// أخطر المستمعين هنا: users حيث role == student، وهو استعلام مسموح
+  /// للمشرف وحده. بقاؤه حيًّا بعد الخروج أو بعد تبديل الحساب إلى طالب ينتج
+  /// PERMISSION_DENIED متكررة. القواعد صحيحة؛ المستمع هو ما يجب أن يتوقف.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState = _isAdminSession ||
+        _studentsSubscription != null ||
+        _enrollmentsSubscription != null ||
+        _rosterSubscription != null ||
+        _students.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListeningToStudents();
+    stopListeningToRoster();
+    stopListeningToSelectedStudentEnrollments();
+
+    _students = [];
+    _selectedStudentEnrollments = [];
+    _selectedStudent = null;
+    _isLoadingStudents = false;
+    _isLoadingEnrollments = false;
+    _errorMessage = null;
+
+    scheduleMicrotask(notifyListeners);
+  }
+
   void listenToStudents() {
     stopListeningToStudents();
     _isLoadingStudents = true;

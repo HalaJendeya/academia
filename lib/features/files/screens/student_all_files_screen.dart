@@ -10,17 +10,26 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_bottom_navigation.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/error_state.dart';
-import '../models/student_app_file.dart';
-import '../providers/student_file_provider.dart';
+import '../../courses/providers/student_courses_provider.dart';
+import '../models/course_file_model.dart';
+import '../providers/course_file_provider.dart';
 import '../widgets/student_all_file_card.dart';
-import '../widgets/student_download_progress_card.dart';
-import '../widgets/student_download_progress_sheet.dart';
 import '../widgets/student_file_filter_tabs.dart';
+import 'student_file_preview_screen.dart';
 
+/// كل ملفات الطالب عبر الطروح المصرَّح له بها.
+///
+/// التصميم كما وضعه فريق الواجهة. ما تغيّر هو المصدر: لا بيانات وهمية، بل
+/// ملفات حقيقية من Firestore.
+///
+/// الطروح المصرَّح بها تأتي من تسجيلات الطالب نفسها — الحالية والسابقة —
+/// ولكل طرح استعلام مقيَّد به. لا يوجد استعلام عام على courseFiles: القاعدة
+/// ترفضه، ومحاولته تُفشل الشاشة كلها.
 class AllFilesScreen extends StatefulWidget {
   const AllFilesScreen({super.key});
 
@@ -37,13 +46,10 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StudentFileProvider>().loadAllFiles();
-    });
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.trim();
-      });
+      final query = _searchController.text.trim();
+      if (query == _searchQuery) return;
+      setState(() => _searchQuery = query);
     });
   }
 
@@ -54,29 +60,16 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
   }
 
   void _handleNavigation(int index) {
-    handleMainNavigation(context, index, currentIndex: 1);
-  }
-
-  void _openOfflineFiles() {
-    Navigator.pushNamed(context, AppRoutes.offlineFiles);
-  }
-
-  void _openFilePreview(String fileId) {
-    Navigator.pushNamed(context, AppRoutes.filePreview, arguments: fileId);
-  }
-
-  void _showDownloadProgress(StudentAppFile file) {
-    DownloadProgressSheet.show(
+    handleMainNavigation(
       context,
-      file: file,
-      downloadProgress: 0.65,
-      downloadedSizeLabel: '12MB',
-      totalSizeLabel: '18MB',
-      remainingTimeLabel: AppStrings.downloadRemainingTimeLabel,
+      index,
+      currentIndex: AcademiaBottomNavigation.coursesIndex,
     );
   }
 
-  void _showDeleteUnderDevelopment() {
+  /// التنزيل غير المتصل مؤجَّل. لا نعرض بيانات تنزيل وهمية ولا شاشة فارغة
+  /// تدّعي أنها تعمل.
+  void _showOfflineDeferred() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(AppStrings.screenUnderDevelopment),
@@ -86,19 +79,44 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
     );
   }
 
-  List<StudentAppFile> _filterFiles(List<StudentAppFile> files) {
+  void _openPreview(CourseFileModel file, String subjectLabel) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.filePreview,
+      arguments: FilePreviewArgs(file: file, subjectLabel: subjectLabel),
+    );
+  }
+
+  /// معرّفات الطروح التي يملك الطالب حق قراءتها.
+  ///
+  /// [StudentCoursesProvider] يستبعد التسجيلات المُزالة من القائمتين، فلا
+  /// ينتج عنها معرّف طرح أصلًا.
+  List<String> _authorizedOfferingIds(StudentCoursesProvider courses) {
+    return <String>{
+      for (final view in courses.currentCourses)
+        if (view.offeringId.isNotEmpty) view.offeringId,
+      for (final view in courses.history)
+        if (view.offeringId.isNotEmpty) view.offeringId,
+    }.toList();
+  }
+
+  List<CourseFileModel> _applyFilters(List<CourseFileModel> files) {
     var result = files;
 
     if (_selectedFilter == FileFilterTabs.filterPdf) {
-      result = result.where((f) => f.type == StudentAppFile.typePdf).toList();
+      result = result
+          .where((file) => file.typeGroup == CourseFileModel.typePdf)
+          .toList();
     } else if (_selectedFilter == FileFilterTabs.filterPresentations) {
-      result = result.where((f) => f.type == StudentAppFile.typePpt).toList();
+      result = result
+          .where((file) => file.typeGroup == CourseFileModel.typePpt)
+          .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       result = result
-          .where((f) => f.title.toLowerCase().contains(query))
+          .where((file) => file.title.toLowerCase().contains(query))
           .toList();
     }
 
@@ -107,29 +125,39 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final fileProvider = context.watch<StudentFileProvider>();
+    final courses = context.watch<StudentCoursesProvider>();
+    final fileProvider = context.watch<CourseFileProvider>();
 
-    if (fileProvider.isLoadingAllFiles && fileProvider.allFiles.isEmpty) {
-      return _buildScaffold(
-        body: const AppLoadingState(message: AppStrings.filesLoadError),
-      );
+    final offeringIds = _authorizedOfferingIds(courses);
+
+    // يُعاد ضبط المستمعين فقط عند تغيّر مجموعة الطروح المصرَّح بها.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CourseFileProvider>().listenToOfferingsFiles(offeringIds);
+    });
+
+    if (courses.isLoading && !courses.hasLoaded) {
+      return _buildScaffold(body: const AppLoadingState());
     }
 
-    if (fileProvider.allFilesErrorMessage != null &&
-        fileProvider.allFiles.isEmpty) {
+    if (fileProvider.isLoading && fileProvider.files.isEmpty) {
+      return _buildScaffold(body: const AppLoadingState());
+    }
+
+    if (fileProvider.errorMessage != null && fileProvider.files.isEmpty) {
       return _buildScaffold(
         body: AppErrorState(
-          message: fileProvider.allFilesErrorMessage!,
+          message: fileProvider.errorMessage!,
           onRetry: () {
-            context.read<StudentFileProvider>().loadAllFiles(
-              forceRefresh: true,
-            );
+            final provider = context.read<CourseFileProvider>();
+            provider.stopListening();
+            provider.listenToOfferingsFiles(offeringIds);
           },
         ),
       );
     }
 
-    final filteredFiles = _filterFiles(fileProvider.allFiles);
+    final visible = _applyFilters(fileProvider.activeFiles);
 
     return _buildScaffold(
       body: SingleChildScrollView(
@@ -157,25 +185,24 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
                 onFilterChanged: (filter) {
                   setState(() => _selectedFilter = filter);
                 },
-                onOfflineTap: _openOfflineFiles,
+                onOfflineTap: _showOfflineDeferred,
               ),
               const SizedBox(height: AppSpacing.medium),
-              if (filteredFiles.isEmpty)
-                _buildEmptyState()
+              if (visible.isEmpty)
+                _buildEmptyState(offeringIds.isEmpty)
               else
-                ...filteredFiles.map(
-                      (file) => Padding(
+                ...visible.map((file) {
+                  final subject =
+                      courses.courseById(file.courseId)?.title ?? '';
+                  return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.medium),
-                    child: file.isDownloading
-                        ? DownloadProgressCard(file: file)
-                        : AllFileCard(
+                    child: AllFileCard(
                       file: file,
-                      onTap: () => _openFilePreview(file.id),
-                      onDownloadTap: () => _showDownloadProgress(file),
-                      onDeleteTap: _showDeleteUnderDevelopment,
+                      subjectLabel: subject,
+                      onTap: () => _openPreview(file, subject),
                     ),
-                  ),
-                ),
+                  );
+                }),
               const SizedBox(height: AppSpacing.large),
             ],
           ),
@@ -186,14 +213,14 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
 
   Widget _buildScaffold({required Widget body}) {
     return AuthenticatedPageScaffold(
-      currentIndex: 1,
+      currentIndex: AcademiaBottomNavigation.coursesIndex,
       onNavigationTap: _handleNavigation,
       appBar: const AcademiaMainAppBar(
         title: AppStrings.appName,
         showBackButton: true,
-        showProfile: true,
+        showProfile: false,
         showSearch: false,
-        showNotifications: true,
+        showNotifications: false,
       ),
       body: body,
     );
@@ -233,13 +260,17 @@ class _AllFilesScreenState extends State<AllFilesScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  /// "لا مساقات مسجَّلة" ليست نفسها "لا ملفات": الأولى تعني ألا مصدر أصلًا.
+  Widget _buildEmptyState(bool hasNoOfferings) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.extraLarge),
       child: Center(
         child: Text(
-          AppStrings.noFilesFoundMessage,
+          hasNoOfferings
+              ? AppStrings.noEnrolledCoursesForFiles
+              : AppStrings.noFilesFoundMessage,
           style: AppTextStyles.bodyMedium,
+          textAlign: TextAlign.center,
         ),
       ),
     );

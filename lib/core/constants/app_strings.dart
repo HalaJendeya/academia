@@ -229,10 +229,8 @@ abstract final class AppStrings {
   static const String teacherCoursesDeferredTitle = 'لم تُسند إليك مساقات بعد';
   static const String teacherCoursesDeferredDesc =
       'ستظهر هنا الطروحات التي يسندها إليك مدير النظام.';
-  static const String teacherAssignmentsDeferredTitle =
-      'الواجبات غير متاحة بعد';
-  static const String teacherAssignmentsDeferredDesc =
-      'إنشاء الواجبات ومتابعتها يصل في مرحلة لاحقة.';
+  // الواجبات لم تعد مؤجَّلة: المرحلة 8.3 وصلت بها إلى Firestore، وحالاتها
+  // الفارغة صارت وقائع عن الحساب لا ميزات ناقصة.
   static const String teacherDashboardDeferredTitle = 'لا توجد بيانات بعد';
   static const String teacherDashboardDeferredDesc =
       'ستظهر هنا مساقاتك بعد إسنادها إليك.';
@@ -1363,6 +1361,104 @@ abstract final class AppStrings {
   static const String uploadFileTitle = 'رفع ملف';
   static const String courseAssignmentsLoadError = 'تعذر تحميل واجبات المقرر';
   static const String courseFilesLoadError = 'تعذر تحميل ملفات المقرر';
+
+  // ===== المرحلة 8.3: الواجبات الأكاديمية =====
+  //
+  // الواجب الأكاديمي يؤلّفه المعلّم ضمن طرح يملكه، ويقرأه الطلاب المسجّلون.
+  // مختلف تمامًا عن «مهامي» الشخصية التي ينشئها الطالب لنفسه.
+
+  // -- أخطاء وتحقق --
+  static const String assignmentPriorityInvalid = 'الأولوية المختارة غير صالحة';
+  static const String assignmentSaveError = 'تعذر حفظ الواجب';
+  static const String assignmentUpdateError = 'تعذر تحديث الواجب';
+  static const String assignmentNotFound = 'الواجب غير موجود';
+
+  // -- الأولوية --
+  static const String assignmentPriorityLabel = 'الأولوية';
+  static const String assignmentPriorityLow = 'منخفضة';
+  static const String assignmentPriorityMedium = 'متوسطة';
+  static const String assignmentPriorityHigh = 'عالية';
+
+  /// تسمية الأولوية للعرض. تُبنى عند العرض ولا تُخزَّن.
+  static String assignmentPriorityDisplay(String? priority) {
+    switch (priority) {
+      case 'high':
+        return assignmentPriorityHigh;
+      case 'low':
+        return assignmentPriorityLow;
+      case 'medium':
+        return assignmentPriorityMedium;
+      default:
+        return assignmentPriorityMedium;
+    }
+  }
+
+  // -- الحالة الزمنية المشتقّة --
+  static const String assignmentOverdueLabel = 'متأخر';
+  static const String assignmentDueTodayLabel = 'مستحق اليوم';
+  static const String assignmentDueSoonLabel = 'قريب';
+
+  // -- واجهة المعلّم --
+  static const String teacherAssignmentsEmptyTitle = 'لا توجد واجبات بعد';
+  static const String teacherAssignmentsEmptyDesc =
+      'أضف واجبًا لأحد مساقاتك ليظهر هنا وللطلاب المسجّلين فيه.';
+  static const String teacherAssignmentsNoOfferingsTitle =
+      'لم تُسند إليك مساقات بعد';
+  static const String teacherAssignmentsNoOfferingsDesc =
+      'يمكنك إضافة الواجبات بعد أن يسند إليك مدير النظام طرحًا دراسيًا.';
+
+  static const String addAssignmentTitle = 'إضافة واجب';
+  static const String editAssignmentTitle = 'تعديل الواجب';
+  static const String assignmentOfferingLabel = 'المساق (الطرح)';
+  static const String assignmentOfferingHint = 'اختر أحد مساقاتك';
+  static const String assignmentDueDateLabel = 'تاريخ التسليم';
+  static const String assignmentDueTimeLabel = 'وقت التسليم';
+  static const String assignmentDueDatePickHint = 'اختر التاريخ';
+  static const String assignmentDueTimePickHint = 'اختر الوقت';
+  static const String assignmentSaveNewAction = 'حفظ الواجب';
+  static const String assignmentCreatedSuccess = 'تمت إضافة الواجب';
+  static const String assignmentUpdatedSuccess = 'تم تحديث الواجب';
+
+  static const String archiveAssignmentAction = 'أرشفة الواجب';
+  static const String archiveAssignmentConfirmTitle = 'أرشفة الواجب؟';
+  static const String archiveAssignmentConfirmBody =
+      'لن يظهر الواجب للطلاب بعد الأرشفة. لا يُحذف الواجب نهائيًا.';
+  static const String assignmentArchivedSuccess = 'تمت أرشفة الواجب';
+
+  static const String assignmentDetailsScreenTitle = 'تفاصيل الواجب';
+  static const String assignmentInstructionsSectionTitle = 'تعليمات الواجب';
+  static const String assignmentNoInstructions = 'لا توجد تعليمات مضافة.';
+  static const String assignmentCreatedAtLabel = 'أُنشئ في';
+  static const String assignmentDueAtLabel = 'موعد التسليم';
+
+  /// الواجب لم يعد ضمن طروح هذا المعلّم — سُحب الإسناد أو أُرشف الواجب.
+  static const String assignmentNotOwnedTitle = 'الواجب غير متاح';
+  static const String assignmentNotOwnedDesc =
+      'هذا الواجب لم يعد ضمن المساقات المسندة إليك.';
+
+  // -- واجهة الطالب --
+  static const String courseAssignmentsNoOfferingTitle = 'لا توجد واجبات';
+  static const String courseAssignmentsNoOfferingDesc =
+      'الواجبات تُتاح للمساقات المسجَّل فيها فعليًا خلال فصل دراسي.';
+  static const String courseAssignmentsEmptyDesc =
+      'لم يضف معلّم المساق أي واجب حتى الآن.';
+
+  // -- إشراف المشرف --
+  static const String adminAssignmentsOversightTitle = 'الإشراف على الواجبات';
+  static const String adminAssignmentsEmptyTitle = 'لا توجد واجبات نشطة';
+  static const String adminAssignmentsEmptyDesc =
+      'ستظهر هنا الواجبات التي ينشئها المعلّمون في مساقاتهم.';
+
+  /// يُعرض بدل زر الإنشاء: المشرف ليس مؤلّف المحتوى الأكاديمي.
+  static const String adminAssignmentsOversightNote =
+      'الواجبات يؤلّفها معلّمو المساقات. صلاحيتك هنا هي الاطلاع والأرشفة عند '
+      'الحاجة.';
+  static const String adminModerateArchiveAction = 'أرشفة إشرافية';
+  static const String adminModerateArchiveConfirmTitle = 'أرشفة هذا الواجب؟';
+  static const String adminModerateArchiveConfirmBody =
+      'ستُخفي الواجب عن الطلاب والمعلّم. لا يمكنك تعديل محتواه الأكاديمي، '
+      'ولا إعادته بعد الأرشفة من هنا.';
+  static const String assignmentTeacherLabel = 'المعلّم';
   /// فعل الإرسال في نموذج الرفع، مميَّز عن عنوان الشاشة حتى لا يتشابه
   /// العنوان مع الزر في الواجهة.
   static const String confirmUploadAction = 'رفع الملف';

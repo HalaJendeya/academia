@@ -6,17 +6,69 @@ import 'package:academia/app/app_routes.dart';
 import 'package:academia/features/auth/screens/register_screen.dart';
 import 'package:academia/features/auth/screens/login_screen.dart';
 import 'package:academia/features/auth/screens/student_verification_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:academia/features/auth/providers/auth_provider.dart';
+import 'package:academia/features/onboarding/providers/onboarding_provider.dart';
+import 'package:academia/features/auth/models/app_user_model.dart';
+
+class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
+  @override
+  bool get isLoggedIn => false;
+  @override
+  bool get isAdmin => false;
+  @override
+  bool get isStudent => true;
+  @override
+  bool get isTeacher => false;
+  @override
+  bool get isAccountActive => true;
+  @override
+  bool get onboardingCompleted => true;
+  @override
+  String? get errorMessage => null;
+  @override
+  bool get isLoading => false;
+  @override
+  AppUserModel? get currentUserProfile => null;
+
+  @override
+  Future<bool> register({
+    required String fullName,
+    required String studentId,
+    required String email,
+    required String password,
+  }) async {
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeOnboardingProvider extends ChangeNotifier implements OnboardingProvider {
+  @override
+  void initializeForUser(String userId) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   Widget buildTestApp() {
-    return MaterialApp(
-      initialRoute: AppRoutes.register,
-      routes: {
-        AppRoutes.register: (context) => const RegisterScreen(),
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.studentVerification: (context) =>
-            const StudentVerificationScreen(),
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuthProvider()),
+        ChangeNotifierProvider<OnboardingProvider>(create: (_) => FakeOnboardingProvider()),
+      ],
+      child: MaterialApp(
+        initialRoute: AppRoutes.register,
+        routes: {
+          AppRoutes.register: (context) => const RegisterScreen(),
+          AppRoutes.login: (context) => const LoginScreen(),
+          AppRoutes.studentVerification: (context) =>
+              const StudentVerificationScreen(),
+        },
+      ),
     );
   }
 
@@ -61,7 +113,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expect password short validation error to show up
-      expect(find.text('كلمة المرور قصيرة جداً'), findsOneWidget);
+      expect(find.text('كلمة المرور مطلوبة'), findsOneWidget);
     });
 
     testWidgets('Tapping footer navigate to Login Screen', (

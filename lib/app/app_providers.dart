@@ -11,6 +11,8 @@ import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
+import '../features/assignments/providers/course_assignment_provider.dart';
+import '../features/assignments/services/course_assignment_service.dart';
 import '../features/admin/providers/admin_teacher_provider.dart';
 import '../features/admin/services/admin_teacher_service.dart';
 import '../features/academics/providers/academic_structure_provider.dart';
@@ -135,7 +137,24 @@ final List<SingleChildWidget> appProviders = [
     create: (_) =>
         CourseFileProvider(CourseFileService(), CloudinaryUploadService()),
     update: (_, auth, provider) => provider!
-      ..syncWithAuth(isActiveUser: auth.isLoggedIn && auth.isAccountActive),
+      ..syncWithAuth(
+        isActiveUser: auth.isLoggedIn && auth.isAccountActive,
+        role: auth.currentUserProfile?.role.name,
+      ),
+  ),
+  /*
+   * الواجبات الأكاديمية تخدم الأدوار الثلاثة، لذلك شرطها «مستخدم نشط» لا
+   * دور بعينه — كما في ملفات المساقات. الدور يُمرَّر أيضًا حتى يتوقف
+   * الاستماع عند تبديل الدور مع بقاء الجلسة: استعلام فتحه معلّم على طروحه
+   * لا يجوز أن يبقى حيًّا بعد أن صار الحساب طالبًا.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, CourseAssignmentProvider>(
+    create: (_) => CourseAssignmentProvider(CourseAssignmentService()),
+    update: (_, auth, provider) => provider!
+      ..syncWithAuth(
+        isActiveUser: auth.isLoggedIn && auth.isAccountActive,
+        role: auth.currentUserProfile?.role.name,
+      ),
   ),
   ChangeNotifierProvider(
     create: (_) => AdminStudentRecordProvider(

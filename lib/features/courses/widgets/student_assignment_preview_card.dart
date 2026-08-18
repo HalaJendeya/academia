@@ -10,7 +10,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_status_badge.dart';
-import '../models/student_course_assignment_preview.dart';
+import '../../assignments/models/course_assignment_model.dart';
+import '../../assignments/widgets/assignment_status_chips.dart';
 
 class AssignmentPreviewCard extends StatelessWidget {
   const AssignmentPreviewCard({
@@ -19,11 +20,20 @@ class AssignmentPreviewCard extends StatelessWidget {
     this.onViewDetailsTap,
   });
 
-  final CourseAssignmentPreview assignment;
+  final CourseAssignmentModel assignment;
   final VoidCallback? onViewDetailsTap;
 
   @override
   Widget build(BuildContext context) {
+    /*
+     * الحالة الزمنية تُحسب لحظة البناء من موعد التسليم، ولا تُقرأ من حقل
+     * مخزَّن: واجب «قريب» أمس هو «متأخر» اليوم دون أن يكتب أحد شيئًا.
+     *
+     * المتأخر يسبق المستحق اليوم — واجب فات موعده صباحًا متأخر لا مستحق.
+     */
+    final dueState = AssignmentDueStateBadge.resolve(assignment);
+    final urgent = dueState != null;
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -31,20 +41,22 @@ class AssignmentPreviewCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (assignment.isUrgent)
-                const Icon(
+              if (urgent)
+                Icon(
                   Icons.error_outline_rounded,
                   size: AppSizes.iconSmall,
-                  color: AppColors.error,
+                  color: dueState.color,
                 ),
-              AppStatusBadge(
-                label: assignment.dueDateLabel,
-                backgroundColor: assignment.isUrgent
-                    ? AppColors.error.withValues(alpha: 0.1)
-                    : AppColors.surfaceSecondary,
-                foregroundColor: assignment.isUrgent
-                    ? AppColors.error
-                    : AppColors.textSecondary,
+              Flexible(
+                child: AppStatusBadge(
+                  label: assignment.dueDateLabel,
+                  backgroundColor: urgent
+                      ? dueState.color.withValues(alpha: 0.1)
+                      : AppColors.surfaceSecondary,
+                  foregroundColor: urgent
+                      ? dueState.color
+                      : AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -57,34 +69,55 @@ class AssignmentPreviewCard extends StatelessWidget {
             ),
             textAlign: TextAlign.right,
           ),
-          if (assignment.description != null) ...[
+          if (assignment.description.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.extraSmall),
             Text(
-              assignment.description!,
+              assignment.description,
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
               textAlign: TextAlign.right,
+              // معاينة لا نص كامل: التفاصيل مكانها شاشة الواجب.
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
-          const SizedBox(height: AppSpacing.medium),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onViewDetailsTap,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: AppColors.border, width: 1),
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.small,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
-              ),
-              child: const Text(AppStrings.viewDetailsAction),
-            ),
+          const SizedBox(height: AppSpacing.small),
+          // Wrap لا Row: شارتان مع نص عربي طويل تفيضان على عرض 360.
+          Wrap(
+            spacing: AppSpacing.small,
+            runSpacing: 6,
+            children: [
+              AssignmentPriorityBadge(priority: assignment.priority),
+              AssignmentDueStateBadge(assignment: assignment),
+            ],
           ),
+          /*
+           * الزر يظهر فقط حين يوجد ما يفتحه.
+           *
+           * لا شاشة تفاصيل واجب للطالب في هذه المرحلة، وزرّ معطَّل دائمًا
+           * يَعِد بوجهة غير موجودة. البطاقة تعرض كل ما لدى الطالب أصلًا.
+           */
+          if (onViewDetailsTap != null) ...[
+            const SizedBox(height: AppSpacing.medium),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onViewDetailsTap,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border, width: 1),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.small,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.button),
+                  ),
+                ),
+                child: const Text(AppStrings.viewDetailsAction),
+              ),
+            ),
+          ],
         ],
       ),
     );

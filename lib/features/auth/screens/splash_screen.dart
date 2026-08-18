@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/app_routes.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -44,11 +45,24 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
 
       if (!initialized || !authProvider.isLoggedIn) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          AppRoutes.login,
-          (route) => false,
-        );
+        final prefs = await SharedPreferences.getInstance();
+        final hasAccount = prefs.getBool('has_account') ?? false;
+
+        if (!mounted) return;
+
+        if (!hasAccount) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.welcome,
+            (route) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.login,
+            (route) => false,
+          );
+        }
         return;
       }
 

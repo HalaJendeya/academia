@@ -6,18 +6,108 @@ import 'package:academia/app/app_routes.dart';
 import 'package:academia/features/auth/screens/login_screen.dart';
 import 'package:academia/features/auth/screens/register_screen.dart';
 import 'package:academia/features/auth/screens/forgot_password_screen.dart';
-import 'package:academia/features/dashboard/screens/dashboard_screen.dart';
+
+import 'package:provider/provider.dart';
+import 'package:academia/features/auth/providers/auth_provider.dart';
+import 'package:academia/features/onboarding/providers/onboarding_provider.dart';
+import 'package:academia/features/auth/models/app_user_model.dart';
+
+class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
+  FakeAuthProvider({
+    this.isLoggedInValue = false,
+    this.isAdminValue = true,
+    this.isTeacherValue = false,
+    this.isStudentValue = false,
+  });
+
+  bool isLoggedInValue;
+  bool isAdminValue;
+  bool isTeacherValue;
+  bool isStudentValue;
+  String? errorValue;
+
+  @override
+  bool get isLoggedIn => isLoggedInValue;
+
+  @override
+  bool get isAdmin => isAdminValue;
+
+  @override
+  bool get isStudent => isStudentValue;
+
+  @override
+  bool get isTeacher => isTeacherValue;
+
+  @override
+  bool get isAccountActive => true;
+
+  @override
+  bool get onboardingCompleted => true;
+
+  @override
+  String? get errorMessage => errorValue;
+
+  @override
+  AppUserModel? get currentUserProfile => const AppUserModel(
+        uid: 'admin_123',
+        fullName: 'Test Admin',
+        email: 'admin@test.com',
+        role: UserRole.admin,
+        status: 'active',
+        emailVerified: true,
+        onboardingCompleted: true,
+        onboardingStatus: 'completed',
+      );
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  Future<bool> login(String email, String password) async {
+    if (email == 'student_123' && password == 'password123') {
+      isLoggedInValue = true;
+      return true;
+    }
+    errorValue = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+    return false;
+  }
+
+  @override
+  Future<bool> logout() async {
+    isLoggedInValue = false;
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeOnboardingProvider extends ChangeNotifier implements OnboardingProvider {
+  @override
+  void initializeForUser(String userId) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
-  Widget buildTestApp() {
-    return MaterialApp(
-      initialRoute: AppRoutes.login,
-      routes: {
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.register: (context) => const RegisterScreen(),
-        AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
-        AppRoutes.dashboard: (context) => const DashboardScreen(),
-      },
+  Widget buildTestApp({AuthProvider? auth}) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>.value(value: auth ?? FakeAuthProvider()),
+        ChangeNotifierProvider<OnboardingProvider>(create: (_) => FakeOnboardingProvider()),
+      ],
+      child: MaterialApp(
+        initialRoute: AppRoutes.login,
+        routes: {
+          AppRoutes.login: (context) => const LoginScreen(),
+          AppRoutes.register: (context) => const RegisterScreen(),
+          AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
+          AppRoutes.adminShell: (context) => const Scaffold(
+                body: Text('شاشة الرئيسية (Dashboard)'),
+              ),
+        },
+      ),
     );
   }
 
@@ -39,9 +129,9 @@ void main() {
         find.text('تسجيل الدخول'),
         findsWidgets,
       ); // matches title and button
-      expect(find.text('الرقم الجامعي أو البريد الجامعي'), findsOneWidget);
+      expect(find.text('الرقم الجامعي'), findsOneWidget);
       expect(find.text('كلمة المرور'), findsOneWidget);
-      expect(find.text('أدخل رقمك الجامعي أو بريد الطالب'), findsOneWidget);
+      expect(find.text('أدخل بريدك الجامعي'), findsOneWidget);
       expect(find.text('نسيت كلمة المرور؟'), findsOneWidget);
     });
 
@@ -63,7 +153,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Expect password incorrect validation message to appear
-      expect(find.text('كلمة المرور غير صحيحة'), findsOneWidget);
+      expect(find.text('كلمة المرور مطلوبة'), findsOneWidget);
     });
 
     testWidgets('Tapping footer navigate to Register Screen', (

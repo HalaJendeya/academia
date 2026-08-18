@@ -64,9 +64,17 @@ abstract final class AppRoutes {
 
   /// تفاصيل طرح واحد داخل واجهة المعلّم، ومنها قائمة الطلاب المسجّلين.
   static const String teacherOfferingDetail = '/teacher/offerings/detail';
+  static const String teacherOfferingFiles = '/teacher/offerings/files';
+
+  // الواجبات الأكاديمية (المرحلة 8.3). شاشة الإضافة تخدم التعديل أيضًا:
+  // يُمرَّر الواجب عبر arguments للتعديل ويُترك فارغًا للإنشاء، كما في
+  // شاشات الطروحات والفصول الدراسية.
+  static const String teacherAddAssignment = '/teacher/assignments/add';
+  static const String teacherAssignmentDetails =
+      '/teacher/assignments/details';
+  static const String teacherUploadFile = '/teacher/offerings/files/upload';
   static const String adminCourseDetails = '/admin/courses/details';
   static const String adminAssignments = '/admin/assignments';
-  static const String adminAddAssignment = '/admin/assignments/add';
   static const String adminAssignmentDetails = '/admin/assignments/details';
   static const String adminCourseFiles = '/admin/files';
   static const String adminUploadFile = '/admin/files/upload';

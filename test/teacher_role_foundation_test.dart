@@ -17,6 +17,8 @@ import 'package:academia/features/curriculum/services/curriculum_service.dart';
 import 'package:academia/features/enrollments/services/enrollment_service.dart';
 import 'package:academia/features/semesters/services/semester_service.dart';
 import 'package:academia/features/teacher/screens/teacher_shell_screen.dart';
+import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/teacher/models/teacher_offering_view.dart';
 import 'package:academia/features/teacher/providers/teacher_offerings_provider.dart';
 import 'package:academia/features/teacher/widgets/teacher_access_guard.dart';
@@ -159,6 +161,35 @@ class InertTeacherOfferingsProvider extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class InertAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  @override
+  List<CourseAssignmentModel> get assignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  List<CourseAssignmentModel> get activeAssignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  void listenToOfferingsAssignments(List<String> offeringIds) {}
+
+  @override
+  void listenToOfferingAssignments(String offeringId) {}
+
+  @override
+  void stopListening() {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 Widget _guarded({
   required Widget child,
   required FakeAuthProvider auth,
@@ -169,6 +200,14 @@ Widget _guarded({
       ChangeNotifierProvider<AuthProvider>.value(value: auth),
       ChangeNotifierProvider<TeacherOfferingsProvider>(
         create: (_) => InertTeacherOfferingsProvider(),
+      ),
+      /*
+       * Phase 8.3: the الواجبات tab reads real assignments now. Loaded and
+       * empty keeps this file about the role and the shell; assignment
+       * behaviour is covered in assignment_screens_test.
+       */
+      ChangeNotifierProvider<CourseAssignmentProvider>(
+        create: (_) => InertAssignmentProvider(),
       ),
     ],
     child: MaterialApp(
@@ -521,10 +560,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(AppStrings.teacherCoursesDeferredTitle), findsOneWidget);
 
+      /*
+       * Phase 8.3 changed this expectation, and the change IS the feature.
+       *
+       * The الواجبات tab used to say "not available yet" because no
+       * assignments collection existed. It now reads real data, so a
+       * teacher with no offerings sees the state that actually applies to
+       * them — "no courses assigned to you yet" — which is a fact about
+       * their account, not a missing feature.
+       */
       await tester.tap(find.text(AppStrings.teacherAssignmentsTab));
       await tester.pumpAndSettle();
       expect(
-        find.text(AppStrings.teacherAssignmentsDeferredTitle),
+        find.text(AppStrings.teacherAssignmentsNoOfferingsTitle),
         findsOneWidget,
       );
     });

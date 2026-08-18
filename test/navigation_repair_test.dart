@@ -19,6 +19,7 @@ import 'package:academia/features/courses/providers/student_courses_provider.dar
 import 'package:academia/features/courses/screens/student_courses_screen.dart';
 import 'package:academia/features/dashboard/screens/dashboard_screen.dart';
 import 'package:academia/features/enrollments/providers/enrollment_provider.dart';
+import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/files/providers/course_file_provider.dart';
 import 'package:academia/features/semesters/models/semester_model.dart';
 import 'package:academia/features/academics/models/major_model.dart';
@@ -106,6 +107,29 @@ class FakeEnrollmentProvider extends ChangeNotifier
 }
 
 /// Records that the dashboard asked for a real count instead of printing one.
+/// Mirrors FakeCourseFileProvider for the assignment statistic.
+class FakeCourseAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  FakeCourseAssignmentProvider({this.countValue});
+
+  int? countValue;
+  int loadCountCallCount = 0;
+
+  @override
+  int? get activeAssignmentCount => countValue;
+
+  @override
+  bool get isLoadingActiveAssignmentCount => false;
+
+  @override
+  Future<void> loadActiveAssignmentCount() async {
+    loadCountCallCount++;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class FakeCourseFileProvider extends ChangeNotifier
     implements CourseFileProvider {
   FakeCourseFileProvider({this.countValue});
@@ -317,8 +341,9 @@ void main() {
 
   group('Admin dashboard', () {
     List<SingleChildWidget> adminProviders(
-      FakeCourseFileProvider fileProvider,
-    ) => [
+      FakeCourseFileProvider fileProvider, [
+      FakeCourseAssignmentProvider? assignmentProvider,
+    ]) => [
       ChangeNotifierProvider<AuthProvider>(
         create: (_) => FakeAuthProvider(user: _adminUser),
       ),
@@ -327,6 +352,13 @@ void main() {
         create: (_) => FakeEnrollmentProvider(),
       ),
       ChangeNotifierProvider<CourseFileProvider>.value(value: fileProvider),
+      /*
+       * Phase 8.3: the dashboard's assignment card now reads a real count
+       * from this provider instead of the hardcoded '0' it used to show.
+       */
+      ChangeNotifierProvider<CourseAssignmentProvider>.value(
+        value: assignmentProvider ?? FakeCourseAssignmentProvider(),
+      ),
     ];
 
     testWidgets(
@@ -425,6 +457,147 @@ void main() {
         ),
       );
       expect(updated.value, '12');
+    });
+
+    // ---- Phase 8.3: the assignment statistic ----
+
+    AdminStatCard assignmentCard(WidgetTester tester) =>
+        tester.widget<AdminStatCard>(
+          find.ancestor(
+            of: find.text(AppStrings.assignmentsManagementTitle),
+            matching: find.byType(AdminStatCard),
+          ),
+        );
+
+    Future<void> pumpDashboard(
+      WidgetTester tester,
+      FakeCourseAssignmentProvider assignments,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          home: const AdminDashboardScreen(),
+          recorder: RouteRecorder(),
+          providers: adminProviders(
+            FakeCourseFileProvider(countValue: 0),
+            assignments,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /*
+     * Until the count is read, the card must say "unknown", not "none".
+     * The old dashboard hardcoded '0', which asserted there were no
+     * assignments in a system that had never been asked.
+     */
+    testWidgets('an unread assignment count shows a dash, never 0', (
+      tester,
+    ) async {
+      final assignments = FakeCourseAssignmentProvider();
+      await pumpDashboard(tester, assignments);
+
+      expect(assignmentCard(tester).value, '—');
+      expect(assignments.loadCountCallCount, 1);
+    });
+
+    testWidgets('a real zero shows as 0', (tester) async {
+      await pumpDashboard(tester, FakeCourseAssignmentProvider(countValue: 0));
+      expect(assignmentCard(tester).value, '0');
+    });
+
+    testWidgets('a real count shows the number', (tester) async {
+      await pumpDashboard(tester, FakeCourseAssignmentProvider(countValue: 9));
+      expect(assignmentCard(tester).value, '9');
+    });
+
+    testWidgets('a provider update reaches the card', (tester) async {
+      final assignments = FakeCourseAssignmentProvider(countValue: 3);
+      await pumpDashboard(tester, assignments);
+      expect(assignmentCard(tester).value, '3');
+
+      assignments.countValue = 5;
+      assignments.notifyListeners();
+      await tester.pumpAndSettle();
+
+      expect(assignmentCard(tester).value, '5');
+    });
+
+    /*
+     * A failed count read leaves the value null. The dashboard must keep
+     * rendering everything else rather than fabricating a zero.
+     */
+    testWidgets('a failed count does not fabricate 0 or break the dashboard', (
+      tester,
+    ) async {
+      final assignments = FakeCourseAssignmentProvider(countValue: 4);
+      await pumpDashboard(tester, assignments);
+
+      assignments.countValue = null; // read failed
+      assignments.notifyListeners();
+      await tester.pumpAndSettle();
+
+      expect(assignmentCard(tester).value, '—');
+      // Neighbouring statistics and the page itself are unaffected.
+      expect(find.text(AppStrings.filesManagementTitle), findsOneWidget);
+      expect(find.text(AppStrings.adminStudentsTitle), findsOneWidget);
+    });
+
+    /*
+     * The admin authoring path was removed in Phase 8.3: teachers author
+     * assignments, and the rules deny admin create.
+     */
+    testWidgets('the dashboard offers oversight, not assignment creation', (
+      tester,
+    ) async {
+      await pumpDashboard(tester, FakeCourseAssignmentProvider(countValue: 0));
+
+      expect(find.text(AppStrings.addAssignmentQuickAction), findsNothing);
+      expect(
+        find.text(AppStrings.adminAssignmentsOversightTitle),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the oversight action opens the assignments list', (
+      tester,
+    ) async {
+      final recorder = RouteRecorder();
+      await tester.pumpWidget(
+        _wrap(
+          home: const AdminDashboardScreen(),
+          recorder: recorder,
+          providers: adminProviders(
+            FakeCourseFileProvider(countValue: 0),
+            FakeCourseAssignmentProvider(countValue: 0),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.text(AppStrings.adminAssignmentsOversightTitle),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.adminAssignmentsOversightTitle));
+      await tester.pumpAndSettle();
+
+      expect(recorder.pushedRoutes.last, AppRoutes.adminAssignments);
+    });
+
+    testWidgets('no overflow at 360px with the assignment card', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await pumpDashboard(tester, FakeCourseAssignmentProvider(countValue: 42));
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('an unknown count shows a dash, never a fabricated zero', (

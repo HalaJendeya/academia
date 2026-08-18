@@ -207,15 +207,28 @@ class CourseFileProvider extends ChangeNotifier {
   /// الشرط هنا "مستخدم نشط" لا "مشرف": هذا المزوّد يخدم الطالب أيضًا،
   /// ومسحه لكل غير مشرف كان يفرغ ملفات الطالب فور تحميلها. ما يجب أن يوقف
   /// الاستماع هو الخروج من الحساب، وهو ما ينتج PERMISSION_DENIED.
-  void syncWithAuth({required bool isActiveUser}) {
+  void syncWithAuth({required bool isActiveUser, String? role}) {
     if (isActiveUser) {
+      if (_hadSession && _lastRole != null && _lastRole != role) {
+        // Role switched while keeping session active (e.g. from teacher to student)
+        // We MUST cancel current file listeners to avoid leaking file subscriptions
+        // that the new role might not be authorized to read.
+        stopListening();
+        _offeringId = null;
+        _files = const <CourseFileModel>[];
+        _activeFileCount = null;
+        _isLoading = false;
+        _errorMessage = null;
+      }
       _hadSession = true;
+      _lastRole = role;
       return;
     }
 
     final hadState =
         _hadSession || _subscriptions.isNotEmpty || _files.isNotEmpty;
     _hadSession = false;
+    _lastRole = null;
     if (!hadState) return;
 
     stopListening();
@@ -229,6 +242,7 @@ class CourseFileProvider extends ChangeNotifier {
   }
 
   bool _hadSession = false;
+  String? _lastRole;
 
   void stopListening() {
     for (final subscription in _subscriptions.values) {

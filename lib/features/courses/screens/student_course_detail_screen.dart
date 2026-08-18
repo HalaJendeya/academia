@@ -16,6 +16,8 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../curriculum/models/curriculum_course_model.dart';
+import '../../assignments/providers/course_assignment_provider.dart';
+import '../widgets/student_assignment_preview_card.dart';
 import '../../files/models/course_file_model.dart';
 import '../../files/providers/course_file_provider.dart';
 import '../widgets/student_file_list_item_card.dart';
@@ -37,9 +39,10 @@ class StudentCourseDetailArgs {
 
 /// تفاصيل مساق للطالب.
 ///
-/// التبويبات محفوظة كما صمّمها فريق الواجهة، لكن الواجبات والملفات
-/// والمساحة تعرض حالة "غير متاح بعد" صريحة: لا توجد مجموعات تغذّيها،
-/// وملؤها بقيم وهمية يجعل الشاشة تكذب على الطالب.
+/// التبويبات محفوظة كما صمّمها فريق الواجهة. الواجبات والملفات تقرآن من
+/// Firestore مقيَّدتين بالطرح الذي يملك الطالب تسجيلًا فيه؛ «المساحة
+/// المشتركة» وحدها تبقى تعرض حالة «غير متاح بعد» صريحة، إذ لا مجموعة
+/// تغذّيها، وملؤها بقيم وهمية يجعل الشاشة تكذب على الطالب.
 class StudentCourseDetailScreen extends StatelessWidget {
   const StudentCourseDetailScreen({super.key});
 
@@ -107,7 +110,8 @@ class StudentCourseDetailScreen extends StatelessWidget {
                         offering?.instructorName,
                     curriculumEntry: curriculumEntry,
                   ),
-                  _buildNotAvailableTab(),
+                  // الواجبات: مقيَّدة بالطرح نفسه — الخطة وحدها لا تكفي.
+                  _CourseAssignmentsTab(offeringId: args.offeringId),
                   // الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
                   _CourseFilesTab(offeringId: args.offeringId),
                   _buildNotAvailableTab(),
@@ -411,6 +415,101 @@ class _CourseFilesTabState extends State<_CourseFilesTab> {
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.small),
           child: FileListItemCard(file: file, onTap: () => _openFile(file)),
+        );
+      },
+    );
+  }
+}
+
+/// واجبات طرح واحد داخل تفاصيل المساق.
+///
+/// المسار: تسجيل الطالب ← offeringId ← assignments حيث offeringId يطابق.
+/// بلا طرح لا واجبات: مساق من الخطة الدراسية لم يُسجَّل فيه الطالب لا يملك
+/// طرحًا، ولا يجوز أن يعرض واجبات شعبةٍ ما.
+///
+/// للقراءة فقط: لا إنشاء ولا تعديل ولا أرشفة. المؤرشف لا يصل أصلًا لأن
+/// الاستعلام يقيّد الحالة على النشط في الخادم.
+class _CourseAssignmentsTab extends StatefulWidget {
+  const _CourseAssignmentsTab({required this.offeringId});
+
+  final String? offeringId;
+
+  @override
+  State<_CourseAssignmentsTab> createState() => _CourseAssignmentsTabState();
+}
+
+class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
+  CourseAssignmentProvider? _assignmentProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _assignmentProvider = context.read<CourseAssignmentProvider>();
+
+    final offeringId = widget.offeringId;
+    if (offeringId == null || offeringId.trim().isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<CourseAssignmentProvider>().listenToOfferingAssignments(
+        offeringId,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    // مرجع محفوظ: لا يمكن قراءة المزوّد من context أثناء dispose.
+    _assignmentProvider?.stopListening();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offeringId = widget.offeringId;
+
+    if (offeringId == null || offeringId.trim().isEmpty) {
+      return const AppEmptyState(
+        title: AppStrings.courseAssignmentsNoOfferingTitle,
+        description: AppStrings.courseAssignmentsNoOfferingDesc,
+        icon: Icons.assignment_outlined,
+      );
+    }
+
+    final provider = context.watch<CourseAssignmentProvider>();
+
+    if (provider.isLoading && provider.assignments.isEmpty) {
+      return const AppLoadingState();
+    }
+
+    if (provider.errorMessage != null && provider.assignments.isEmpty) {
+      return AppErrorState(
+        message: provider.errorMessage!,
+        onRetry: () {
+          final assignmentProvider = context.read<CourseAssignmentProvider>();
+          assignmentProvider.stopListening();
+          assignmentProvider.listenToOfferingAssignments(offeringId);
+        },
+      );
+    }
+
+    final assignments = provider.activeAssignments;
+
+    if (assignments.isEmpty) {
+      return const AppEmptyState(
+        title: AppStrings.noAssignmentsTitle,
+        description: AppStrings.courseAssignmentsEmptyDesc,
+        icon: Icons.assignment_outlined,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppSpacing.screenHorizontal),
+      itemCount: assignments.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.small),
+          child: AssignmentPreviewCard(assignment: assignments[index]),
         );
       },
     );

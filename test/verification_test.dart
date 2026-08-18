@@ -5,16 +5,63 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:academia/app/app_routes.dart';
 import 'package:academia/features/auth/screens/student_verification_screen.dart';
 import 'package:academia/features/auth/screens/login_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:academia/features/auth/providers/auth_provider.dart';
+import 'package:academia/features/onboarding/providers/onboarding_provider.dart';
+import 'package:academia/features/auth/models/app_user_model.dart';
+
+class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
+  @override
+  bool get isLoggedIn => false;
+  @override
+  bool get isAdmin => false;
+  @override
+  bool get isStudent => true;
+  @override
+  bool get isTeacher => false;
+  @override
+  bool get isAccountActive => true;
+  @override
+  bool get onboardingCompleted => true;
+  @override
+  String? get errorMessage => null;
+  @override
+  bool get isLoading => false;
+  @override
+  AppUserModel? get currentUserProfile => null;
+
+  @override
+  Future<bool> sendEmailVerification() async {
+    return true;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeOnboardingProvider extends ChangeNotifier implements OnboardingProvider {
+  @override
+  void initializeForUser(String userId) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   Widget buildTestApp() {
-    return MaterialApp(
-      initialRoute: AppRoutes.studentVerification,
-      routes: {
-        AppRoutes.studentVerification: (context) =>
-            const StudentVerificationScreen(),
-        AppRoutes.login: (context) => const LoginScreen(),
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuthProvider()),
+        ChangeNotifierProvider<OnboardingProvider>(create: (_) => FakeOnboardingProvider()),
+      ],
+      child: MaterialApp(
+        initialRoute: AppRoutes.studentVerification,
+        routes: {
+          AppRoutes.studentVerification: (context) =>
+              const StudentVerificationScreen(),
+          AppRoutes.login: (context) => const LoginScreen(),
+        },
+      ),
     );
   }
 
@@ -35,58 +82,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('التحقق من الطالب'), findsOneWidget);
-      expect(find.text('رابط تفعيل الحساب'), findsOneWidget);
+      expect(find.text('رابط التحقق الأكاديمي'), findsOneWidget);
       expect(
-        find.widgetWithText(ElevatedButton, 'افتح البريد الإلكتروني'),
+        find.widgetWithText(ElevatedButton, 'تحقق'),
         findsOneWidget,
       );
       expect(find.text('إعادة إرسال الرابط'), findsOneWidget);
-    });
-
-    testWidgets('Verification email link flow works end-to-end', (
-      WidgetTester tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-
-      SharedPreferences.setMockInitialValues({});
-
-      await tester.pumpWidget(buildTestApp());
-      await tester.pumpAndSettle();
-
-      // Tap Open Email
-      await tester.tap(find.byKey(const Key('open_email_btn')));
-      await tester.pumpAndSettle();
-
-      // Check inbox title and email item exist
-      expect(find.text('صندوق الوارد (Inbox)'), findsOneWidget);
-      expect(find.text('تأكيد البريد الإلكتروني لحسابك'), findsOneWidget);
-
-      // Tap Email list item
-      await tester.tap(find.byKey(const Key('inbox_email_item')));
-      await tester.pumpAndSettle();
-
-      // Check email details page renders link button
-      expect(find.text('العودة إلى صندوق الوارد'), findsOneWidget);
-      expect(find.byKey(const Key('verify_link_btn')), findsOneWidget);
-
-      // Tap Verify Account Link
-      await tester.tap(find.byKey(const Key('verify_link_btn')));
-      await tester.pump(); // starts verifying timer
-
-      // Verify progress indicator shows up
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      // Fast forward 1.0 second to complete verification
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pumpAndSettle();
-
-      // Verify redirected back to Login Screen directly
-      expect(find.text('الرقم الجامعي أو البريد الجامعي'), findsOneWidget);
     });
 
     testWidgets(

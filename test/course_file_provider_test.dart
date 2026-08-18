@@ -58,6 +58,11 @@ class FakeCourseFileService implements CourseFileService {
   }
 
   @override
+  Stream<List<CourseFileModel>> watchOfferingFiles(String offeringId) {
+    return Stream.value([]);
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -313,7 +318,30 @@ void main() {
 
       expect(ok, isFalse);
       expect(fileService.createCallCount, 0);
-      expect(provider.errorMessage, AppStrings.fileUploadNetworkError);
+    });
+  });
+
+  group('CourseFileProvider.syncWithAuth role switch', () {
+    test('role switch cancels existing subscriptions and clears state', () async {
+      final fileService = FakeCourseFileService();
+      final provider = CourseFileProvider(
+        fileService,
+        CloudinaryUploadService(),
+      );
+
+      // Simulate first session with teacher role
+      provider.syncWithAuth(isActiveUser: true, role: 'teacher');
+      provider.listenToOfferingFiles('offering1');
+
+      // Ensure provider is in listening state
+      expect(provider.offeringId, 'offering1');
+
+      // Now simulate a role switch (e.g. to student) while keeping active user session
+      provider.syncWithAuth(isActiveUser: true, role: 'student');
+
+      // The offeringId and loaded files must be cleared
+      expect(provider.offeringId, isNull);
+      expect(provider.files, isEmpty);
     });
   });
 

@@ -11,6 +11,7 @@ import '../../../core/widgets/app_status_badge.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../courses/providers/course_provider.dart';
 import '../../enrollments/providers/enrollment_provider.dart';
+import '../../assignments/providers/course_assignment_provider.dart';
 import '../../files/providers/course_file_provider.dart';
 import '../widgets/admin_quick_action_card.dart';
 import '../widgets/admin_stat_card.dart';
@@ -34,6 +35,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context.read<EnrollmentProvider>().listenToStudents();
       // قراءة واحدة لا استماع: بطاقة إحصاء لا تحتاج تحديثًا لحظيًا.
       context.read<CourseFileProvider>().loadActiveFileCount();
+      context.read<CourseAssignmentProvider>().loadActiveAssignmentCount();
     });
   }
 
@@ -63,6 +65,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final fileProvider = context.watch<CourseFileProvider>();
     final activeFilesCount = fileProvider.activeFileCount;
     final activeFilesValue = activeFilesCount?.toString() ?? '—';
+
+    /*
+     * عدد الواجبات النشطة، بالمنطق نفسه: null يعني «لم يُقرأ بعد أو فشلت
+     * قراءته» فتُعرض شرطة. صفر حقيقي يُعرض صفرًا — الفرق بينهما هو الفرق
+     * بين «لا واجبات» و«لا نعرف».
+     */
+    final activeAssignmentsValue =
+        context.watch<CourseAssignmentProvider>().activeAssignmentCount
+            ?.toString() ??
+        '—';
 
     return Scaffold(
       appBar: AppBar(
@@ -141,9 +153,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   iconColor: AppColors.primary,
                   iconBackgroundColor: AppColors.primary.withValues(alpha: 0.1),
                 ),
-                const AdminStatCard(
+                AdminStatCard(
                   title: AppStrings.assignmentsManagementTitle,
-                  value: '0',
+                  value: activeAssignmentsValue,
                   icon: Icons.assignment_outlined,
                   iconColor: AppColors.accentPurple,
                   iconBackgroundColor: AppColors.accentPurpleLight,
@@ -192,14 +204,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     widget.onTabSelect?.call(2);
                   },
                 ),
+                /*
+                 * إشراف لا إنشاء.
+                 *
+                 * كان هذا الإجراء يفتح نموذج إنشاء واجب للمشرف، وهو ما
+                 * ترفضه القواعد صراحةً: الواجب الأكاديمي يؤلّفه معلّم
+                 * المساق. الوجهة الآن قائمة الإشراف العالمية.
+                 */
                 AdminQuickActionCard(
-                  title: AppStrings.addAssignmentQuickAction,
-                  icon: Icons.note_add_rounded,
+                  title: AppStrings.adminAssignmentsOversightTitle,
+                  icon: Icons.assignment_outlined,
                   color: AppColors.accentPurple,
                   onTap: () {
-                    Navigator.of(
-                      context,
-                    ).pushNamed(AppRoutes.adminAddAssignment);
+                    Navigator.of(context).pushNamed(AppRoutes.adminAssignments);
                   },
                 ),
                 /*

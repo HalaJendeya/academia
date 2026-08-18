@@ -41,9 +41,12 @@ import '../features/admin/screens/admin_teacher_list_screen.dart';
 import '../features/admin/screens/admin_teacher_details_screen.dart';
 import '../features/teacher/screens/teacher_shell_screen.dart';
 import '../features/teacher/screens/teacher_offering_detail_screen.dart';
+import '../features/teacher/screens/teacher_course_files_screen.dart';
+import '../features/teacher/screens/teacher_upload_file_screen.dart';
+import '../features/teacher/screens/teacher_add_assignment_screen.dart';
+import '../features/teacher/screens/teacher_assignment_details_screen.dart';
 import '../features/admin/screens/admin_course_details_screen.dart';
 import '../features/admin/screens/admin_assignment_list_screen.dart';
-import '../features/admin/screens/admin_assignment_form_screen.dart';
 import '../features/admin/screens/admin_assignment_details_screen.dart';
 import '../features/admin/screens/admin_course_files_screen.dart';
 import '../features/admin/screens/admin_upload_file_screen.dart';
@@ -164,12 +167,18 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.teacherShell: (context) => const TeacherShellScreen(),
         AppRoutes.teacherOfferingDetail: (context) =>
             const TeacherOfferingDetailScreen(),
+        AppRoutes.teacherOfferingFiles: (context) =>
+            const TeacherCourseFilesScreen(),
+        AppRoutes.teacherUploadFile: (context) =>
+            const TeacherUploadFileScreen(),
+        AppRoutes.teacherAddAssignment: (context) =>
+            const TeacherAddAssignmentScreen(),
+        AppRoutes.teacherAssignmentDetails: (context) =>
+            const TeacherAssignmentDetailsScreen(),
         AppRoutes.adminCourseDetails: (context) =>
             const AdminCourseDetailsScreen(),
         AppRoutes.adminAssignments: (context) =>
             const AdminAssignmentListScreen(),
-        AppRoutes.adminAddAssignment: (context) =>
-            const AdminAssignmentFormScreen(),
         AppRoutes.adminAssignmentDetails: (context) =>
             const AdminAssignmentDetailsScreen(),
         AppRoutes.adminCourseFiles: (context) => const AdminCourseFilesScreen(),

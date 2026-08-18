@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/constants/app_strings.dart';
-import '../../../core/services/admin_access.dart';
 import '../models/course_file_model.dart';
 
 class CourseFileException implements Exception {
@@ -30,16 +29,7 @@ class CourseFileService {
   CollectionReference<Map<String, dynamic>> get _files =>
       _firestore.collection('courseFiles');
 
-  Future<String> _requireAdmin() async {
-    if (!AdminAccess.isSignedIn(_auth)) {
-      throw const CourseFileException(AppStrings.authenticationRequired);
-    }
-    final uid = await AdminAccess.activeAdminUid(_auth, _firestore);
-    if (uid == null) {
-      throw const CourseFileException(AppStrings.unauthorizedAccess);
-    }
-    return uid;
-  }
+
 
   List<CourseFileModel> _map(QuerySnapshot<Map<String, dynamic>> snapshot) {
     final list = snapshot.docs
@@ -131,8 +121,58 @@ class CourseFileService {
   ///
   /// تُستدعى بعد الرفع لا قبله: مستند يشير إلى ملف غير موجود أسوأ من عدم
   /// وجود المستند أصلًا.
+  /// التحقق من صلاحية الكتابة: مشرف نشط، أو معلم نشط يملك الطرح.
+  /// يعيد معرّف المستخدم الحالي ونوع دوره (كحالة) إذا كان مصرّحًا له.
+  Future<({String uid, bool isAdmin})> _requireWriteAccess(String offeringId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw const CourseFileException(AppStrings.authenticationRequired);
+    }
+    final uid = currentUser.uid;
+
+    final userDoc = await _firestore.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      throw const CourseFileException(AppStrings.unauthorizedAccess);
+    }
+
+    final data = userDoc.data();
+    if (data == null) {
+      throw const CourseFileException(AppStrings.unauthorizedAccess);
+    }
+
+    final role = data['role'] as String?;
+    final status = data['status'] as String? ?? 'active';
+    if (status != 'active') {
+      throw const CourseFileException(AppStrings.unauthorizedAccess);
+    }
+
+    if (role == 'admin') {
+      return (uid: uid, isAdmin: true);
+    } else if (role == 'teacher') {
+      // قراءة الطرح للتحقق من أن المعلم هو مالك الطرح
+      final offeringDoc = await _firestore
+          .collection('courseOfferings')
+          .doc(offeringId)
+          .get();
+      if (!offeringDoc.exists || offeringDoc.data() == null) {
+        throw const CourseFileException(AppStrings.offeringNotFound);
+      }
+      final offeringData = offeringDoc.data()!;
+      if (offeringData['teacherId'] != uid) {
+        throw const CourseFileException(AppStrings.unauthorizedAccess);
+      }
+      return (uid: uid, isAdmin: false);
+    }
+
+    throw const CourseFileException(AppStrings.unauthorizedAccess);
+  }
+
+  /// إنشاء البيانات الوصفية بعد نجاح الرفع إلى Cloudinary.
+  ///
+  /// تُستدعى بعد الرفع لا قبله: مستند يشير إلى ملف غير موجود أسوأ من عدم
+  /// وجود المستند أصلًا.
   Future<String> createFileMetadata(CourseFileModel file) async {
-    final adminUid = await _requireAdmin();
+    final authResult = await _requireWriteAccess(file.offeringId);
     _validate(file);
 
     if (file.cloudinaryUrl.trim().isEmpty ||
@@ -146,7 +186,7 @@ class CourseFileService {
       final docRef = _files.doc();
       await docRef.set({
         ...file.toMap(),
-        'uploadedBy': adminUid,
+        'uploadedBy': authResult.uid,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -163,12 +203,20 @@ class CourseFileService {
   /// الطرح والمساق والفصل ومراجع Cloudinary ورافع الملف غير قابلة للتعديل:
   /// تغييرها يعني ملفًا آخر، وهو ما يُنشأ برفع جديد.
   Future<void> updateFileMetadata(CourseFileModel file) async {
-    await _requireAdmin();
-    _validate(file);
-
     if (file.id.trim().isEmpty) {
       throw const CourseFileException(AppStrings.fileNotFound);
     }
+
+    // Read the existing file metadata from Firestore to prevent tampering with offeringId or other fields
+    final existingDoc = await _files.doc(file.id).get();
+    if (!existingDoc.exists || existingDoc.data() == null) {
+      throw const CourseFileException(AppStrings.fileNotFound);
+    }
+    final existingData = existingDoc.data()!;
+    final trueOfferingId = existingData['offeringId'] as String? ?? '';
+
+    await _requireWriteAccess(trueOfferingId);
+    _validate(file);
 
     try {
       await _files.doc(file.id).update({
@@ -186,11 +234,19 @@ class CourseFileService {
   }
 
   Future<void> archiveFile(String fileId) async {
-    await _requireAdmin();
-
     if (fileId.trim().isEmpty) {
       throw const CourseFileException(AppStrings.fileNotFound);
     }
+
+    // Read the existing file to get its true offeringId for authorization
+    final existingDoc = await _files.doc(fileId).get();
+    if (!existingDoc.exists || existingDoc.data() == null) {
+      throw const CourseFileException(AppStrings.fileNotFound);
+    }
+    final existingData = existingDoc.data()!;
+    final trueOfferingId = existingData['offeringId'] as String? ?? '';
+
+    await _requireWriteAccess(trueOfferingId);
 
     try {
       await _files.doc(fileId).update({

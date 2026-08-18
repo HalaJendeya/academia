@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:academia/app/app_routes.dart';
 import 'package:academia/features/auth/screens/splash_screen.dart';
 import 'package:academia/features/auth/screens/welcome_screen.dart';
 import 'package:academia/features/auth/screens/login_screen.dart';
-import 'package:academia/features/dashboard/screens/dashboard_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:academia/features/auth/providers/auth_provider.dart';
+import 'package:academia/features/onboarding/providers/onboarding_provider.dart';
+import 'package:academia/features/auth/models/app_user_model.dart';
 
 // Mocks
 class FakeUser implements User {
@@ -17,8 +20,18 @@ class FakeUser implements User {
   final String? email;
   @override
   final String? displayName;
+  @override
+  final bool emailVerified;
 
-  FakeUser({required this.uid, this.email, this.displayName});
+  FakeUser({
+    required this.uid,
+    this.email,
+    this.displayName,
+    this.emailVerified = true,
+  });
+
+  @override
+  Future<void> reload() async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -34,6 +47,57 @@ class MockFirebaseAuth implements FirebaseAuth {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
+  final MockFirebaseAuth mockAuth;
+  FakeAuthProvider(this.mockAuth);
+
+  @override
+  bool get isLoggedIn => mockAuth.currentUser != null;
+  @override
+  bool get isAdmin => false;
+  @override
+  bool get isStudent => true;
+  @override
+  bool get isTeacher => false;
+  @override
+  bool get isAccountActive => true;
+  @override
+  bool get onboardingCompleted => true;
+  @override
+  String? get errorMessage => null;
+  @override
+  bool get isLoading => false;
+  @override
+  AppUserModel? get currentUserProfile => mockAuth.currentUser != null
+      ? AppUserModel(
+          uid: mockAuth.currentUser!.uid,
+          fullName: 'Test Student',
+          email: mockAuth.currentUser!.email ?? 'student@test.com',
+          role: UserRole.student,
+          status: 'active',
+          emailVerified: true,
+          onboardingCompleted: true,
+          onboardingStatus: 'completed',
+        )
+      : null;
+
+  @override
+  Future<bool> initializeCurrentUser() async {
+    return isLoggedIn;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeOnboardingProvider extends ChangeNotifier implements OnboardingProvider {
+  @override
+  void initializeForUser(String userId) {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 void main() {
   late MockFirebaseAuth mockAuth;
 
@@ -42,14 +106,22 @@ void main() {
   });
 
   Widget buildTestApp() {
-    return MaterialApp(
-      initialRoute: AppRoutes.splash,
-      routes: {
-        AppRoutes.splash: (context) => SplashScreen(auth: mockAuth),
-        AppRoutes.welcome: (context) => const WelcomeScreen(),
-        AppRoutes.login: (context) => const LoginScreen(),
-        AppRoutes.dashboard: (context) => const DashboardScreen(),
-      },
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuthProvider(mockAuth)),
+        ChangeNotifierProvider<OnboardingProvider>(create: (_) => FakeOnboardingProvider()),
+      ],
+      child: MaterialApp(
+        initialRoute: AppRoutes.splash,
+        routes: {
+          AppRoutes.splash: (context) => SplashScreen(auth: mockAuth),
+          AppRoutes.welcome: (context) => const WelcomeScreen(),
+          AppRoutes.login: (context) => const LoginScreen(),
+          AppRoutes.dashboard: (context) => const Scaffold(
+                body: Text('شاشة الرئيسية (Dashboard)'),
+              ),
+        },
+      ),
     );
   }
 

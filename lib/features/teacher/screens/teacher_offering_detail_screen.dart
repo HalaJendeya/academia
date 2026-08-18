@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/app_routes.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../admin/screens/admin_course_files_screen.dart';
 import '../models/teacher_offering_view.dart';
 import '../providers/teacher_offerings_provider.dart';
 import '../widgets/teacher_access_guard.dart';
@@ -55,6 +57,21 @@ class _TeacherOfferingDetailScreenState
         appBar: AppBar(
           title: const Text(AppStrings.teacherOfferingDetailTitle),
           centerTitle: true,
+          actions: [
+            if (view != null)
+              IconButton(
+                icon: const Icon(Icons.folder_open_rounded),
+                onPressed: () {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.teacherOfferingFiles,
+                    arguments: OfferingFilesArgs(
+                      offering: view.offering,
+                      courseTitle: view.displayTitle,
+                    ),
+                  );
+                },
+              ),
+          ],
         ),
         body: view == null
             /*

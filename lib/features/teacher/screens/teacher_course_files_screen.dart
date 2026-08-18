@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../files/services/course_file_opener.dart';
 
 import '../../../app/app_routes.dart';
 import '../../../core/constants/app_strings.dart';
@@ -12,39 +11,26 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/app_status_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
-import '../../courses/models/course_offering_model.dart';
+import '../../admin/screens/admin_course_files_screen.dart';
 import '../../files/models/course_file_model.dart';
 import '../../files/providers/course_file_provider.dart';
-import '../widgets/admin_access_guard.dart';
-import '../widgets/admin_back_button.dart';
+import '../../files/services/course_file_opener.dart';
 import '../../files/widgets/edit_course_file_dialog.dart';
-import 'admin_upload_file_screen.dart';
+import '../providers/teacher_offerings_provider.dart';
+import '../widgets/teacher_access_guard.dart';
+import 'teacher_upload_file_screen.dart';
 
-/// وسيطات الشاشة: الملفات دائمًا تخص طرحًا بعينه.
-class OfferingFilesArgs {
-  const OfferingFilesArgs({required this.offering, required this.courseTitle});
-
-  final CourseOfferingModel offering;
-  final String courseTitle;
-}
-
-/// ملفات طرح مساق، للمشرف.
-///
-/// الشاشة مقيَّدة بطرح مُمرَّر إليها، ولا تسأل المشرف عن المساق أو الفصل:
-/// هذه الحقول تُشتق من الطرح داخل المزوّد، فلا يمكن أن يُنسب ملف إلى فصل
-/// لا ينتمي إليه.
-class AdminCourseFilesScreen extends StatefulWidget {
-  const AdminCourseFilesScreen({super.key});
+/// شاشة ملفات طرح مساق، للمعلم.
+class TeacherCourseFilesScreen extends StatefulWidget {
+  const TeacherCourseFilesScreen({super.key});
 
   @override
-  State<AdminCourseFilesScreen> createState() => _AdminCourseFilesScreenState();
+  State<TeacherCourseFilesScreen> createState() => _TeacherCourseFilesScreenState();
 }
 
-class _AdminCourseFilesScreenState extends State<AdminCourseFilesScreen> {
+class _TeacherCourseFilesScreenState extends State<TeacherCourseFilesScreen> {
   OfferingFilesArgs? _args;
   bool _initialized = false;
-
-  /// مرجع محفوظ: لا يمكن قراءة المزوّد من context أثناء dispose.
   CourseFileProvider? _fileProvider;
 
   @override
@@ -78,8 +64,8 @@ class _AdminCourseFilesScreenState extends State<AdminCourseFilesScreen> {
     if (args == null) return;
 
     Navigator.of(context).pushNamed(
-      AppRoutes.adminUploadFile,
-      arguments: UploadFileArgs(
+      AppRoutes.teacherUploadFile,
+      arguments: TeacherUploadFileArgs(
         offering: args.offering,
         courseTitle: args.courseTitle,
       ),
@@ -174,35 +160,59 @@ class _AdminCourseFilesScreenState extends State<AdminCourseFilesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<CourseFileProvider>();
     final args = _args;
 
     if (args == null) {
-      return const AdminAccessGuard(
+      return const TeacherAccessGuard(
         child: Scaffold(body: Center(child: Text(AppStrings.offeringNotFound))),
       );
     }
 
-    return AdminAccessGuard(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(AppStrings.offeringFilesTitle),
-          centerTitle: true,
-          leading: const AdminBackButton(),
+    final offeringsProvider = context.watch<TeacherOfferingsProvider>();
+
+    return TeacherAccessGuard(
+      child: offeringsProvider.isLoading
+          ? const Scaffold(body: AppLoadingState())
+          : _buildGuardContent(context, offeringsProvider, args),
+    );
+  }
+
+  Widget _buildGuardContent(
+    BuildContext context,
+    TeacherOfferingsProvider offeringsProvider,
+    OfferingFilesArgs args,
+  ) {
+    // التحقق من الملكية: يجب أن يكون الطرح مسندًا لهذا المعلم
+    final hasAccess = offeringsProvider.offerings.any((o) => o.offeringId == args.offering.id);
+
+    if (!hasAccess) {
+      return const Scaffold(
+        body: Center(
+          child: Text(AppStrings.unauthorizedAccess),
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openUpload,
-          label: const Text(AppStrings.uploadFileTitle),
-          icon: const Icon(Icons.upload_rounded),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-        ),
-        body: Column(
-          children: [
-            _buildOfferingHeader(args, provider.files.length),
-            Expanded(child: _buildBody(provider)),
-          ],
-        ),
+      );
+    }
+
+    final provider = context.watch<CourseFileProvider>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(AppStrings.offeringFilesTitle),
+        centerTitle: true,
+        leading: const BackButton(),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openUpload,
+        label: const Text(AppStrings.uploadFileTitle),
+        icon: const Icon(Icons.upload_rounded),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: Column(
+        children: [
+          _buildOfferingHeader(args, provider.files.length),
+          Expanded(child: _buildBody(provider)),
+        ],
       ),
     );
   }
@@ -394,8 +404,6 @@ class _AdminCourseFilesScreenState extends State<AdminCourseFilesScreen> {
                 icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
                 onPressed: () => _editFile(file),
               ),
-              // لا حذف نهائي: الرفع غير موقَّع فلا يمكن حذف الملف من التخزين،
-              // وحذف بياناته وحده يترك ملفًا يتيمًا.
               IconButton(
                 tooltip: AppStrings.archiveAction,
                 icon: Icon(

@@ -710,12 +710,14 @@ service cloud.firestore {
 
       // Admins see everything; a student sees a file only for an offering
       // they are (or were) enrolled in.
+      // Active teacher may read files only for their own offering.
       allow read: if isActiveAdmin()
-        || ( isActiveUser() && isEnrolledInOffering(resource.data.offeringId) );
+        || ( isActiveUser() && isEnrolledInOffering(resource.data.offeringId) )
+        || teacherOwnsOffering(resource.data.offeringId);
 
       // POLICY: students never upload course material. Files are course
       // content authored by staff, not student submissions.
-      allow create: if isActiveAdmin()
+      allow create: if ( isActiveAdmin() || teacherOwnsOffering(d().offeringId) )
         && validFile()
         && matchesOffering()
         && d().uploadedBy == request.auth.uid
@@ -730,7 +732,7 @@ service cloud.firestore {
        * of them would make the document describe a different file, which is
        * what a new upload is for.
        */
-      allow update: if isActiveAdmin()
+      allow update: if ( isActiveAdmin() || teacherOwnsOffering(resource.data.offeringId) )
         && d().offeringId == resource.data.offeringId
         && d().courseId == resource.data.courseId
         && d().semesterId == resource.data.semesterId
@@ -750,6 +752,135 @@ service cloud.firestore {
        * upload preset is unsigned, so the client cannot delete the binary
        * from Cloudinary. Deleting the metadata would leave a file nothing
        * in the system knows about.
+       */
+      allow delete: if false;
+    }
+
+    // ===================================================================
+    //  assignments/{assignmentId}
+    //
+    //  Academic assignments attached to a course offering, created by the
+    //  assigned teacher.
+    // ===================================================================
+    match /assignments/{assignmentId} {
+
+      function d() {
+        return request.resource.data;
+      }
+
+      function enrollmentPath(offeringId) {
+        return /databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + offeringId);
+      }
+
+      function isEnrolledInOffering(offeringId) {
+        return isSignedIn()
+          && exists(enrollmentPath(offeringId))
+          && get(enrollmentPath(offeringId)).data.status in ['active', 'completed'];
+      }
+
+      function offeringData() {
+        return get(/databases/$(database)/documents/courseOfferings/$(d().offeringId)).data;
+      }
+
+      function matchesOffering() {
+        return exists(/databases/$(database)/documents/courseOfferings/$(d().offeringId))
+          && d().courseId == offeringData().courseId
+          && d().semesterId == offeringData().semesterId;
+      }
+
+      function validAssignment() {
+        return isNonEmptyString(d().offeringId)
+          && isNonEmptyString(d().courseId)
+          && isNonEmptyString(d().semesterId)
+          && isNonEmptyString(d().title)
+          && d().description is string
+          && d().priority in ['low', 'medium', 'high']
+          && d().status in ['active', 'archived']
+          && d().dueAt is timestamp;
+      }
+
+      /*
+       * READ
+       *   admin   — globally, for oversight.
+       *   teacher — only assignments of an offering they own.
+       *   student — only offerings they hold an enrollment in, with the
+       *             SAME semantics as course files: 'active' or 'completed'
+       *             grant access, 'removed' grants nothing. A student who
+       *             studied the course last term keeps their material.
+       *
+       * Archived assignments are not hidden here: hiding is the query's
+       * job (status == 'active'), and an admin must still be able to read
+       * what they archived.
+       */
+      allow read: if isActiveAdmin()
+        || ( isActiveUser() && isEnrolledInOffering(resource.data.offeringId) )
+        || teacherOwnsOffering(resource.data.offeringId);
+
+      /*
+       * CREATE — the assigned teacher, and nobody else.
+       *
+       * Admin create is denied by omission and that is deliberate: the
+       * admin owns academic STRUCTURE, the teacher owns academic CONTENT.
+       * Students are denied for the obvious reason.
+       *
+       * matchesOffering() re-derives courseId/semesterId from the real
+       * offering document, so a forged pair cannot be smuggled in through
+       * the client; createdBy is pinned to the caller so authorship cannot
+       * be attributed to someone else.
+       */
+      allow create: if teacherOwnsOffering(d().offeringId)
+        && validAssignment()
+        && matchesOffering()
+        && d().createdBy == request.auth.uid
+        && d().status == 'active'
+        && d().keys().hasAll(
+             ['offeringId', 'courseId', 'semesterId', 'title', 'description',
+              'dueAt', 'priority', 'createdBy', 'status']);
+
+      /*
+       * UPDATE — two disjoint capabilities, never one relaxed rule.
+       *
+       * Teacher (authoring): may change what they wrote — title,
+       * description, dueAt, priority — and may archive. Ownership is read
+       * from resource.data.offeringId, the ORIGINAL document: trusting the
+       * incoming offeringId would let a teacher move an assignment into
+       * another teacher's offering by simply sending a different id.
+       *
+       * Admin (moderation): may set status to 'archived' and nothing else.
+       * Every academic field is pinned to its existing value AND
+       * changedKeys() is restricted, so the two checks fail independently.
+       * Requiring status == 'archived' also means an admin cannot RESTORE
+       * an archived assignment — moderation is one-directional by policy.
+       */
+      allow update: if (
+            teacherOwnsOffering(resource.data.offeringId)
+            && d().offeringId == resource.data.offeringId
+            && d().courseId == resource.data.courseId
+            && d().semesterId == resource.data.semesterId
+            && d().createdBy == resource.data.createdBy
+            && d().status in ['active', 'archived']
+            && d().priority in ['low', 'medium', 'high']
+            && isNonEmptyString(d().title)
+            && d().dueAt is timestamp
+            && changedKeys().hasOnly(['title', 'description', 'dueAt', 'priority', 'status', 'updatedAt'])
+          ) || (
+            isActiveAdmin()
+            && d().offeringId == resource.data.offeringId
+            && d().courseId == resource.data.courseId
+            && d().semesterId == resource.data.semesterId
+            && d().createdBy == resource.data.createdBy
+            && d().title == resource.data.title
+            && d().description == resource.data.description
+            && d().dueAt == resource.data.dueAt
+            && d().priority == resource.data.priority
+            && d().status == 'archived'
+            && changedKeys().hasOnly(['status', 'updatedAt'])
+          );
+
+      /*
+       * Archive over delete, for everyone including admins. A hard delete
+       * would silently remove work students may have organised around, and
+       * nothing in the app can undo it.
        */
       allow delete: if false;
     }

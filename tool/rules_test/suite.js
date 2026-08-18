@@ -1747,11 +1747,10 @@ t('27m. teacher assigning an offering to THEMSELVES denied', {
   existing: OFFERING_DOC,
 });
 /*
- * Phase 8.2 boundary, asserted now so it cannot arrive early: owning an
- * offering does not yet grant anything over its files.
+ * Phase 8.2 boundary: owning an offering grants write permission over its files.
  */
-t('27n. teacher writing courseFiles for own offering denied (Phase 8.2)', {
-  expect: 'DENY',
+t('27n. teacher writing courseFiles for own offering allowed (Phase 8.2)', {
+  expect: 'ALLOW',
   uid: 'teacher1',
   path: 'courseFiles/f9',
   method: 'create',
@@ -1869,6 +1868,616 @@ t('27z. admin retains full roster read on any offering', {
   existing: OWNED_ENROLLMENT_DOC,
 });
 
+// ---- Phase 8.2 — Teacher Course Files Tests ----
+
+const TEST_OWNED_FILE_DOC = {
+  offeringId: OWNED_OFFERING,
+  courseId: COURSE,
+  semesterId: SEM,
+  title: 'المساق المالك',
+  fileName: 'file.pdf',
+  fileExtension: 'pdf',
+  mimeType: 'application/pdf',
+  fileSize: 1000,
+  cloudinaryUrl: 'https://res.cloudinary.com/x/image/upload/file.pdf',
+  cloudinaryPublicId: 'file',
+  cloudinaryResourceType: 'image',
+  category: 'lecture',
+  uploadedBy: 'teacher1',
+  status: 'active',
+};
+
+t('28a. active teacher READ own-offering file allowed', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28b. teacher READ another teacher\'s file denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: { ...TEST_OWNED_FILE_DOC, offeringId: OTHER_OFFERING },
+});
+
+t('28c. teacher READ file belonging to unassigned legacy offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: { ...TEST_OWNED_FILE_DOC, offeringId: OFFERING },
+});
+
+t('28d. admin READ remains ALLOW', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28e. active enrolled student READ remains ALLOW', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'active' },
+  },
+});
+
+t('28f. completed enrolled student READ remains ALLOW', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'completed' },
+  },
+});
+
+t('28g. removed enrollment READ remains DENY', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'removed' },
+  },
+});
+
+t('28h. unauthenticated READ remains DENY', {
+  expect: 'DENY',
+  path: 'courseFiles/f9',
+  method: 'get',
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28i. teacher can upload to own offering', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'create',
+  data: TEST_OWNED_FILE_DOC,
+});
+
+t('28j. teacher upload to foreign offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'create',
+  data: { ...TEST_OWNED_FILE_DOC, offeringId: OTHER_OFFERING },
+});
+
+t('28k. teacher can edit metadata on own file', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'update',
+  data: { ...TEST_OWNED_FILE_DOC, title: 'عنوان جديد' },
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28l. teacher cannot mutate immutable file relation fields', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'update',
+  data: { ...TEST_OWNED_FILE_DOC, offeringId: OTHER_OFFERING },
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28m. teacher can archive own file', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'update',
+  data: { ...TEST_OWNED_FILE_DOC, status: 'archived' },
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+t('28n. teacher cannot hard delete own file', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'delete',
+  existing: TEST_OWNED_FILE_DOC,
+});
+
+const TEST_ASSIGNMENT_DOC = {
+  offeringId: OWNED_OFFERING,
+  courseId: COURSE,
+  semesterId: SEM,
+  title: 'واجب البرمجة الأول',
+  description: 'قم بحل التمارين المرفقة في ملف المحاضرة',
+  dueAt: TIME,
+  priority: 'medium',
+  createdBy: 'teacher1',
+  status: 'active',
+};
+
+// --- 29. Phase 8.3: Teacher Assignments ----------------------------
+
+t('29a. teacher can read owned assignment', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29b. teacher cannot read foreign assignment', {
+  expect: 'DENY',
+  uid: 'teacher2',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29c. teacher cannot read assignment for unassigned offering', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: { ...TEST_ASSIGNMENT_DOC, offeringId: OTHER_OFFERING },
+});
+
+t('29d. teacher can create assignment for owned offering', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: TEST_ASSIGNMENT_DOC,
+});
+
+t('29e. teacher cannot create assignment for foreign offering', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, offeringId: OTHER_OFFERING, createdBy: 'teacher1' },
+});
+
+t('29f. teacher cannot create assignment with forged courseId', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, courseId: 'wrong_course' },
+});
+
+t('29g. teacher cannot create assignment with forged semesterId', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, semesterId: 'wrong_semester' },
+});
+
+t('29h. teacher cannot create assignment with createdBy != uid', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, createdBy: 'teacher2' },
+});
+
+t('29i. teacher can update mutable fields on own assignment', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, title: 'عنوان جديد', description: 'وصف جديد' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29j. teacher cannot update immutable offeringId on own assignment', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, offeringId: OTHER_OFFERING },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29k. teacher cannot update immutable createdBy on own assignment', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, createdBy: 'teacher2' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29l. teacher can archive own assignment', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29m. teacher cannot hard delete own assignment', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'delete',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29n. student with active enrollment can read assignment', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'active' },
+  },
+});
+
+t('29o. student with completed enrollment can read assignment', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'completed' },
+  },
+});
+
+t('29p. student with removed enrollment cannot read assignment', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: { ...OWNED_ENROLLMENT_DOC, status: 'removed' },
+  },
+});
+
+t('29q. student cannot read assignment for unrelated offering', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29r. student cannot create assignment', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: TEST_ASSIGNMENT_DOC,
+});
+
+t('29s. admin can read all assignments', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29t. admin can update status to archived (moderation)', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29u. admin cannot update other fields (moderation)', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived', title: 'تعديل المشرف' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+t('29v. admin cannot create assignment', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'create',
+  data: TEST_ASSIGNMENT_DOC,
+});
+
+t('29w. unauthenticated access is denied', {
+  expect: 'DENY',
+  path: 'assignments/assign1',
+  method: 'get',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+// --- 30. Phase 8.3: completing the assignment permission boundary -------
+//
+// Section 29 pins the common paths. This section closes the rest of the
+// matrix so that no single edit can quietly widen the surface: every
+// forgeable field, every moderation limit, and every unauthenticated verb.
+
+// ---- create: remaining forgery and validity paths ----
+t('30a. teacher creating for an UNASSIGNED offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/new1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, offeringId: OFFERING },
+});
+t('30b. teacher creating with an invalid priority denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/new1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, priority: 'urgent' },
+});
+/*
+ * An assignment cannot be born archived. Creating one already hidden would
+ * be a way to write content that never passes through the active state the
+ * students' and teacher's queries observe.
+ */
+t('30c. teacher creating an ARCHIVED assignment denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/new1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived' },
+});
+t('30d. teacher creating with a missing title denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/new1',
+  method: 'create',
+  data: { ...TEST_ASSIGNMENT_DOC, title: '' },
+});
+
+// ---- teacher update: each mutable field individually ----
+t('30e. teacher updating own description allowed', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, description: 'تعليمات محدَّثة' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30f. teacher updating own dueAt allowed', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, dueAt: '2026-09-30T12:00:00Z' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30g. teacher updating own priority allowed', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, priority: 'high' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30h. teacher setting an invalid priority denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, priority: 'urgent' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+// ---- teacher update: the remaining immutable relational fields ----
+t('30i. teacher changing courseId denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, courseId: 'c2' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30j. teacher changing semesterId denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, semesterId: 'semester_2027_1' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30k. teacher changing createdAt denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, createdAt: '2020-01-01T00:00:00Z' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+/*
+ * The ownership check reads the ORIGINAL offeringId, so a teacher editing
+ * somebody else's assignment is rejected even though the payload is
+ * otherwise perfectly valid.
+ */
+t('30l. teacher updating a FOREIGN assignment denied', {
+  expect: 'DENY',
+  uid: 'teacher2',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, title: 'عنوان من معلّم آخر' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+// ---- student: reads only, never writes ----
+t('30m. student updating an assignment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, title: 'عنوان من طالب' },
+  existing: TEST_ASSIGNMENT_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: OWNED_ENROLLMENT_DOC,
+  },
+});
+t('30n. student deleting an assignment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'assignments/assign1',
+  method: 'delete',
+  existing: TEST_ASSIGNMENT_DOC,
+  world: {
+    ...WORLD,
+    [`enrollments/student1_${OWNED_OFFERING}`]: OWNED_ENROLLMENT_DOC,
+  },
+});
+
+// ---- admin: global oversight, moderation only ----
+t('30o. admin LIST over assignments allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'list',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30p. admin changing description while archiving denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: {
+    ...TEST_ASSIGNMENT_DOC,
+    status: 'archived',
+    description: 'تعليمات من المشرف',
+  },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30q. admin changing dueAt while archiving denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: {
+    ...TEST_ASSIGNMENT_DOC,
+    status: 'archived',
+    dueAt: '2026-12-31T23:59:00Z',
+  },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30r. admin changing priority while archiving denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived', priority: 'high' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+/*
+ * Moderation is one-directional by policy: an admin may hide an
+ * assignment, but reinstating a teacher's academic content is the
+ * teacher's decision, not the moderator's.
+ */
+t('30s. admin RESTORING an archived assignment denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'active' },
+  existing: { ...TEST_ASSIGNMENT_DOC, status: 'archived' },
+});
+t('30t. admin hard delete denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'assignments/assign1',
+  method: 'delete',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+// ---- unauthenticated: every verb ----
+t('30u. unauthenticated list denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'assignments/assign1',
+  method: 'list',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30v. unauthenticated create denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'assignments/new1',
+  method: 'create',
+  data: TEST_ASSIGNMENT_DOC,
+});
+t('30w. unauthenticated update denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'assignments/assign1',
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, title: 'مجهول' },
+  existing: TEST_ASSIGNMENT_DOC,
+});
+t('30x. unauthenticated delete denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'assignments/assign1',
+  method: 'delete',
+  existing: TEST_ASSIGNMENT_DOC,
+});
+
+/*
+ * Assignments must not have widened the neighbouring collections. These
+ * two re-assert the boundaries most at risk from a shared-helper edit.
+ */
+t('30y. teacher still cannot write courseFiles for own offering', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/fA',
+  method: 'delete',
+  existing: { offeringId: OWNED_OFFERING, status: 'active' },
+});
+t('30z. teacher still cannot read a student personal task', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'tasks/t1',
+  method: 'get',
+  existing: { userId: 'student1', title: 'مهمة', status: 'pending' },
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {
@@ -1876,28 +2485,60 @@ const source = {
 };
 
 const token = await accessToken();
-const res = await fetch(
-  `https://firebaserules.googleapis.com/v1/projects/${PROJECT}:test`,
-  {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      'content-type': 'application/json',
+
+/*
+ * The :test endpoint rejects an oversized request with a bare
+ * INVALID_ARGUMENT — no hint that size is the problem. Phase 8.3 crossed
+ * that line (240 cases passed, 266 did not), so the suite is sent in
+ * batches and the results are stitched back together in order.
+ *
+ * Batches are evaluated against the SAME ruleset source, so splitting
+ * changes nothing about what is tested; only the transport is chunked.
+ */
+const BATCH_SIZE = 100;
+
+async function runBatch(batch) {
+  const response = await fetch(
+    `https://firebaserules.googleapis.com/v1/projects/${PROJECT}:test`,
+    {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        source,
+        testSuite: { testCases: batch.map((c) => c.testCase) },
+      }),
     },
-    body: JSON.stringify({
-      source,
-      testSuite: { testCases: cases.map((c) => c.testCase) },
-    }),
-  },
-);
+  );
 
-const body = await res.json();
+  const payload = await response.json();
 
-if (!res.ok) {
-  console.error('HTTP', res.status);
-  console.error(JSON.stringify(body, null, 2).slice(0, 4000));
-  process.exit(1);
+  if (!response.ok) {
+    console.error('HTTP', response.status);
+    console.error(JSON.stringify(payload, null, 2).slice(0, 4000));
+    process.exit(1);
+  }
+
+  return payload;
 }
+
+const batches = [];
+for (let i = 0; i < cases.length; i += BATCH_SIZE) {
+  batches.push(cases.slice(i, i + BATCH_SIZE));
+}
+
+const payloads = [];
+for (const batch of batches) {
+  payloads.push(await runBatch(batch));
+}
+
+// Compilation issues are identical for every batch; one copy is enough.
+const body = {
+  issues: payloads[0]?.issues ?? [],
+  testResults: payloads.flatMap((payload) => payload.testResults ?? []),
+};
 
 /*
  * ERROR fails the run; WARNING is surfaced but does not.

@@ -65,11 +65,40 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      // Admin must be checked before student verification.
+      /*
+       * التوجيه حسب الدور قبل أي بوابة خاصة بالطالب.
+       *
+       * التحقق من البريد والإعداد الأولي وخطة الدراسة كلها مسارات طالب؛
+       * تمرير المشرف أو المعلّم خلالها يوقفهما عند بوابة لا تخصهما.
+       *
+       * الدور غير المعروف لا يصل إلى هنا أصلًا: initializeCurrentUser
+       * يسجّل خروجه ويعيد false، فيُوجَّه إلى تسجيل الدخول أعلاه.
+       */
       if (authProvider.isAdmin) {
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.adminShell,
+          (route) => false,
+        );
+        return;
+      }
+
+      if (authProvider.isTeacher) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.teacherShell,
+          (route) => false,
+        );
+        return;
+      }
+
+      // دفاع في العمق: أي شيء ليس طالبًا لا يكمل مسار الطالب.
+      if (!authProvider.isStudent) {
+        await authProvider.logout();
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
           (route) => false,
         );
         return;

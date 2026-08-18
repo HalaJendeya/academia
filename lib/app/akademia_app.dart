@@ -37,6 +37,7 @@ import '../features/admin/screens/admin_student_list_screen.dart';
 import '../features/admin/screens/admin_student_details_screen.dart';
 import '../features/admin/screens/admin_assign_courses_screen.dart';
 import '../features/admin/screens/admin_shell_screen.dart';
+import '../features/teacher/screens/teacher_shell_screen.dart';
 import '../features/admin/screens/admin_course_details_screen.dart';
 import '../features/admin/screens/admin_assignment_list_screen.dart';
 import '../features/admin/screens/admin_assignment_form_screen.dart';
@@ -152,6 +153,9 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.adminAssignCourses: (context) =>
             const AdminAssignCoursesScreen(),
         AppRoutes.adminShell: (context) => const AdminShellScreen(),
+
+        //Teacher Routes (Phase 8A)
+        AppRoutes.teacherShell: (context) => const TeacherShellScreen(),
         AppRoutes.adminCourseDetails: (context) =>
             const AdminCourseDetailsScreen(),
         AppRoutes.adminAssignments: (context) =>

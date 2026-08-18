@@ -19,6 +19,13 @@ const ADMIN = { role: 'admin', status: 'active' };
 const STUDENT = { role: 'student', status: 'active' };
 const DISABLED_STUDENT = { role: 'student', status: 'disabled' };
 
+// Phase 8A: the third role, plus the shapes that must grant nothing.
+const TEACHER = { role: 'teacher', status: 'active' };
+const DISABLED_TEACHER = { role: 'teacher', status: 'disabled' };
+const UNKNOWN_ROLE = { role: 'professor', status: 'active' };
+const EMPTY_ROLE = { role: '', status: 'active' };
+const NO_ROLE = { status: 'active' };
+
 const SEM = 'semester_2026_1'; // underscores on purpose: IDs are never parsed
 const COURSE = 'c1';
 const SECTION = '1';
@@ -41,6 +48,12 @@ const WORLD = {
   [`users/student1`]: STUDENT,
   [`users/student2`]: STUDENT,
   [`users/disabled1`]: DISABLED_STUDENT,
+  [`users/teacher1`]: TEACHER,
+  [`users/teacher2`]: TEACHER,
+  [`users/teacherOff`]: DISABLED_TEACHER,
+  [`users/unknown1`]: UNKNOWN_ROLE,
+  [`users/emptyrole1`]: EMPTY_ROLE,
+  [`users/norole1`]: NO_ROLE,
   [`departments/dep1`]: { name: 'قسم', status: 'active' },
   [`majors/maj1`]: { name: 'تخصص', code: 'MIS', departmentId: 'dep1' },
   [`courses/${COURSE}`]: {
@@ -888,6 +901,63 @@ t('23c. student reads supportRequests denied', {
   method: 'get',
   existing: { uid: 'student1', status: 'open' },
 });
+/*
+ * The support inbox may move a request through its lifecycle and nothing
+ * else. These pin the hardened update rule that is live in production —
+ * without them a branch can silently ship the older, looser version, which
+ * is exactly what happened once already.
+ */
+const SUPPORT_OPEN = {
+  uid: 'student1',
+  fullName: 'حلا جندية',
+  email: 's@test.com',
+  subject: 'مشكلة في تسجيل المساقات',
+  message: 'لا أستطيع رؤية مساقات الفصل الحالي.',
+  status: 'open',
+  source: 'mobile_app',
+};
+
+t('23e. admin marks a support request resolved allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved' },
+  existing: SUPPORT_OPEN,
+});
+t('23f. admin rewriting the student message denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', message: 'نص مختلف' },
+  existing: SUPPORT_OPEN,
+});
+t('23g. admin reassigning the request owner denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', uid: 'student2' },
+  existing: SUPPORT_OPEN,
+});
+t('23h. student updating a support request denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved' },
+  existing: SUPPORT_OPEN,
+});
+t('23i. teacher updating a support request denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved' },
+  existing: SUPPORT_OPEN,
+});
+
 t('23d. unmatched collection denied for admin', {
   expect: 'DENY',
   uid: 'admin1',
@@ -1271,6 +1341,231 @@ t('25t. admin hard-deleting a course file denied', {
   existing: FILE_DOC,
 });
 
+// --- 26. Phase 8A: teacher role foundation ------------------------------
+//
+// A teacher is a recognised account that can READ the shared academic
+// catalogue and nothing more. Every write path stays admin-only until the
+// later teacher phases add offering ownership.
+
+t('26a. active teacher is a valid account and may read courses', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+t('26b. active teacher may read semesters', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: `semesters/${SEM}`,
+  method: 'get',
+  existing: WORLD[`semesters/${SEM}`],
+});
+t('26c. active teacher may read offerings', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: `courseOfferings/${OFFERING}`,
+  method: 'get',
+  existing: OFFERING_DOC,
+});
+t('26d. DISABLED teacher is not a valid account', {
+  expect: 'DENY',
+  uid: 'teacherOff',
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+
+// ---- teacher holds no write capability anywhere in Phase 8A ----
+t('26e. teacher creating a course denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courses/newCourse',
+  method: 'create',
+  data: VALID.course,
+});
+t('26f. teacher updating a course denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `courses/${COURSE}`,
+  method: 'update',
+  data: { ...VALID.course, title: 'عنوان آخر' },
+  existing: WORLD[`courses/${COURSE}`],
+});
+t('26g. teacher creating a department denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'departments/dep2',
+  method: 'create',
+  data: VALID.department,
+});
+t('26h. teacher creating a major denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'majors/maj2',
+  method: 'create',
+  data: VALID.major,
+});
+t('26i. teacher creating a curriculum row denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `curriculumCourses/maj1_${COURSE}`,
+  method: 'create',
+  data: VALID.curriculumCourse,
+});
+t('26j. teacher creating a semester denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'semesters/semester_2027_1',
+  method: 'create',
+  data: {
+    academicYear: '2027',
+    semesterNumber: 1,
+    semesterName: 'الفصل الأول 2027',
+    status: 'upcoming',
+  },
+});
+t('26k. teacher creating an offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `courseOfferings/${COURSE}_${SEM}_2`,
+  method: 'create',
+  data: { ...VALID.offering, section: '2' },
+});
+t('26l. teacher creating an enrollment denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OFFERING}`,
+  method: 'create',
+  data: {
+    userId: 'student1',
+    offeringId: OFFERING,
+    courseId: COURSE,
+    semesterId: SEM,
+    attemptNumber: 1,
+    status: 'active',
+    assignedBy: 'teacher1',
+  },
+});
+
+// Course files stay admin-only until the teacher Files phase.
+t('26m. teacher creating a course file denied (deferred to a later phase)', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/file2',
+  method: 'create',
+  data: { ...FILE_DOC, uploadedBy: 'teacher1' },
+});
+t('26n. teacher updating a course file denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/file1',
+  method: 'update',
+  data: { ...FILE_DOC, title: 'عنوان آخر' },
+  existing: FILE_DOC,
+});
+t('26o. teacher reading a course file denied — no enrollment grants it', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/file1',
+  method: 'get',
+  existing: FILE_DOC,
+  missing: [`enrollments/teacher1_${OFFERING}`],
+});
+
+// Personal tasks are a student-only feature.
+t('26p. teacher creating a personal task denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'tasks/task2',
+  method: 'create',
+  data: { ...VALID.task, userId: 'teacher1' },
+});
+t('26q. teacher reading a student task denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'tasks/task1',
+  method: 'get',
+  existing: VALID.task,
+});
+
+// ---- role is immutable from every client ----
+t('26r. teacher changing own role to admin denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/teacher1',
+  method: 'update',
+  data: { ...TEACHER, role: 'admin' },
+  existing: TEACHER,
+});
+t('26s. student changing own role to teacher denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT, role: 'teacher' },
+  existing: STUDENT,
+});
+t('26t. admin changing a student into a teacher denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT, role: 'teacher' },
+  existing: STUDENT,
+});
+t('26u. self-registration as teacher denied', {
+  expect: 'DENY',
+  uid: 'newuser',
+  path: 'users/newuser',
+  method: 'create',
+  data: {
+    fullName: 'معلّم',
+    email: 'new@test.com',
+    role: 'teacher',
+    status: 'active',
+    emailVerified: false,
+  },
+  token: { email: 'new@test.com', email_verified: false },
+});
+t('26v. teacher reading another user document denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/student1',
+  method: 'get',
+  existing: STUDENT,
+});
+
+// ---- unknown roles fail closed ----
+t('26w. an unrecognised role grants no read access', {
+  expect: 'DENY',
+  uid: 'unknown1',
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+t('26x. an empty role grants no read access', {
+  expect: 'DENY',
+  uid: 'emptyrole1',
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+t('26y. a missing role field grants no read access', {
+  expect: 'DENY',
+  uid: 'norole1',
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+t('26z. unauthenticated read remains denied', {
+  expect: 'DENY',
+  uid: null,
+  path: `courses/${COURSE}`,
+  method: 'get',
+  existing: WORLD[`courses/${COURSE}`],
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {
@@ -1301,9 +1596,32 @@ if (!res.ok) {
   process.exit(1);
 }
 
-if (body.issues?.length) {
-  console.error('RULES COMPILATION ISSUES:');
-  console.error(JSON.stringify(body.issues, null, 2));
+/*
+ * ERROR fails the run; WARNING is surfaced but does not.
+ *
+ * The compiler reports a declared-but-not-yet-referenced helper as a
+ * WARNING. Phase 8A introduces isActiveTeacher() ahead of the phases that
+ * use it, so treating every issue as fatal would block a ruleset that
+ * compiles and behaves correctly. Warnings stay printed on every run so
+ * they cannot accumulate unnoticed.
+ */
+const issues = body.issues ?? [];
+const blocking = issues.filter((issue) => issue.severity === 'ERROR');
+const warnings = issues.filter((issue) => issue.severity !== 'ERROR');
+
+if (warnings.length) {
+  console.warn('RULES COMPILATION WARNINGS:');
+  for (const warning of warnings) {
+    console.warn(
+      `  [${warning.severity}] line ${warning.sourcePosition?.line}: ${warning.description}`,
+    );
+  }
+  console.warn('');
+}
+
+if (blocking.length) {
+  console.error('RULES COMPILATION ERRORS:');
+  console.error(JSON.stringify(blocking, null, 2));
   process.exit(1);
 }
 

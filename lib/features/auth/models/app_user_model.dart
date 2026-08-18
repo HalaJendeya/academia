@@ -1,6 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserRole { student, admin }
+/// أدوار التطبيق.
+///
+/// [unknown] ليس دورًا يُخزَّن، بل نتيجة قراءة مستند لا يحمل دورًا مفهومًا.
+/// وجوده صريحًا هو ما يجعل التحليل يفشل مغلقًا: قبل ذلك كان أي دور غير
+/// معروف يُقرأ كطالب، فيحصل مستند تالف أو دور مستقبلي على صلاحيات الطالب
+/// كاملة دون أن يطلبها أحد.
+enum UserRole { student, admin, teacher, unknown }
 
 class AppUserModel {
   const AppUserModel({
@@ -60,6 +66,11 @@ class AppUserModel {
   bool get isStudent => role == UserRole.student;
 
   bool get isAdmin => role == UserRole.admin;
+
+  bool get isTeacher => role == UserRole.teacher;
+
+  /// دور مفهوم لهذا الإصدار. الحساب بدونه لا يدخل التطبيق.
+  bool get hasKnownRole => role != UserRole.unknown;
 
   bool get isActive => status == 'active';
 
@@ -172,16 +183,24 @@ class AppUserModel {
     return null;
   }
 
+  /// تحليل يفشل مغلقًا.
+  ///
+  /// كل قيمة غير مذكورة صراحةً — غائبة أو فارغة أو مكتوبة بخطأ أو دور
+  /// أُضيف لاحقًا في قاعدة البيانات ولا يعرفه هذا الإصدار — تصبح
+  /// [UserRole.unknown]، ولا تمنح أي صلاحية.
   static UserRole _roleFromString(dynamic value) {
-    final roleValue = value?.toString().trim().toLowerCase();
-
-    switch (roleValue) {
+    switch (value?.toString().trim().toLowerCase()) {
       case 'admin':
         return UserRole.admin;
 
+      case 'teacher':
+        return UserRole.teacher;
+
       case 'student':
-      default:
         return UserRole.student;
+
+      default:
+        return UserRole.unknown;
     }
   }
 

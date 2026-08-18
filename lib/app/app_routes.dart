@@ -52,6 +52,10 @@ abstract final class AppRoutes {
   static const String adminAssignCourses = '/admin/students/assign-courses';
 
   static const String adminShell = '/admin/shell';
+
+  /// واجهة المعلّم (المرحلة 8A). مسار واحد يكفي: التنقّل داخلها عبر
+  /// IndexedStack لا عبر مسارات مستقلة، كما في واجهة المشرف.
+  static const String teacherShell = '/teacher/shell';
   static const String adminCourseDetails = '/admin/courses/details';
   static const String adminAssignments = '/admin/assignments';
   static const String adminAddAssignment = '/admin/assignments/add';

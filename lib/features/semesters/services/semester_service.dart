@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/admin_access.dart';
 import '../models/semester_model.dart';
 
 class SemesterException implements Exception {
@@ -25,32 +26,21 @@ class SemesterService {
   CollectionReference<Map<String, dynamic>> get _semesters =>
       _firestore.collection(_collection);
 
+  /*
+   * فحص واحد مشترك.
+   *
+   * كانت هنا نسخة ثانية من منطق AdminAccess بالحرف — نفس شرط الدور ونفس
+   * معاملة status الغائب كنشط — فأصبح لدور المشرف تعريفان في مكانين. مع
+   * دخول دور ثالث، تعريفان يعنيان مكانين يجب تحديثهما معًا. السلوك لم
+   * يتغيّر: مشرف بحساب نشط وحده يمرّ.
+   */
   Future<void> _verifyAdminAccess() async {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) {
+    if (!AdminAccess.isSignedIn(_auth)) {
       throw const SemesterException(AppStrings.authenticationRequired);
     }
 
-    final userDoc = await _firestore
-        .collection('users')
-        .doc(currentUser.uid)
-        .get();
-    if (!userDoc.exists) {
-      throw const SemesterException(AppStrings.unauthorizedAccess);
-    }
-
-    final data = userDoc.data();
-    if (data == null || data['role'] != 'admin') {
-      throw const SemesterException(AppStrings.unauthorizedAccess);
-    }
-
-    /*
-     * توافق انتقالي: بعض مستندات المستخدمين القديمة لا تحتوي على الحقل status.
-     * نتعامل مع غيابه على أنه "نشط"، تمامًا كما يفعل AppUserModel وقواعد
-     * Firestore في المرحلة 6A. يُشدَّد هذا الشرط بعد إكمال ترحيل البيانات.
-     */
-    final status = data['status'] as String? ?? 'active';
-    if (status != 'active') {
+    final uid = await AdminAccess.activeAdminUid(_auth, _firestore);
+    if (uid == null) {
       throw const SemesterException(AppStrings.unauthorizedAccess);
     }
   }

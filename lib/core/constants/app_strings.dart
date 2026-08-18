@@ -197,6 +197,38 @@ abstract final class AppStrings {
   static const String studyTab = 'المذاكرة';
   static const String profileTab = 'الملف';
   static const String screenUnderDevelopment = 'هذه الشاشة قيد التطوير';
+
+  // ===== المرحلة 8A: دور المعلّم =====
+
+  /// يُعرض عند تسجيل الدخول بحساب دوره غير مدعوم في هذا الإصدار.
+  static const String unsupportedAccountRole =
+      'دور هذا الحساب غير مدعوم في هذا الإصدار. يرجى مراجعة إدارة النظام.';
+
+  static const String teacherRoleLabel = 'معلّم';
+
+  // تبويبات واجهة المعلّم.
+  static const String teacherHomeTab = 'الرئيسية';
+  static const String teacherCoursesTab = 'مساقاتي';
+  static const String teacherAssignmentsTab = 'الواجبات';
+  static const String teacherProfileTab = 'الملف';
+
+  static const String teacherDashboardTitle = 'لوحة المعلّم';
+  static const String teacherCoursesTitle = 'مساقاتي';
+  static const String teacherAssignmentsTitle = 'الواجبات';
+  static const String teacherProfileTitle = 'الملف الشخصي';
+
+  static const String welcomeTeacherPrefix = 'مرحبًا، ';
+
+  /// حالات مؤجَّلة صريحة: لا أعداد ولا إحصاءات قبل وجود بياناتها.
+  static const String teacherCoursesDeferredTitle = 'لم تُسند إليك مساقات بعد';
+  static const String teacherCoursesDeferredDesc =
+      'إسناد المساقات للمعلّمين يصل في مرحلة لاحقة.';
+  static const String teacherAssignmentsDeferredTitle = 'الواجبات غير متاحة بعد';
+  static const String teacherAssignmentsDeferredDesc =
+      'إنشاء الواجبات ومتابعتها يصل في مرحلة لاحقة.';
+  static const String teacherDashboardDeferredTitle = 'لا توجد بيانات بعد';
+  static const String teacherDashboardDeferredDesc =
+      'ستظهر هنا مساقاتك وواجباتك بعد إسنادها إليك.';
   static const String retry = 'إعادة المحاولة';
   static const String search = 'بحث';
   static const String notifications = 'الإشعارات';

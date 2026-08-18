@@ -47,9 +47,21 @@ service cloud.firestore {
     // Phase 6E backfilled role and status on every live user document, so a
     // missing or unknown value is now a malformed document, not a legacy one.
     // Both checks fail CLOSED.
+    /*
+     * Phase 8A: 'teacher' becomes a recognised account role.
+     *
+     * Without this line a teacher document fails every isActiveUser() gate
+     * and the account can read nothing at all — not a permission gap, a
+     * total lockout. Recognising the role grants only what isActiveUser
+     * already grants any signed-in account: reads of the shared academic
+     * catalogue. Every write path below remains admin-only.
+     *
+     * An unknown role (missing, empty, or anything else) still matches
+     * nothing here and therefore has no access whatsoever.
+     */
     function hasValidAccount() {
       return userDocExists()
-        && userData().role in ['student', 'admin']
+        && userData().role in ['student', 'admin', 'teacher']
         && userData().status == 'active';
     }
 
@@ -59,6 +71,18 @@ service cloud.firestore {
 
     function isActiveAdmin() {
       return hasValidAccount() && userData().role == 'admin';
+    }
+
+    /*
+     * Declared in Phase 8A, deliberately unused by any rule yet.
+     *
+     * Teacher capabilities — owning offerings, writing course files,
+     * authoring assignments — arrive in later phases together with
+     * courseOfferings.teacherId. Introducing the helper now keeps the role
+     * foundation in one changeset without granting anything.
+     */
+    function isActiveTeacher() {
+      return hasValidAccount() && userData().role == 'teacher';
     }
 
     function isOwner(uid) {
@@ -661,10 +685,22 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll(
              ['uid', 'subject', 'message', 'status']);
 
+      // POLICY: admin-only inbox. A student writes a request and never reads
+      // it back — not their own, and not anyone else's.
       allow read: if isActiveAdmin();
 
+      /*
+       * Phase 7H5: the admin inbox may move a request through its lifecycle
+       * and nothing else.
+       *
+       * Previously any admin write was accepted as long as `uid` survived,
+       * which allowed silently rewriting the subject or the message a student
+       * had sent. What the student wrote is the record; only its handling
+       * state belongs to the admin.
+       */
       allow update: if isActiveAdmin()
-        && request.resource.data.uid == resource.data.uid;
+        && request.resource.data.status in ['open', 'resolved']
+        && changedKeys().hasOnly(['status', 'updatedAt']);
 
       allow delete: if false;
     }

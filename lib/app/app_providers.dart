@@ -161,9 +161,19 @@ final List<SingleChildWidget> appProviders = [
   ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider, TaskProvider>(
     create: (_) => TaskProvider(TaskService()),
     update: (_, auth, studentCourses, taskProvider) {
+      /*
+       * المهام الشخصية ميزة طالب وحده.
+       *
+       * الشرط هنا "طالب نشط" لا "مسجَّل دخول": المعلّم والمشرف حسابان
+       * صالحان بمعرّفات حقيقية، وبدون هذا القيد يفتح المزوّد استماعًا إلى
+       * tasks لهما — وهو استماع ترفضه القواعد بحق وينتج PERMISSION_DENIED.
+       */
+      final isActiveStudent =
+          auth.isLoggedIn && auth.isStudent && auth.isAccountActive;
+
       taskProvider!.syncWithUserAndCourses(
-        userId: auth.currentUser?.uid,
-        isLoggedIn: auth.isLoggedIn,
+        userId: isActiveStudent ? auth.currentUser?.uid : null,
+        isLoggedIn: isActiveStudent,
         currentCourses: studentCourses.currentCourses,
       );
       return taskProvider;

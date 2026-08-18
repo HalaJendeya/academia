@@ -36,9 +36,25 @@ class _AdminAccessGuardState extends State<AdminAccessGuard> {
           context,
         ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
       } else if (!authProvider.isAdmin) {
+        /*
+         * كل دور يعود إلى واجهته.
+         *
+         * كان غير المشرف يُعاد دائمًا إلى لوحة الطالب، فيهبط المعلّم في
+         * تطبيق الطالب. الدور غير المعروف يعود إلى تسجيل الدخول لا إلى
+         * واجهة الطالب.
+         */
+        final String destination;
+        if (authProvider.isTeacher) {
+          destination = AppRoutes.teacherShell;
+        } else if (authProvider.isStudent) {
+          destination = AppRoutes.dashboard;
+        } else {
+          destination = AppRoutes.login;
+        }
+
         Navigator.of(
           context,
-        ).pushNamedAndRemoveUntil(AppRoutes.dashboard, (route) => false);
+        ).pushNamedAndRemoveUntil(destination, (route) => false);
       }
     });
   }

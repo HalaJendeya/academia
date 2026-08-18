@@ -37,7 +37,10 @@ import '../features/admin/screens/admin_student_list_screen.dart';
 import '../features/admin/screens/admin_student_details_screen.dart';
 import '../features/admin/screens/admin_assign_courses_screen.dart';
 import '../features/admin/screens/admin_shell_screen.dart';
+import '../features/admin/screens/admin_teacher_list_screen.dart';
+import '../features/admin/screens/admin_teacher_details_screen.dart';
 import '../features/teacher/screens/teacher_shell_screen.dart';
+import '../features/teacher/screens/teacher_offering_detail_screen.dart';
 import '../features/admin/screens/admin_course_details_screen.dart';
 import '../features/admin/screens/admin_assignment_list_screen.dart';
 import '../features/admin/screens/admin_assignment_form_screen.dart';
@@ -153,9 +156,14 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.adminAssignCourses: (context) =>
             const AdminAssignCoursesScreen(),
         AppRoutes.adminShell: (context) => const AdminShellScreen(),
+        AppRoutes.adminTeachers: (context) => const AdminTeacherListScreen(),
+        AppRoutes.adminTeacherDetails: (context) =>
+            const AdminTeacherDetailsScreen(),
 
-        //Teacher Routes (Phase 8A)
+        //Teacher Routes (Phase 8A/8.1)
         AppRoutes.teacherShell: (context) => const TeacherShellScreen(),
+        AppRoutes.teacherOfferingDetail: (context) =>
+            const TeacherOfferingDetailScreen(),
         AppRoutes.adminCourseDetails: (context) =>
             const AdminCourseDetailsScreen(),
         AppRoutes.adminAssignments: (context) =>

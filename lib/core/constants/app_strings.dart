@@ -219,16 +219,104 @@ abstract final class AppStrings {
 
   static const String welcomeTeacherPrefix = 'مرحبًا، ';
 
-  /// حالات مؤجَّلة صريحة: لا أعداد ولا إحصاءات قبل وجود بياناتها.
+  /*
+   * حالات فارغة حقيقية لا مؤجَّلة.
+   *
+   * المرحلة 8.1 جعلت الإسناد موجودًا، فـ"لم تُسند إليك مساقات" صارت واقعة
+   * قابلة للتغيير لا ميزة ناقصة، ووصفها يقول ذلك. الواجبات وحدها تبقى
+   * مؤجَّلة صراحةً لأن مجموعتها غير موجودة بعد.
+   */
   static const String teacherCoursesDeferredTitle = 'لم تُسند إليك مساقات بعد';
   static const String teacherCoursesDeferredDesc =
-      'إسناد المساقات للمعلّمين يصل في مرحلة لاحقة.';
-  static const String teacherAssignmentsDeferredTitle = 'الواجبات غير متاحة بعد';
+      'ستظهر هنا الطروحات التي يسندها إليك مدير النظام.';
+  static const String teacherAssignmentsDeferredTitle =
+      'الواجبات غير متاحة بعد';
   static const String teacherAssignmentsDeferredDesc =
       'إنشاء الواجبات ومتابعتها يصل في مرحلة لاحقة.';
   static const String teacherDashboardDeferredTitle = 'لا توجد بيانات بعد';
   static const String teacherDashboardDeferredDesc =
-      'ستظهر هنا مساقاتك وواجباتك بعد إسنادها إليك.';
+      'ستظهر هنا مساقاتك بعد إسنادها إليك.';
+
+  // ===== المرحلة 8.1: إدارة المعلّمين وإسنادهم وواجهة عملهم =====
+
+  // -- إدارة المعلّمين في واجهة المشرف --
+  static const String teachersManagementTitle = 'إدارة المعلّمين';
+  static const String teachersTileDesc =
+      'حسابات المعلّمين وحالتها والمساقات المسندة إليهم';
+  static const String teacherDetailsTitle = 'بيانات المعلّم';
+  static const String teacherSearchHint = 'ابحث بالاسم أو البريد الإلكتروني';
+
+  static const String teachersEmptyTitle = 'لا توجد حسابات معلّمين';
+  static const String teachersEmptyDesc =
+      'تُنشأ حسابات المعلّمين عبر أداة التزويد، ثم تظهر هنا.';
+  static const String teachersSearchEmptyTitle = 'لا نتائج مطابقة';
+  static const String teachersSearchEmptyDesc = 'جرّب اسمًا أو بريدًا آخر.';
+
+  /*
+   * إنشاء الحساب لا يتم من التطبيق، وهذا قرار أمني لا نقص.
+   *
+   * إنشاء مستخدم من عميل Firebase يُسجّل دخول المُنشئ في الحساب الجديد،
+   * أي يُخرج المشرف من جلسته، كما أن القواعد تمنع كل عميل من كتابة حقل
+   * role. تُوضَّح هذه الحقيقة في الشاشة بدل زرّ لا يمكن أن يعمل.
+   */
+  static const String teacherProvisioningNoteTitle = 'إنشاء حساب معلّم';
+  static const String teacherProvisioningNoteDesc =
+      'تُنشأ حسابات المعلّمين خارج التطبيق بصلاحيات إدارية، ثم يضبط المعلّم '
+      'كلمة مروره عبر «نسيت كلمة المرور». يمكنك من هنا تفعيل الحسابات '
+      'وتعطيلها وإسناد الطروحات إليها.';
+
+  static const String teacherAccountActiveLabel = 'الحساب نشط';
+  static const String teacherAccountDisabledLabel = 'الحساب معطّل';
+  static const String enableTeacherAction = 'تفعيل الحساب';
+  static const String disableTeacherAction = 'تعطيل الحساب';
+  static const String teacherEnabledSuccess = 'تم تفعيل حساب المعلّم';
+  static const String teacherDisabledSuccess = 'تم تعطيل حساب المعلّم';
+  static const String disableTeacherConfirmTitle = 'تعطيل حساب المعلّم؟';
+  static const String disableTeacherConfirmBody =
+      'لن يتمكّن المعلّم من الدخول إلى التطبيق. تبقى الطروحات المسندة إليه '
+      'كما هي ويمكن إعادة التفعيل في أي وقت.';
+
+  static const String teacherAssignedOfferingsTitle = 'الطروحات المسندة';
+  static const String teacherNoAssignedOfferings =
+      'لا توجد طروحات مسندة إلى هذا المعلّم.';
+
+  static const String teacherLoadError = 'تعذر تحميل حسابات المعلّمين';
+  static const String teacherSaveError = 'تعذر حفظ التغييرات على حساب المعلّم';
+  static const String teacherNotFound = 'حساب المعلّم غير موجود';
+  static const String teacherStatusInvalid = 'حالة حساب غير صالحة';
+
+  // -- إسناد المعلّم إلى الطرح --
+  static const String offeringTeacherLabel = 'المعلّم المسؤول';
+  static const String offeringTeacherHint = 'اختر معلّمًا';
+  static const String offeringTeacherNone = 'بدون معلّم';
+  static const String offeringTeacherUnassigned = 'غير مُسنَد';
+  static const String offeringNoActiveTeachers =
+      'لا يوجد معلّمون نشطون للإسناد.';
+
+  /// يُعرض تحت قائمة المعلّمين لتفسير أثر الاختيار.
+  static const String offeringTeacherNote =
+      'المعلّم المسند هو من يرى هذا الطرح في واجهته. اسم المدرّس المعروض '
+      'للطلاب يُؤخذ من اسمه.';
+
+  /// طرح قديم يحمل اسم مدرّس نصيًا دون حساب مرتبط.
+  static const String offeringLegacyInstructorNote =
+      'هذا الطرح يحمل اسم مدرّس مكتوب يدويًا دون حساب مرتبط. اختر معلّمًا '
+      'لربطه.';
+
+  // -- واجهة عمل المعلّم --
+  static const String teacherMyOfferingsTitle = 'مساقاتي';
+  static const String teacherOfferingDetailTitle = 'تفاصيل الطرح';
+  static const String teacherRosterTitle = 'الطلاب المسجّلون';
+  static const String teacherRosterEmptyTitle = 'لا يوجد طلاب مسجّلون';
+  static const String teacherRosterEmptyDesc =
+      'سيظهر الطلاب هنا بعد تسجيلهم في هذا الطرح.';
+  static const String teacherRosterLoadError = 'تعذر تحميل قائمة الطلاب';
+
+  static const String teacherActiveOfferingsCountLabel = 'الطروحات النشطة';
+  static const String teacherOfferingsLoadError = 'تعذر تحميل مساقاتك';
+
+  /// اسم الطالب غير متاح للقراءة — يُعرض بدل تخمين أو معرّف خام.
+  static const String teacherUnknownStudentName = 'طالب غير معروف';
   static const String retry = 'إعادة المحاولة';
   static const String search = 'بحث';
   static const String notifications = 'الإشعارات';

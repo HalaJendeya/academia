@@ -12,6 +12,8 @@ import '../../courses/models/course_offering_model.dart';
 import '../../courses/providers/course_offering_provider.dart';
 import '../../courses/providers/course_provider.dart';
 import '../../semesters/providers/semester_provider.dart';
+import '../models/admin_teacher_model.dart';
+import '../providers/admin_teacher_provider.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
 
@@ -38,18 +40,31 @@ class AdminOfferingFormScreen extends StatefulWidget {
 class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _instructorController = TextEditingController();
   final _sectionController = TextEditingController(
     text: CourseOfferingModel.defaultSection,
   );
 
   String _semesterId = '';
   String? _selectedCourseId;
+
+  /// المعلّم المسند. null يعني "بدون معلّم"، وهو خيار متاح للطروحات القديمة
+  /// وحدها؛ الطرح الجديد يجب أن يُسند.
+  String? _selectedTeacherId;
+
   String _selectedStatus = CourseOfferingModel.statusActive;
 
   CourseOfferingModel? _editing;
   bool _isEditMode = false;
   bool _initialized = false;
+
+  /// طرح أُنشئ قبل وجود الإسناد: يحمل اسم مدرّس نصيًا بلا حساب مرتبط.
+  ///
+  /// لا يُجبَر المشرف على ربطه فورًا — قد لا يكون للاسم حساب أصلًا — لكن
+  /// الشاشة تقول ما هو، ويبقى الاسم القديم محفوظًا حتى يُختار معلّم.
+  bool get _isLegacyOffering =>
+      _isEditMode &&
+      !(_editing?.hasTeacher ?? false) &&
+      (_editing?.instructorName.trim().isNotEmpty ?? false);
 
   @override
   void didChangeDependencies() {
@@ -65,7 +80,7 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
         _isEditMode = true;
         _semesterId = offering.semesterId;
         _selectedCourseId = offering.courseId;
-        _instructorController.text = offering.instructorName;
+        _selectedTeacherId = offering.teacherId;
         _sectionController.text = offering.section;
         _selectedStatus = offering.status;
       }
@@ -75,6 +90,8 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
       if (!mounted) return;
       context.read<CourseProvider>().listenToCourses();
       context.read<SemesterProvider>().listenToSemesters();
+      // قائمة المعلّمين هي ما يجعل الإسناد ممكنًا؛ بدونها لا خيارات.
+      context.read<AdminTeacherProvider>().listenToTeachers();
     });
 
     _initialized = true;
@@ -82,7 +99,6 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
 
   @override
   void dispose() {
-    _instructorController.dispose();
     _sectionController.dispose();
     super.dispose();
   }
@@ -119,12 +135,48 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
         .toList();
   }
 
+  /// المعلّمون المتاحون للإسناد.
+  ///
+  /// النشطون فقط، مع استثناء واحد: المعلّم المسند حاليًا يبقى معروضًا حتى
+  /// لو عُطِّل حسابه بعد الإسناد. حذفه من القائمة كان سيُظهر الطرح كأنه بلا
+  /// معلّم ويمحو الإسناد بصمت عند أول حفظ.
+  List<AdminTeacherModel> _assignableTeachers(AdminTeacherProvider provider) {
+    final assignable = provider.activeTeachers;
+    final assignedId = _selectedTeacherId;
+
+    if (assignedId == null ||
+        assignable.any((teacher) => teacher.uid == assignedId)) {
+      return assignable;
+    }
+
+    for (final teacher in provider.teachers) {
+      if (teacher.uid == assignedId) return [teacher, ...assignable];
+    }
+    return assignable;
+  }
+
+  /// اسم المدرّس المخزَّن، مشتقًّا من المعلّم المسند.
+  ///
+  /// الاسم منسوخ لا مُدخَل: شاشات الطالب تعرضه دون قراءة مستند المستخدم،
+  /// وتركه حرًّا يسمح بأن يخالف الحسابَ المسند.
+  String _resolveInstructorName(List<AdminTeacherModel> teachers) {
+    final teacherId = _selectedTeacherId;
+    if (teacherId != null) {
+      for (final teacher in teachers) {
+        if (teacher.uid == teacherId) return teacher.displayName;
+      }
+    }
+    // طرح قديم بقي بلا إسناد: يحتفظ باسمه المكتوب يدويًا.
+    return _editing?.instructorName.trim() ?? '';
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_selectedCourseId == null) return;
 
     final provider = context.read<CourseOfferingProvider>();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final teachers = context.read<AdminTeacherProvider>().teachers;
 
     final section = _sectionController.text.trim();
 
@@ -138,7 +190,8 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
             ),
       courseId: _selectedCourseId!,
       semesterId: _semesterId,
-      instructorName: _instructorController.text.trim(),
+      teacherId: _selectedTeacherId,
+      instructorName: _resolveInstructorName(teachers),
       section: section,
       status: _selectedStatus,
       source: _isEditMode
@@ -183,6 +236,31 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
         .watch<SemesterProvider>()
         .semesterNameFor(_semesterId);
     final courseItems = _courseItems(courses);
+
+    final teacherProvider = context.watch<AdminTeacherProvider>();
+    final teacherItems = _assignableTeachers(teacherProvider)
+        .map(
+          (teacher) => DropdownMenuItem<String?>(
+            value: teacher.uid,
+            child: Text(
+              teacher.isActive
+                  ? teacher.displayName
+                  : '${teacher.displayName} (${AppStrings.disabledStatus})',
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        )
+        .toList();
+
+    /*
+     * لا يمكن إنشاء طرح جديد بلا معلّم متاح.
+     *
+     * هذا قيد مقصود لا عيب: الطرح غير المملوك لا يظهر لأي معلّم، وإنشاؤه
+     * الآن يعني صنع دَين ترحيل جديد بينما الغرض من هذه المرحلة إنهاؤه.
+     */
+    final canSave =
+        courseItems.isNotEmpty &&
+        (teacherItems.isNotEmpty || _isLegacyOffering);
 
     return AdminAccessGuard(
       child: Scaffold(
@@ -269,18 +347,63 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
                         },
                       ),
 
-                      _buildLabel(AppStrings.offeringInstructorLabel),
-                      TextFormField(
-                        controller: _instructorController,
-                        decoration: const InputDecoration(
-                          hintText: AppStrings.offeringInstructorHint,
+                      _buildLabel(AppStrings.offeringTeacherLabel),
+                      if (_isLegacyOffering) ...[
+                        Text(
+                          '${AppStrings.offeringLegacyInstructorNote} '
+                          '(${_editing!.instructorName})',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.warningDark,
+                          ),
+                          textAlign: TextAlign.right,
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppStrings.offeringInstructorRequired;
-                          }
-                          return null;
-                        },
+                        const SizedBox(height: 6),
+                      ],
+                      if (teacherItems.isEmpty)
+                        Text(
+                          AppStrings.offeringNoActiveTeachers,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.warningDark,
+                          ),
+                        )
+                      else
+                        DropdownButtonFormField<String?>(
+                          initialValue: _selectedTeacherId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            hintText: AppStrings.offeringTeacherHint,
+                            prefixIcon: Icon(Icons.co_present_rounded),
+                          ),
+                          items: [
+                            /*
+                             * "بدون معلّم" خيار للطروحات القديمة وحدها.
+                             * الطرح الجديد يجب أن يُسند: تركه بلا مالك يعيد
+                             * إنتاج الحالة التي جاءت هذه المرحلة لتنهيها.
+                             */
+                            if (_isLegacyOffering)
+                              const DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text(AppStrings.offeringTeacherNone),
+                              ),
+                            ...teacherItems,
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _selectedTeacherId = value),
+                          validator: (value) {
+                            if (_isLegacyOffering) return null;
+                            if (value == null || value.trim().isEmpty) {
+                              return AppStrings.offeringInstructorRequired;
+                            }
+                            return null;
+                          },
+                        ),
+                      const SizedBox(height: 6),
+                      Text(
+                        AppStrings.offeringTeacherNote,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                        textAlign: TextAlign.right,
                       ),
 
                       _buildLabel(AppStrings.statusLabel),
@@ -338,7 +461,7 @@ class _AdminOfferingFormScreenState extends State<AdminOfferingFormScreen> {
                       ? AppStrings.saveChanges
                       : AppStrings.addOfferingLabel,
                   isLoading: provider.isSaving,
-                  isEnabled: !provider.isSaving && courseItems.isNotEmpty,
+                  isEnabled: !provider.isSaving && canSave,
                   onPressed: _submit,
                 ),
                 const SizedBox(height: AppSpacing.medium),

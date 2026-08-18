@@ -74,15 +74,39 @@ service cloud.firestore {
     }
 
     /*
-     * Declared in Phase 8A, deliberately unused by any rule yet.
+     * Declared in Phase 8A; first referenced in Phase 8.1.
      *
-     * Teacher capabilities — owning offerings, writing course files,
-     * authoring assignments — arrive in later phases together with
-     * courseOfferings.teacherId. Introducing the helper now keeps the role
-     * foundation in one changeset without granting anything.
+     * A teacher's capabilities are always SCOPED BY OWNERSHIP — never
+     * granted by the role alone. Every rule that uses this helper also
+     * checks that courseOfferings/{id}.teacherId == request.auth.uid.
+     * The role says "may own offerings"; it never says "may read
+     * everything".
      */
     function isActiveTeacher() {
       return hasValidAccount() && userData().role == 'teacher';
+    }
+
+    /*
+     * The teacher assigned to an offering, or '' when the offering carries
+     * no assignment.
+     *
+     * Offerings created before Phase 8.1 have no teacherId and can never
+     * gain an owner implicitly: '' never equals a real uid, so an
+     * unassigned offering grants nothing to anybody. instructorName is NOT
+     * consulted — it is free text, and matching a name against an account
+     * would turn a spelling coincidence into a permission.
+     */
+    function offeringTeacherId(offeringId) {
+      return get(/databases/$(database)/documents/courseOfferings/$(offeringId))
+        .data.get('teacherId', '');
+    }
+
+    function teacherOwnsOffering(offeringId) {
+      return isActiveTeacher()
+        && offeringId is string
+        && offeringId != ''
+        && exists(/databases/$(database)/documents/courseOfferings/$(offeringId))
+        && offeringTeacherId(offeringId) == request.auth.uid;
     }
 
     function isOwner(uid) {
@@ -137,10 +161,34 @@ service cloud.firestore {
           || request.resource.data.emailVerified == request.auth.token.email_verified;
       }
 
-      allow get: if isOwner(userId) || isActiveAdmin();
+      /*
+       * Phase 8.1: an active teacher may `get` a STUDENT document.
+       *
+       * A roster that shows opaque uids instead of names is not a roster.
+       * Enrollments store only userId, so the name must come from the user
+       * document — there is no third place to read it from.
+       *
+       * Scope of the grant, and why it stops where it does:
+       *   - `get` only, never `list` (see below): a teacher can resolve a
+       *     uid they already hold, but can never enumerate the student body.
+       *   - students only: admin and teacher documents stay unreadable, so
+       *     this cannot be used to map out staff accounts.
+       *
+       * Narrowing it further to "students enrolled in an offering I teach"
+       * is not expressible for a single-document get — the request carries
+       * no offering to check ownership against. The alternative is
+       * denormalising studentName onto every enrollment, which needs a
+       * migration and duplicates a field that changes.
+       */
+      allow get: if isOwner(userId)
+        || isActiveAdmin()
+        || ( isActiveTeacher() && resource.data.role == 'student' );
 
       // Admin-only. Supports  users.where('role', '==', 'student')
-      // POLICY: students cannot read other students' profiles.
+      // and users.where('role', '==', 'teacher').
+      // POLICY: students cannot read other students' profiles, and teachers
+      // cannot enumerate users at all — a list query is how you would turn
+      // the get() above into a directory dump.
       allow list: if isActiveAdmin();
 
       // Self-registration only. role and status are FORCED by the rule, so a
@@ -311,11 +359,34 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/semesters/$(d().semesterId));
       }
 
+      /*
+       * teacherId is OPTIONAL, but never arbitrary.
+       *
+       * Absent = unassigned, which is the state every pre-8.1 offering is
+       * in and a state the admin may deliberately keep. Present = it must
+       * name a real account whose role is 'teacher'. Without the lookup an
+       * admin could write any uid — including their own — and hand offering
+       * ownership to an account that is not a teacher at all.
+       *
+       * The account's status is deliberately NOT checked here: assignment
+       * must survive a teacher being temporarily disabled. Access is gated
+       * on isActiveTeacher() at read time, so a disabled teacher owns the
+       * offering on paper and can read nothing.
+       */
+      function validTeacherAssignment() {
+        return isAbsent(d(), 'teacherId')
+          || ( isNonEmptyString(d().teacherId)
+               && exists(/databases/$(database)/documents/users/$(d().teacherId))
+               && get(/databases/$(database)/documents/users/$(d().teacherId))
+                    .data.role == 'teacher' );
+      }
+
       function validOffering() {
         return isNonEmptyString(d().courseId)
           && isNonEmptyString(d().semesterId)
           && isNonEmptyString(d().instructorName)
           && isNonEmptyString(d().section)
+          && validTeacherAssignment()
           && d().status in ['active', 'archived', 'cancelled']
           && d().get('source', 'manual') in ['manual', 'api'];
       }
@@ -517,11 +588,23 @@ service cloud.firestore {
         return isAbsent(d(), 'grade') || d().grade is string;
       }
 
-      // Student: own rows only.  Admin: everything.
-      // Compatible with where('userId','==',uid) and, for admins,
-      // where('offeringId','==',id). An unfiltered student query is denied.
+      /*
+       * Student: own rows only.  Admin: everything.
+       * Teacher: rows of offerings they own — their class roster.
+       *
+       * Compatible with where('userId','==',uid) and, for admins and
+       * teachers, where('offeringId','==',id): rules are evaluated per
+       * document, so a roster query over one offering succeeds while an
+       * unfiltered teacher query fails on the first row it does not own.
+       *
+       * READ ONLY for teachers. Recording results stays admin-only — the
+       * update rule below is the tightest in the ruleset and opening it
+       * would mean an ownership get() inside the most sensitive collection
+       * in exchange for a display-only field.
+       */
       allow read: if ( isActiveUser() && resource.data.userId == request.auth.uid )
-        || isActiveAdmin();
+        || isActiveAdmin()
+        || teacherOwnsOffering(resource.data.get('offeringId', ''));
 
       // POLICY: students can NEVER enrol themselves, and can never author an
       // academic outcome — completionStatus and grade must not exist yet.

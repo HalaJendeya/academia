@@ -461,6 +461,22 @@ class _AdminOfferingListScreenState extends State<AdminOfferingListScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              /*
+               * الطرح غير المسند يُعلَّم صراحةً.
+               *
+               * اسم المدرّس وحده لا يميّز الطرح المملوك من غيره: كلاهما يعرض
+               * نصًا. الطرح بلا teacherId لا يظهر لأي معلّم، وهذه هي العلامة
+               * التي تدلّ المشرف على ما يحتاج ربطًا.
+               */
+              if (!offering.hasTeacher) ...[
+                const SizedBox(width: 6),
+                const AppStatusBadge(
+                  label: AppStrings.offeringTeacherUnassigned,
+                  backgroundColor: AppColors.surfaceSecondary,
+                  foregroundColor: AppColors.warningDark,
+                  icon: Icons.link_off_rounded,
+                ),
+              ],
             ],
           ),
           const Divider(height: 24, color: AppColors.divider),

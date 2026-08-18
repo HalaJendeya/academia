@@ -53,9 +53,17 @@ abstract final class AppRoutes {
 
   static const String adminShell = '/admin/shell';
 
+  // إدارة المعلّمين (المرحلة 8.1). لا مسار "إضافة": إنشاء الحساب يتم عبر
+  // أداة تزويد بصلاحيات إدارية، لا من داخل التطبيق.
+  static const String adminTeachers = '/admin/teachers';
+  static const String adminTeacherDetails = '/admin/teachers/details';
+
   /// واجهة المعلّم (المرحلة 8A). مسار واحد يكفي: التنقّل داخلها عبر
   /// IndexedStack لا عبر مسارات مستقلة، كما في واجهة المشرف.
   static const String teacherShell = '/teacher/shell';
+
+  /// تفاصيل طرح واحد داخل واجهة المعلّم، ومنها قائمة الطلاب المسجّلين.
+  static const String teacherOfferingDetail = '/teacher/offerings/detail';
   static const String adminCourseDetails = '/admin/courses/details';
   static const String adminAssignments = '/admin/assignments';
   static const String adminAddAssignment = '/admin/assignments/add';

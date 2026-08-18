@@ -11,6 +11,8 @@ import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
+import '../features/admin/providers/admin_teacher_provider.dart';
+import '../features/admin/services/admin_teacher_service.dart';
 import '../features/academics/providers/academic_structure_provider.dart';
 import '../features/academics/services/department_service.dart';
 import '../features/academics/services/major_service.dart';
@@ -29,6 +31,7 @@ import '../features/enrollments/providers/enrollment_provider.dart';
 import '../features/enrollments/services/enrollment_service.dart';
 import '../features/semesters/providers/semester_provider.dart';
 import '../features/semesters/services/semester_service.dart';
+import '../features/teacher/providers/teacher_offerings_provider.dart';
 import '../features/tasks/providers/task_provider.dart';
 import '../features/tasks/services/task_service.dart';
 
@@ -104,6 +107,16 @@ final List<SingleChildWidget> appProviders = [
         provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
   /*
+   * حسابات المعلّمين: استعلام قائمة على users مسموح للمشرف وحده، فيتبع
+   * الشرط الإداري نفسه ويتوقف عند الخروج أو تبديل الحساب.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, AdminTeacherProvider>(
+    create: (_) =>
+        AdminTeacherProvider(AdminTeacherService(), CourseOfferingService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
+  ),
+  /*
    * السجل الأكاديمي لطالب واحد في شاشة المشرف، منفصل عن EnrollmentProvider:
    * ذاك يشارك errorMessage بين القراءة والكتابة، فيكفي فشل إسناد مساق حتى
    * تعرض قائمة السجل خطأً رغم نجاح تحميلها.
@@ -157,6 +170,28 @@ final List<SingleChildWidget> appProviders = [
       );
       return studentCourses;
     },
+  ),
+  /*
+   * واجهة عمل المعلّم.
+   *
+   * الشرط "معلّم نشط" لا "مسجَّل دخول": الطالب والمشرف حسابان صالحان،
+   * وتمرير معرّف أيٍّ منهما هنا يفتح استعلام courseOfferings حيث teacherId
+   * يساويه — استعلام لا يعيد شيئًا في أحسن الأحوال، ومستمع لا مبرر له في
+   * كل الأحوال. تمرير null يوقف كل شيء ويمسح الحالة.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, TeacherOfferingsProvider>(
+    create: (_) => TeacherOfferingsProvider(
+      CourseOfferingService(),
+      CourseService(),
+      SemesterService(),
+      EnrollmentService(),
+    ),
+    update: (_, auth, provider) => provider!
+      ..syncWithAuth(
+        teacherUid: auth.isLoggedIn && auth.isTeacher && auth.isAccountActive
+            ? auth.currentUser?.uid
+            : null,
+      ),
   ),
   ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider, TaskProvider>(
     create: (_) => TaskProvider(TaskService()),

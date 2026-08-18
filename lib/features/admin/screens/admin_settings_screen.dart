@@ -206,6 +206,16 @@ class AdminSettingsScreen extends StatelessWidget {
                         ).pushNamed(AppRoutes.adminOfferings);
                       },
                     ),
+                    // المعلّمون يسبقون الفصول: الطرح يُسند إلى معلّم، فوجود
+                    // الحسابات شرط لاكتمال إنشاء الطروحات.
+                    AppMenuTile(
+                      icon: Icons.co_present_rounded,
+                      title: AppStrings.teachersManagementTitle,
+                      subtitle: AppStrings.teachersTileDesc,
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.adminTeachers);
+                      },
+                    ),
                     // إعداد أكاديمي على مستوى النظام: إنشاء الفصول الدراسية
                     // وتحديد الفصل الحالي الذي تعتمد عليه شاشات الطروحات.
                     AppMenuTile(

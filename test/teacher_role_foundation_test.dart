@@ -17,6 +17,8 @@ import 'package:academia/features/curriculum/services/curriculum_service.dart';
 import 'package:academia/features/enrollments/services/enrollment_service.dart';
 import 'package:academia/features/semesters/services/semester_service.dart';
 import 'package:academia/features/teacher/screens/teacher_shell_screen.dart';
+import 'package:academia/features/teacher/models/teacher_offering_view.dart';
+import 'package:academia/features/teacher/providers/teacher_offerings_provider.dart';
 import 'package:academia/features/teacher/widgets/teacher_access_guard.dart';
 
 // --------------------------------------------------------------- fixtures
@@ -129,13 +131,46 @@ class RouteRecorder extends NavigatorObserver {
   }
 }
 
+/*
+ * An inert teacher workspace: loaded, no error, no assignments.
+ *
+ * Phase 8.1 made the dashboard and مساقاتي read real data, so the shell
+ * cannot be built without this provider. "Loaded and empty" is the state
+ * these shell tests are about — a teacher who has been given nothing yet.
+ * Data-driven behaviour lives in teacher_workspace_test and
+ * teacher_screens_test; this file stays about the role and the shell.
+ */
+class InertTeacherOfferingsProvider extends ChangeNotifier
+    implements TeacherOfferingsProvider {
+  @override
+  List<TeacherOfferingView> get offerings => const <TeacherOfferingView>[];
+
+  @override
+  List<TeacherOfferingView> get activeOfferings =>
+      const <TeacherOfferingView>[];
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 Widget _guarded({
   required Widget child,
   required FakeAuthProvider auth,
   required RouteRecorder recorder,
 }) {
-  return ChangeNotifierProvider<AuthProvider>.value(
-    value: auth,
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<AuthProvider>.value(value: auth),
+      ChangeNotifierProvider<TeacherOfferingsProvider>(
+        create: (_) => InertTeacherOfferingsProvider(),
+      ),
+    ],
     child: MaterialApp(
       locale: const Locale('ar'),
       navigatorObservers: [recorder],
@@ -449,12 +484,23 @@ void main() {
       expect(find.text(AppStrings.teacherAssignmentsTab), findsOneWidget);
       expect(find.text(AppStrings.teacherProfileTab), findsOneWidget);
 
-      // Dashboard shows identity and an honest empty state — no counts.
+      // Dashboard shows identity and an honest empty state.
       expect(
         find.text(AppStrings.teacherDashboardDeferredTitle),
         findsOneWidget,
       );
-      for (final fabricated in ['0', '3 مساقات', '12 طالب']) {
+      /*
+       * '0' is no longer in this list, and that is the Phase 8.1 change.
+       *
+       * In 8A there was no data source, so any number on this screen was
+       * invented. The count is now READ from courseOfferings, so a zero
+       * here is a verified fact: this teacher has no active offerings.
+       * What must still never appear is a number nothing produced.
+       *
+       * The complementary guarantee — a dash, never 0, while the count is
+       * unknown or failed — is asserted in teacher_screens_test.
+       */
+      for (final fabricated in ['3 مساقات', '12 طالب', '85%']) {
         expect(find.text(fabricated), findsNothing);
       }
     });

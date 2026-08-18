@@ -142,6 +142,38 @@ class EnrollmentService {
     }
   }
 
+  /// قراءة مستندات طلاب بعينها، مستندًا مستندًا.
+  ///
+  /// عمدًا ليست استعلام whereIn: استعلام القائمة على users مسموح للمشرف
+  /// وحده، بينما القراءة المفردة مسموحة للمعلّم أيضًا. هذه هي الطريقة التي
+  /// تحصل بها قائمة طرح المعلّم على أسماء طلابها دون فتح تعداد المستخدمين.
+  ///
+  /// المستند غير المقروء أو المفقود يُتخطّى بلا استثناء: اسم ناقص في القائمة
+  /// أفضل من قائمة لا تُحمَّل.
+  Future<List<AdminStudentModel>> getStudentsByIds(List<String> userIds) async {
+    final unique = userIds
+        .where((id) => id.trim().isNotEmpty)
+        .map((id) => id.trim())
+        .toSet()
+        .toList();
+    if (unique.isEmpty) return <AdminStudentModel>[];
+
+    final results = await Future.wait(
+      unique.map((uid) async {
+        try {
+          final doc = await _firestore.collection('users').doc(uid).get();
+          final data = doc.data();
+          if (!doc.exists || data == null) return null;
+          return AdminStudentModel.fromFirestore(data, doc.id);
+        } catch (e) {
+          return null;
+        }
+      }),
+    );
+
+    return results.whereType<AdminStudentModel>().toList();
+  }
+
   // ------------------------------------------------------------- enrollments
 
   Stream<List<EnrollmentModel>> watchStudentEnrollments(String userId) {

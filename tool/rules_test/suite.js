@@ -42,6 +42,46 @@ const OFFERING_DOC = {
   createdBy: 'admin1',
 };
 
+/*
+ * Phase 8.1 fixtures: the same course, one section owned by teacher1 and
+ * one (OFFERING above) left unassigned. Keeping both is the point — the
+ * unassigned one is what every pre-8.1 offering looks like, and it must
+ * grant nothing to anyone.
+ */
+const OWNED_SECTION = '2';
+const OWNED_OFFERING = `${COURSE}_${SEM}_${OWNED_SECTION}`;
+const OWNED_OFFERING_DOC = {
+  ...OFFERING_DOC,
+  section: OWNED_SECTION,
+  teacherId: 'teacher1',
+};
+
+const OTHER_SECTION = '3';
+const OTHER_OFFERING = `${COURSE}_${SEM}_${OTHER_SECTION}`;
+const OTHER_OFFERING_DOC = {
+  ...OFFERING_DOC,
+  section: OTHER_SECTION,
+  teacherId: 'teacher2',
+};
+
+const OWNED_ENROLLMENT_DOC = {
+  userId: 'student1',
+  offeringId: OWNED_OFFERING,
+  courseId: COURSE,
+  semesterId: SEM,
+  attemptNumber: 1,
+  status: 'active',
+  assignedBy: 'admin1',
+};
+const OTHER_ENROLLMENT_DOC = {
+  ...OWNED_ENROLLMENT_DOC,
+  offeringId: OTHER_OFFERING,
+};
+const UNASSIGNED_ENROLLMENT_DOC = {
+  ...OWNED_ENROLLMENT_DOC,
+  offeringId: OFFERING,
+};
+
 // The world every academic test assumes exists.
 const WORLD = {
   [`users/admin1`]: ADMIN,
@@ -66,6 +106,8 @@ const WORLD = {
   },
   [`semesters/${SEM}`]: { status: 'current', semesterNumber: 1 },
   [`courseOfferings/${OFFERING}`]: OFFERING_DOC,
+  [`courseOfferings/${OWNED_OFFERING}`]: OWNED_OFFERING_DOC,
+  [`courseOfferings/${OTHER_OFFERING}`]: OTHER_OFFERING_DOC,
   [`enrollments/student1_${OFFERING}`]: { userId: 'student1', offeringId: OFFERING, courseId: COURSE, semesterId: SEM, attemptNumber: 1, status: 'active', assignedBy: 'admin1' },
   [`enrollments/student2_${OFFERING}`]: { userId: 'student2', offeringId: OFFERING, courseId: COURSE, semesterId: SEM, attemptNumber: 1, status: 'active', assignedBy: 'admin1' },
 };
@@ -1528,12 +1570,26 @@ t('26u. self-registration as teacher denied', {
   },
   token: { email: 'new@test.com', email_verified: false },
 });
-t('26v. teacher reading another user document denied', {
+/*
+ * 26v changed policy in Phase 8.1 and is now three tests.
+ *
+ * A teacher may resolve a STUDENT document — without it a class roster
+ * shows uids instead of names. Staff documents stay closed, and the
+ * enumeration path (list) stays admin-only; see section 27.
+ */
+t('26v. teacher reading an ADMIN user document denied', {
   expect: 'DENY',
   uid: 'teacher1',
-  path: 'users/student1',
+  path: 'users/admin1',
   method: 'get',
-  existing: STUDENT,
+  existing: ADMIN,
+});
+t('26v2. teacher reading ANOTHER TEACHER user document denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/teacher2',
+  method: 'get',
+  existing: TEACHER,
 });
 
 // ---- unknown roles fail closed ----
@@ -1564,6 +1620,253 @@ t('26z. unauthenticated read remains denied', {
   path: `courses/${COURSE}`,
   method: 'get',
   existing: WORLD[`courses/${COURSE}`],
+});
+
+// --- 27. Phase 8.1: teacher ownership via courseOfferings.teacherId -----
+//
+// The whole phase rests on one invariant: a teacher's access is never
+// granted by their role, only by teacherId on a specific offering. These
+// tests exist to make that invariant expensive to break by accident.
+
+// ---- who a teacher may resolve in users ----
+t('27a. teacher may get a STUDENT user document (roster names)', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'users/student1',
+  method: 'get',
+  existing: STUDENT,
+});
+t('27b. teacher may NOT list users (no directory dump)', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/student1',
+  method: 'list',
+  existing: STUDENT,
+});
+/*
+ * Control for 27b. Without it a DENY on `list` proves nothing: it could
+ * mean the harness rejects the method rather than the rule rejecting the
+ * teacher. Admin must ALLOW on the identical shape.
+ */
+t('27b2. admin CAN list users (control for 27b)', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'list',
+  existing: STUDENT,
+});
+t('27c. DISABLED teacher may not get a student document', {
+  expect: 'DENY',
+  uid: 'teacherOff',
+  path: 'users/student1',
+  method: 'get',
+  existing: STUDENT,
+});
+
+// ---- roster reads follow offering ownership ----
+t('27d. teacher reads enrollment of an offering they OWN', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'get',
+  existing: OWNED_ENROLLMENT_DOC,
+});
+t('27e. teacher reads enrollment of ANOTHER teacher offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OTHER_OFFERING}`,
+  method: 'get',
+  existing: OTHER_ENROLLMENT_DOC,
+});
+t('27f. teacher reads enrollment of an UNASSIGNED offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OFFERING}`,
+  method: 'get',
+  existing: UNASSIGNED_ENROLLMENT_DOC,
+});
+t('27g. DISABLED teacher reads enrollment of own offering denied', {
+  expect: 'DENY',
+  uid: 'teacherOff',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'get',
+  // teacherOff is not the owner either; the point is the role gate fires first.
+  existing: OWNED_ENROLLMENT_DOC,
+});
+t('27h. student still cannot read another student enrollment', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'get',
+  existing: OWNED_ENROLLMENT_DOC,
+});
+
+// ---- reading a roster grants NO write on it ----
+t('27i. teacher recording a result on own offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'update',
+  data: {
+    ...OWNED_ENROLLMENT_DOC,
+    status: 'completed',
+    completionStatus: 'passed',
+  },
+  existing: OWNED_ENROLLMENT_DOC,
+});
+t('27j. teacher deleting an enrollment on own offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'delete',
+  existing: OWNED_ENROLLMENT_DOC,
+});
+t('27k. teacher enrolling a student into own offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `enrollments/student2_${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_ENROLLMENT_DOC, userId: 'student2', assignedBy: 'teacher1' },
+});
+
+// ---- owning an offering is not owning the offering document ----
+t('27l. teacher updating own offering denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'update',
+  data: { ...OWNED_OFFERING_DOC, status: 'archived' },
+  existing: OWNED_OFFERING_DOC,
+});
+t('27m. teacher assigning an offering to THEMSELVES denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `courseOfferings/${OFFERING}`,
+  method: 'update',
+  data: { ...OFFERING_DOC, teacherId: 'teacher1' },
+  existing: OFFERING_DOC,
+});
+/*
+ * Phase 8.2 boundary, asserted now so it cannot arrive early: owning an
+ * offering does not yet grant anything over its files.
+ */
+t('27n. teacher writing courseFiles for own offering denied (Phase 8.2)', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'courseFiles/f9',
+  method: 'create',
+  data: {
+    offeringId: OWNED_OFFERING,
+    courseId: COURSE,
+    semesterId: SEM,
+    title: 'ملف',
+    fileName: 'a.pdf',
+    fileExtension: 'pdf',
+    mimeType: 'application/pdf',
+    fileSize: 1000,
+    cloudinaryUrl: 'https://res.cloudinary.com/x/image/upload/a.pdf',
+    cloudinaryPublicId: 'a',
+    cloudinaryResourceType: 'image',
+    category: 'lecture',
+    uploadedBy: 'teacher1',
+    status: 'active',
+  },
+});
+
+// ---- admin assignment writes are validated, not trusted ----
+t('27o. admin creates offering assigned to a real teacher allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: OWNED_OFFERING_DOC,
+});
+t('27p. admin creates offering with NO teacherId allowed (legacy shape)', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `courseOfferings/${OFFERING}`,
+  method: 'create',
+  data: OFFERING_DOC,
+});
+t('27q. admin assigning an offering to a STUDENT denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_OFFERING_DOC, teacherId: 'student1' },
+});
+t('27r. admin assigning an offering to ANOTHER ADMIN denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_OFFERING_DOC, teacherId: 'admin1' },
+});
+t('27s. admin assigning an offering to a NONEXISTENT user denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_OFFERING_DOC, teacherId: 'ghost' },
+  missing: ['users/ghost'],
+});
+t('27t. admin writing an EMPTY teacherId denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_OFFERING_DOC, teacherId: '' },
+});
+/*
+ * A DISABLED teacher may still be assigned. Assignment must survive a
+ * temporary suspension — the read gate is what stops them, not the field.
+ */
+t('27u. admin assigning an offering to a DISABLED teacher allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'create',
+  data: { ...OWNED_OFFERING_DOC, teacherId: 'teacherOff' },
+});
+t('27v. admin reassigning an offering to another teacher allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'update',
+  data: { ...OWNED_OFFERING_DOC, teacherId: 'teacher2' },
+  existing: OWNED_OFFERING_DOC,
+});
+t('27w. admin UNASSIGNING an offering allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'update',
+  data: withOut(OWNED_OFFERING_DOC, 'teacherId'),
+  existing: OWNED_OFFERING_DOC,
+});
+t('27x. admin still cannot move an offering to another semester', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `courseOfferings/${OWNED_OFFERING}`,
+  method: 'update',
+  data: { ...OWNED_OFFERING_DOC, semesterId: 'semester_2027_1' },
+  existing: OWNED_OFFERING_DOC,
+});
+
+// ---- an unassigned offering is owned by nobody ----
+t('27y. teacher2 reads enrollment of unassigned offering denied', {
+  expect: 'DENY',
+  uid: 'teacher2',
+  path: `enrollments/student1_${OFFERING}`,
+  method: 'get',
+  existing: UNASSIGNED_ENROLLMENT_DOC,
+});
+t('27z. admin retains full roster read on any offering', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: `enrollments/student1_${OWNED_OFFERING}`,
+  method: 'get',
+  existing: OWNED_ENROLLMENT_DOC,
 });
 
 // ------------------------------------------------------------------- runner

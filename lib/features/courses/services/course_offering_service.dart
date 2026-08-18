@@ -84,6 +84,22 @@ class CourseOfferingService {
     }
   }
 
+  /// طروحات معلّم واحد عبر كل الفصول — استعلام مساواة فقط.
+  ///
+  /// هذا هو الاستعلام الوحيد الذي تبني عليه واجهة المعلّم: الملكية تُقرأ من
+  /// teacherId المخزَّن لا من اسم المدرّس، فالاسم نص حر لا يُطابق حسابًا.
+  Stream<List<CourseOfferingModel>> watchOfferingsByTeacher(String teacherId) {
+    if (teacherId.trim().isEmpty) {
+      return Stream<List<CourseOfferingModel>>.value(
+        const <CourseOfferingModel>[],
+      );
+    }
+    return _offerings
+        .where('teacherId', isEqualTo: teacherId.trim())
+        .snapshots()
+        .map(_map);
+  }
+
   /// كل طروحات مساق دائم عبر الفصول — "متى طُرح هذا المساق؟"
   Stream<List<CourseOfferingModel>> watchOfferingsByCourse(String courseId) {
     return _offerings
@@ -216,6 +232,14 @@ class CourseOfferingService {
 
     try {
       await _offerings.doc(offering.id).update({
+        /*
+         * إلغاء الإسناد يحذف الحقل ولا يكتبه فارغًا: القواعد تشترط لأي
+         * teacherId موجود أن يشير إلى حساب معلّم فعلي، والطرح غير المملوك
+         * يُمثَّل بغياب الحقل تمامًا كما في الطروحات القديمة.
+         */
+        'teacherId': offering.hasTeacher
+            ? offering.teacherId
+            : FieldValue.delete(),
         'instructorName': offering.instructorName,
         'status': offering.status,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -286,6 +310,9 @@ class CourseOfferingService {
         batch.set(_offerings.doc(newId), {
           'courseId': offering.courseId,
           'semesterId': toSemesterId,
+          // المعلّم يُنسخ مع الطرح كقيمة افتراضية قابلة للتعديل، تمامًا كما
+          // يُنسخ اسم المدرّس: الفصل الجديد يبدأ من توزيع الفصل السابق.
+          if (offering.hasTeacher) 'teacherId': offering.teacherId,
           'instructorName': offering.instructorName,
           'section': offering.section,
           'status': CourseOfferingModel.statusActive,

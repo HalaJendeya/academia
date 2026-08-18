@@ -31,6 +31,8 @@ import '../features/semesters/providers/semester_provider.dart';
 import '../features/semesters/services/semester_service.dart';
 import '../features/tasks/providers/task_provider.dart';
 import '../features/tasks/services/task_service.dart';
+import '../features/shared_space/providers/post_provider.dart';
+import '../features/shared_space/services/post_service.dart';
 
 /// مشرف نشط ومسجَّل الدخول فعلًا.
 ///
@@ -169,4 +171,10 @@ final List<SingleChildWidget> appProviders = [
       return taskProvider;
     },
   ),
+  /*
+   * ساحة المشاركة: منشورات مقيَّدة بمساق واحد في كل مرة، بنفس مبدأ
+   * CourseFileProvider مع offeringId. Mock بالكامل حاليًا (PostService لا
+   * يتصل بـ Firestore بعد)، وسيُستبدل لاحقًا دون تغيير في الشاشات.
+   */
+  ChangeNotifierProvider(create: (_) => PostProvider(PostService())),
 ];

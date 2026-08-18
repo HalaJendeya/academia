@@ -23,7 +23,7 @@ import '../models/course_model.dart';
 import '../models/student_course_view.dart';
 import '../providers/student_courses_provider.dart';
 import '../widgets/student_course_header_card.dart';
-
+import '../../shared_space/screens/shared_space_screen.dart';
 /// وسيطات شاشة التفاصيل.
 ///
 /// [offeringId] هو ما يفرّق السياقين: مساق من الخطة (بلا طرح) أو محاولة
@@ -54,8 +54,8 @@ class StudentCourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final args =
-        ModalRoute.of(context)?.settings.arguments
-            as StudentCourseDetailArgs?;
+    ModalRoute.of(context)?.settings.arguments
+    as StudentCourseDetailArgs?;
     final provider = context.watch<StudentCoursesProvider>();
 
     final course = provider.courseById(args?.courseId);
@@ -108,9 +108,17 @@ class StudentCourseDetailScreen extends StatelessWidget {
                     curriculumEntry: curriculumEntry,
                   ),
                   _buildNotAvailableTab(),
+
                   // الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
                   _CourseFilesTab(offeringId: args.offeringId),
                   _buildNotAvailableTab(),
+
+                  _buildNotAvailableTab(),
+                  SharedSpaceScreen(
+                    courseId: course.id,
+                    courseTitle: course.title,
+                  ),
+
                 ],
               ),
             ),

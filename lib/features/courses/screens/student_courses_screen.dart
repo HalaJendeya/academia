@@ -24,7 +24,7 @@ import '../widgets/student_course_card.dart';
 import '../widgets/student_course_status_tabs.dart';
 import '../widgets/student_program_entry_card.dart';
 import 'student_course_detail_screen.dart';
-
+import '../../shared_space/screens/shared_space_screen.dart';
 /// شاشة مساقات الطالب.
 ///
 /// أربعة أقسام مبنية على مصدر واحد: برنامجي (الخطة) والمتاح الآن (تقاطع

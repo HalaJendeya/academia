@@ -7,6 +7,8 @@ import 'package:academia/app/app_routes.dart';
 import 'package:academia/core/constants/app_strings.dart';
 import 'package:academia/features/dashboard/widgets/today_tasks_card.dart';
 import 'package:academia/features/tasks/models/task_model.dart';
+import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/tasks/providers/task_provider.dart';
 
 // --------------------------------------------------------------- fixtures
@@ -70,9 +72,50 @@ class RouteRecorder extends NavigatorObserver {
   }
 }
 
-Widget _wrap(FakeTaskProvider provider, {RouteRecorder? recorder}) {
-  return ChangeNotifierProvider<TaskProvider>.value(
-    value: provider,
+/*
+ * Phase 8.4: the card now merges personal tasks with academic assignments.
+ * Loaded and empty keeps these tests about the task half; assignment
+ * behaviour is covered in student_work_item_test and tasks_screen tests.
+ */
+class FakeAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  FakeAssignmentProvider({
+    this.assignmentsValue = const <CourseAssignmentModel>[],
+    this.error,
+  });
+
+  final List<CourseAssignmentModel> assignmentsValue;
+  final String? error;
+
+  @override
+  List<CourseAssignmentModel> get assignments => assignmentsValue;
+
+  @override
+  List<CourseAssignmentModel> get activeAssignments =>
+      assignmentsValue.where((a) => a.isActive).toList();
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => error;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Widget _wrap(
+  FakeTaskProvider provider, {
+  RouteRecorder? recorder,
+  FakeAssignmentProvider? assignments,
+}) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<TaskProvider>.value(value: provider),
+      ChangeNotifierProvider<CourseAssignmentProvider>.value(
+        value: assignments ?? FakeAssignmentProvider(),
+      ),
+    ],
     child: MaterialApp(
       locale: const Locale('ar'),
       navigatorObservers: [?recorder],

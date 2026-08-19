@@ -8,21 +8,26 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../../tasks/models/task_model.dart';
+import '../../assignments/models/course_assignment_model.dart';
+import '../../assignments/providers/course_assignment_provider.dart';
+import '../../tasks/models/student_work_item.dart';
 import '../../tasks/providers/task_provider.dart';
 import '../../tasks/widgets/status_chip.dart';
 
-/// ملخص مهام الطالب في لوحة التحكم.
+/// ملخص عبء الطالب اليوم في لوحة التحكم.
 ///
-/// شاشة تجميع لا مجال بيانات جديد: المصدر الوحيد هو [TaskProvider] الذي
-/// تعتمد عليه شاشة المهام نفسها، فلا استعلام إضافي ولا نسخة ثانية من منطق
-/// التحميل. البطاقة تقرأ الحالة وتعرضها فقط.
+/// تجميع عرضٍ لا مجال بيانات جديد: المصدران هما [TaskProvider] و
+/// [CourseAssignmentProvider] نفساهما اللذان تعتمد عليهما شاشة «المهام
+/// والواجبات»، فلا استعلام إضافي ولا نسخة ثانية من منطق التحميل. البطاقة
+/// تقرأ الحالة وتعرضها فقط.
 ///
-/// «اليوم» و«المتأخرة» و«القادمة» تُشتق من dueAt وقت العرض عبر دوال
-/// [TaskModel]، ولا تُخزَّن في Firestore.
+/// الدمج يتم عبر [StudentWorkItem] بالترتيب نفسه المستعمل في الشاشة، حتى لا
+/// يقول الملخّص شيئًا وتقول الشاشة غيره.
 ///
-/// البطاقة تراقب مزوّد المهام بنفسها: خطأ في تحميل المهام يبقى داخل هذه
-/// البطاقة ولا يُفرغ بقية اللوحة.
+/// «اليوم» و«المتأخرة» تُشتقّان من موعد الاستحقاق وقت العرض، ولا تُخزَّنان.
+///
+/// كل مصدر معزول عن الآخر: فشل تحميل الواجبات يترك ملخّص المهام كما هو،
+/// وفشل المهام يبقى داخل هذه البطاقة ولا يُفرغ بقية اللوحة.
 class TodayTasksCard extends StatelessWidget {
   const TodayTasksCard({super.key, this.now});
 
@@ -40,6 +45,8 @@ class TodayTasksCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TaskProvider>();
+    // الواجبات مصدر ثانٍ مستقل؛ فشله لا يُسقط ملخص المهام والعكس.
+    final assignmentProvider = context.watch<CourseAssignmentProvider>();
     final reference = now ?? DateTime.now();
 
     return AppCard(
@@ -49,7 +56,7 @@ class TodayTasksCard extends StatelessWidget {
         children: [
           _buildHeader(context),
           const SizedBox(height: AppSpacing.small),
-          _buildBody(context, provider, reference),
+          _buildBody(context, provider, assignmentProvider, reference),
         ],
       ),
     );
@@ -108,6 +115,7 @@ class TodayTasksCard extends StatelessWidget {
   Widget _buildBody(
     BuildContext context,
     TaskProvider provider,
+    CourseAssignmentProvider assignmentProvider,
     DateTime reference,
   ) {
     /*
@@ -137,33 +145,49 @@ class TodayTasksCard extends StatelessWidget {
       );
     }
 
-    final pending = provider.tasks.where((task) => task.isPending).toList();
+    /*
+     * العبء الدراسي اليوم = المهام الشخصية + الواجبات الأكاديمية.
+     *
+     * المصدران يبقيان منفصلين تمامًا في Firestore؛ الدمج هنا عرضٌ فقط عبر
+     * [StudentWorkItem]، وهو نفسه المستعمل في شاشة «المهام والواجبات» حتى
+     * لا يختلف ترتيب اللوحة عن ترتيب الشاشة.
+     *
+     * العناصر بلا موعد لا تدخل أي مجموعة زمنية: دوال النموذجين تعيد false
+     * حين لا يوجد موعد، فلا تُحتسب «اليوم» ولا «متأخرة».
+     */
+    final items = StudentWorkItem.merge(
+      tasks: provider.tasks,
+      // فشل الواجبات لا يُسقط ملخّص المهام: تُعرض المهام وحدها.
+      assignments: assignmentProvider.errorMessage != null
+          ? const <CourseAssignmentModel>[]
+          : assignmentProvider.activeAssignments,
+      relativeTo: reference,
+    );
+
+    final overdueCount = items
+        .where((item) => item.isOverdue(relativeTo: reference))
+        .length;
+    final todayCount = items
+        .where((item) => item.isDueToday(relativeTo: reference))
+        .length;
 
     /*
-     * المهام بلا موعد تسليم لا تدخل أي مجموعة: دوال TaskModel تعيد false
-     * حين يكون dueAt فارغًا، فلا تُحتسب "اليوم" ولا "متأخرة".
+     * المعاينة زمنية: ما له موعد فقط.
+     *
+     * merge تُبقي العناصر بلا موعد في آخر القائمة لأنها عمل قائم فعلًا،
+     * وتبويب «الكل» يعرضها. أما هذه البطاقة فتجيب عن «ما الذي يستحق
+     * انتباهي الآن؟»، ومهمة بلا موعد لا تزاحم على هذا السؤال — وهو السلوك
+     * الذي كانت عليه البطاقة قبل دمج الواجبات.
      */
-    final overdue = _sortedByDue(
-      pending.where((task) => task.isOverdue(relativeTo: reference)),
-    );
-    final today = _sortedByDue(
-      pending.where((task) => task.isToday(relativeTo: reference)),
-    );
-    final upcoming = _sortedByDue(
-      pending.where((task) => task.isUpcoming(relativeTo: reference)),
-    );
-
-    // ترتيب الأهمية: المتأخر أولًا، ثم اليوم، ثم الأقرب قدومًا.
-    final preview = <TaskModel>[
-      ...overdue,
-      ...today,
-      ...upcoming,
-    ].take(previewLimit).toList();
+    final preview = items
+        .where((item) => item.dueAt != null)
+        .take(previewLimit)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSummaryLine(today.length, overdue.length),
+        _buildSummaryLine(todayCount, overdueCount),
         if (preview.isEmpty)
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.extraSmall),
@@ -177,8 +201,8 @@ class TodayTasksCard extends StatelessWidget {
           )
         else ...[
           const SizedBox(height: AppSpacing.small),
-          for (final task in preview)
-            _TaskPreviewRow(task: task, reference: reference),
+          for (final item in preview)
+            _WorkPreviewRow(item: item, reference: reference),
         ],
       ],
     );
@@ -212,31 +236,29 @@ class TodayTasksCard extends StatelessWidget {
     );
   }
 
-  static List<TaskModel> _sortedByDue(Iterable<TaskModel> tasks) {
-    final list = tasks.toList();
-    // الأقرب موعدًا أولًا. كلها تحمل dueAt هنا بحكم شروط الاشتقاق.
-    list.sort((a, b) => a.dueAt!.compareTo(b.dueAt!));
-    return list;
-  }
 }
 
-/// سطر مهمة واحد في المعاينة.
+/// سطر عمل واحد في المعاينة — مهمة شخصية أو واجب أكاديمي.
 ///
 /// مبسَّط عمدًا مقارنةً بـ TaskCard: البطاقة الكاملة تعرض الوصف والمساق
 /// وأزرار الإجراءات، وهي أطول من أن تتسع في ملخص لوحة. العنوان والموعد
 /// والحالة تكفي للإجابة عن "ما الذي يستحقّ انتباهي الآن؟".
-class _TaskPreviewRow extends StatelessWidget {
-  const _TaskPreviewRow({required this.task, required this.reference});
+///
+/// المصدر مميَّز بشارة نصية: الطالب يملك مهمته الشخصية ويستطيع إنهاءها،
+/// بينما الواجب مفروض عليه ولا يملك تغييره — والخلط بينهما يجعل الملخص
+/// مضللًا.
+class _WorkPreviewRow extends StatelessWidget {
+  const _WorkPreviewRow({required this.item, required this.reference});
 
-  final TaskModel task;
+  final StudentWorkItem item;
   final DateTime reference;
 
   String _dueText() {
-    final dueAt = task.dueAt;
+    final dueAt = item.dueAt;
     if (dueAt == null) return AppStrings.dashboardTasksNoDueDate;
 
-    // مهام اليوم: الساعة هي المعلومة المفيدة. غيرها: التاريخ.
-    final pattern = task.isToday(relativeTo: reference)
+    // ما يستحق اليوم: الساعة هي المعلومة المفيدة. غيره: التاريخ.
+    final pattern = item.isDueToday(relativeTo: reference)
         ? 'hh:mm a'
         : 'yyyy/MM/dd';
     return DateFormat(pattern, 'ar').format(dueAt);
@@ -244,7 +266,8 @@ class _TaskPreviewRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue = task.isOverdue(relativeTo: reference);
+    final isOverdue = item.isOverdue(relativeTo: reference);
+    final isAssignment = item.isAcademicAssignment;
 
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.small),
@@ -256,7 +279,9 @@ class _TaskPreviewRow extends StatelessWidget {
             child: Icon(
               isOverdue
                   ? Icons.error_outline_rounded
-                  : Icons.radio_button_unchecked_rounded,
+                  : (isAssignment
+                        ? Icons.assignment_outlined
+                        : Icons.radio_button_unchecked_rounded),
               size: 14,
               color: isOverdue ? AppColors.danger : AppColors.textMuted,
             ),
@@ -267,7 +292,7 @@ class _TaskPreviewRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  task.title,
+                  item.title,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -277,7 +302,9 @@ class _TaskPreviewRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  _dueText(),
+                  // المصدر ثم الموعد، حتى يُقرأ النوع قبل التاريخ.
+                  '${isAssignment ? AppStrings.workKindAssignment : AppStrings.workKindPersonalTask}'
+                  ' · ${_dueText()}',
                   style: AppTextStyles.labelSmall.copyWith(
                     color: isOverdue ? AppColors.danger : AppColors.textMuted,
                   ),
@@ -289,12 +316,17 @@ class _TaskPreviewRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.small),
-          StatusChip.status(
-            task.status,
-            isOverdue: isOverdue,
-            isToday: task.isToday(relativeTo: reference),
-            isUpcoming: task.isUpcoming(relativeTo: reference),
-          ),
+          /*
+           * شارة الحالة تخص المهمة الشخصية وحدها: StatusChip.status مبنيّ
+           * على TaskStatus، ولا حالة إنجاز للواجب الأكاديمي لكل طالب.
+           */
+          if (!isAssignment)
+            StatusChip.status(
+              item.task!.status,
+              isOverdue: isOverdue,
+              isToday: item.isDueToday(relativeTo: reference),
+              isUpcoming: item.task!.isUpcoming(relativeTo: reference),
+            ),
         ],
       ),
     );

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:academia/core/constants/app_strings.dart';
 import 'package:academia/features/academics/models/major_model.dart';
 import 'package:academia/features/auth/models/app_user_model.dart';
+import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/auth/providers/auth_provider.dart';
 import 'package:academia/features/courses/models/course_model.dart';
 import 'package:academia/features/courses/models/student_course_view.dart';
@@ -237,6 +239,9 @@ Widget _wrap({
       ),
       ChangeNotifierProvider<TaskProvider>.value(
         value: tasks ?? FakeTaskProvider(),
+      ),
+      ChangeNotifierProvider<CourseAssignmentProvider>(
+        create: (_) => InertAssignmentProvider(),
       ),
     ],
     child: const MaterialApp(
@@ -471,4 +476,26 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+}
+
+/// Phase 8.4: the dashboard task summary now also reads academic
+/// assignments. Loaded and empty keeps these tests about what they test.
+class InertAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  @override
+  List<CourseAssignmentModel> get assignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  List<CourseAssignmentModel> get activeAssignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

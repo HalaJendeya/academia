@@ -212,6 +212,81 @@ class CourseAssignmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// مجموعة الطروح المشترَك بها نيابةً عن الطالب، أو null إن لم تُضبط بعد.
+  ///
+  /// تُحفظ لتمييز «لم يشترك هذا المزوّد كطالب قط» عن «كان مشتركًا ثم خرج»،
+  /// وهو ما يمنع إيقاف اشتراكات المعلّم أو المشرف عن طريق الخطأ.
+  List<String>? _studentOfferingIds;
+
+  /// يتبع طروح الطالب المصرَّح له بها، من StudentCoursesProvider.
+  ///
+  /// يُستدعى من ProxyProvider حتى تكون واجبات الطالب متاحة في التطبيق كله —
+  /// شاشة المهام ولوحة اليوم معًا — دون أن تدير كل شاشة اشتراكها بنفسها.
+  ///
+  /// [offeringIds] تساوي null لأي جلسة ليست طالبًا نشطًا. في تلك الحالة لا
+  /// يفعل شيئًا إن لم يسبق للمزوّد أن اشترك كطالب: المعلّم والمشرف يقودان
+  /// اشتراكاتهما من شاشاتهما، وإيقافها هنا كان سيُفرغها فور بنائها.
+  void syncStudentOfferings(List<String>? offeringIds) {
+    if (offeringIds == null) {
+      if (_studentOfferingIds == null) return;
+      _studentOfferingIds = null;
+      stopListening();
+      _assignments = const <CourseAssignmentModel>[];
+      scheduleMicrotask(notifyListeners);
+      return;
+    }
+
+    final normalized = offeringIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final current = _studentOfferingIds;
+    final sameSet =
+        current != null &&
+        current.length == normalized.length &&
+        List.generate(
+          current.length,
+          (i) => current[i] == normalized[i],
+        ).every((same) => same);
+
+    /*
+     * الخروج المبكر مشروط بأن تكون الاشتراكات الحيّة هي نفسها فعلًا، لا
+     * بأن تتطابق القائمة المحفوظة وحدها: شاشة تفاصيل المساق تشترك بطرح
+     * واحد ثم توقف، فلو اكتفينا بمقارنة القائمة لبقي الطالب بلا اشتراك
+     * حتى إشعار لاحق. المقارنة بالاشتراكات القائمة تجعل الحالة تُصحّح
+     * نفسها.
+     */
+    if (sameSet && _subscriptionsMatch(normalized)) return;
+
+    _studentOfferingIds = normalized;
+    listenToOfferingsAssignments(normalized);
+  }
+
+  bool _subscriptionsMatch(List<String> offeringIds) {
+    if (_globalSubscription != null) return false;
+    if (_subscriptions.length != offeringIds.length) return false;
+    return offeringIds.every(_subscriptions.containsKey);
+  }
+
+  /// يعيد اشتراك الطالب بعد أن استولت شاشة على المزوّد مؤقتًا.
+  ///
+  /// شاشة تفاصيل المساق تشترك بطرح واحد — وقد يكون طرحًا من السجل ليس ضمن
+  /// مساقات الطالب الحالية — ثم تعيد الحال عند مغادرتها. بدون هذا الاستدعاء
+  /// كانت شاشة «المهام والواجبات» تفقد واجباتها بمجرد زيارة تفاصيل مساق.
+  void restoreStudentOfferings() {
+    final remembered = _studentOfferingIds;
+    if (remembered == null) {
+      // ليست جلسة طالب: المعلّم والمشرف يقودان اشتراكاتهما بأنفسهما.
+      stopListening();
+      return;
+    }
+    if (_subscriptionsMatch(remembered)) return;
+    listenToOfferingsAssignments(remembered);
+  }
+
   bool _hadSession = false;
   String? _lastRole;
 
@@ -228,6 +303,8 @@ class CourseAssignmentProvider extends ChangeNotifier {
         _activeAssignmentCount = null;
         _isLoading = false;
         _errorMessage = null;
+        // الطروح المحفوظة تخص الحساب السابق؛ تركها يمنع إعادة الاشتراك.
+        _studentOfferingIds = null;
       }
       _hadSession = true;
       _lastRole = role;
@@ -238,6 +315,7 @@ class CourseAssignmentProvider extends ChangeNotifier {
         _hadSession || _subscriptions.isNotEmpty || _assignments.isNotEmpty;
     _hadSession = false;
     _lastRole = null;
+    _studentOfferingIds = null;
     if (!hadState) return;
 
     stopListening();

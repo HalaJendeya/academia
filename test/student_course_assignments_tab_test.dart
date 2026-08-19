@@ -54,6 +54,15 @@ class FakeAssignmentProvider extends ChangeNotifier
   @override
   void stopListening() {}
 
+  /*
+   * Phase 8.4: leaving the tab hands the provider back to the student's
+   * app-wide subscription rather than cancelling it outright.
+   */
+  int restoreCalls = 0;
+
+  @override
+  void restoreStudentOfferings() => restoreCalls++;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

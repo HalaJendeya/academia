@@ -11,12 +11,35 @@ class TaskFilterBar extends StatelessWidget {
     required this.onChanged,
     required this.overdueCount,
     required this.onOpenAdvancedFilter,
+    this.visibleFilters = TaskQuickFilter.values,
+    this.allLabel,
   });
 
   final TaskQuickFilter selected;
   final ValueChanged<TaskQuickFilter> onChanged;
   final int overdueCount;
   final VoidCallback onOpenAdvancedFilter;
+
+  /// أي مرشِّحات سريعة تُعرض.
+  ///
+  /// الافتراضي كل القيم، فسلوك أي مستدعٍ قائم لا يتغيّر. تبويب «مهامي» في
+  /// الشاشة الموحَّدة يمرّر مجموعة أضيق: «الكل» و«مكتملة» صارا تبويبين،
+  /// وتكرار التسمية نفسها في مستويين يجعل الاختيار غامضًا.
+  final List<TaskQuickFilter> visibleFilters;
+
+  /// تسمية بديلة لمرشِّح «الكل».
+  ///
+  /// تُستعمل حين يوجد على الشاشة نفسها تبويب اسمه «الكل»: عنصرا تحكّم
+  /// بالتسمية ذاتها ومعنيين مختلفين يجعلان الاختيار غامضًا على المستخدم.
+  final String? allLabel;
+
+  static const Map<TaskQuickFilter, String> _labels = {
+    TaskQuickFilter.all: 'الكل',
+    TaskQuickFilter.today: 'اليوم',
+    TaskQuickFilter.overdue: 'متأخرة',
+    TaskQuickFilter.upcoming: 'قادمة',
+    TaskQuickFilter.completed: 'مكتملة',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -27,32 +50,15 @@ class TaskFilterBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.medium),
         child: Row(
           children: [
-            _FilterPill(
-              label: 'الكل',
-              selected: selected == TaskQuickFilter.all,
-              onTap: () => onChanged(TaskQuickFilter.all),
-            ),
-            _FilterPill(
-              label: 'اليوم',
-              selected: selected == TaskQuickFilter.today,
-              onTap: () => onChanged(TaskQuickFilter.today),
-            ),
-            _FilterPill(
-              label: 'متأخرة',
-              selected: selected == TaskQuickFilter.overdue,
-              count: overdueCount,
-              onTap: () => onChanged(TaskQuickFilter.overdue),
-            ),
-            _FilterPill(
-              label: 'قادمة',
-              selected: selected == TaskQuickFilter.upcoming,
-              onTap: () => onChanged(TaskQuickFilter.upcoming),
-            ),
-            _FilterPill(
-              label: 'مكتملة',
-              selected: selected == TaskQuickFilter.completed,
-              onTap: () => onChanged(TaskQuickFilter.completed),
-            ),
+            for (final filter in visibleFilters)
+              _FilterPill(
+                label: filter == TaskQuickFilter.all
+                    ? (allLabel ?? _labels[filter]!)
+                    : _labels[filter]!,
+                selected: selected == filter,
+                count: filter == TaskQuickFilter.overdue ? overdueCount : null,
+                onTap: () => onChanged(filter),
+              ),
             _FilterPill(
               label: 'فلترة',
               selected: false,

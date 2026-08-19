@@ -142,20 +142,6 @@ final List<SingleChildWidget> appProviders = [
         role: auth.currentUserProfile?.role.name,
       ),
   ),
-  /*
-   * الواجبات الأكاديمية تخدم الأدوار الثلاثة، لذلك شرطها «مستخدم نشط» لا
-   * دور بعينه — كما في ملفات المساقات. الدور يُمرَّر أيضًا حتى يتوقف
-   * الاستماع عند تبديل الدور مع بقاء الجلسة: استعلام فتحه معلّم على طروحه
-   * لا يجوز أن يبقى حيًّا بعد أن صار الحساب طالبًا.
-   */
-  ChangeNotifierProxyProvider<AuthProvider, CourseAssignmentProvider>(
-    create: (_) => CourseAssignmentProvider(CourseAssignmentService()),
-    update: (_, auth, provider) => provider!
-      ..syncWithAuth(
-        isActiveUser: auth.isLoggedIn && auth.isAccountActive,
-        role: auth.currentUserProfile?.role.name,
-      ),
-  ),
   ChangeNotifierProvider(
     create: (_) => AdminStudentRecordProvider(
       EnrollmentService(),
@@ -211,6 +197,48 @@ final List<SingleChildWidget> appProviders = [
             ? auth.currentUser?.uid
             : null,
       ),
+  ),
+  /*
+   * الطالب يحصل على واجباته تلقائيًا من طروحه المسجَّل فيها.
+   *
+   * الاشتراك يُدار هنا لا في الشاشات: شاشة «المهام والواجبات» ولوحة اليوم
+   * تحتاجان البيانات نفسها، وربط كلٍّ منهما باشتراكها كان ينتج مستمعَين
+   * لنفس الطروح ويجعل ترتيب فتح الشاشات يغيّر ما يُعرض.
+   *
+   * المعلّم والمشرف لا يتأثران: syncStudentOfferings(null) لا يفعل شيئًا
+   * ما لم يكن المزوّد قد اشترك كطالب فعلًا، فتبقى اشتراكاتهما التي تقودها
+   * شاشاتهما كما هي.
+   */
+  ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider,
+      CourseAssignmentProvider>(
+    create: (_) => CourseAssignmentProvider(CourseAssignmentService()),
+    update: (_, auth, studentCourses, provider) {
+      provider!.syncWithAuth(
+        isActiveUser: auth.isLoggedIn && auth.isAccountActive,
+        role: auth.currentUserProfile?.role.name,
+      );
+
+      final isActiveStudent =
+          auth.isLoggedIn && auth.isStudent && auth.isAccountActive;
+
+      /*
+       * المساقات الحالية وحدها تغذّي شاشة الإنتاجية.
+       *
+       * القواعد تصرّح للطالب بقراءة واجبات كل تسجيل غير مُزال — النشط
+       * والمكتمل معًا — لكن واجبات فصل مضى كلها متأخرة ولا يمكن فعل شيء
+       * حيالها، فإقحامها في «ما عليّ الآن» ضجيج دائم. تبقى متاحة في
+       * تفاصيل المساق، وهو المكان الذي يُقصد فيه السجل.
+       */
+      provider.syncStudentOfferings(
+        isActiveStudent
+            ? [
+                for (final view in studentCourses.currentCourses)
+                  view.offeringId,
+              ]
+            : null,
+      );
+      return provider;
+    },
   ),
   ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider, TaskProvider>(
     create: (_) => TaskProvider(TaskService()),

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:academia/core/constants/app_strings.dart';
+import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/auth/models/app_user_model.dart';
 import 'package:academia/features/auth/providers/auth_provider.dart';
 import 'package:academia/features/courses/models/course_model.dart';
@@ -160,16 +163,49 @@ class FakeTaskProvider extends ChangeNotifier implements TaskProvider {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/*
+ * Phase 8.4: TasksScreen became the unified «المهام والواجبات» screen and
+ * now also reads academic assignments. Loaded and empty by default keeps
+ * these tests about personal-task behaviour, which is what they cover;
+ * the merged view is tested in tasks_screen_unified_test.
+ */
+class FakeAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  FakeAssignmentProvider({this.assignmentsValue = const <CourseAssignmentModel>[]});
+
+  final List<CourseAssignmentModel> assignmentsValue;
+
+  @override
+  List<CourseAssignmentModel> get assignments => assignmentsValue;
+
+  @override
+  List<CourseAssignmentModel> get activeAssignments =>
+      assignmentsValue.where((a) => a.isActive).toList();
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 Widget _wrap({
   required Widget child,
   required FakeTaskProvider taskProvider,
   required FakeStudentCoursesProvider coursesProvider,
+  FakeAssignmentProvider? assignmentProvider,
 }) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthProvider>(create: (_) => FakeAuthProvider()),
       ChangeNotifierProvider<StudentCoursesProvider>.value(value: coursesProvider),
       ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+      ChangeNotifierProvider<CourseAssignmentProvider>.value(
+        value: assignmentProvider ?? FakeAssignmentProvider(),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('ar'),
@@ -240,9 +276,19 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('لا توجد مهام دراسية'), findsOneWidget);
-      expect(find.textContaining('أضيفي مهامكِ لتنظيم وقتكِ الدراسي'), findsOneWidget);
-      expect(find.text('إضافة مهمة جديدة'), findsOneWidget);
+      /*
+       * Phase 8.4: the landing tab is الكل, which covers personal tasks AND
+       * academic assignments, so its empty state speaks for both. The
+       * personal-task-specific empty state with its add action now lives in
+       * the مهامي tab.
+       */
+      expect(find.text(AppStrings.workEmptyAllTitle), findsOneWidget);
+
+      await tester.tap(find.text(AppStrings.workTabMyTasks));
+      await tester.pumpAndSettle();
+
+      expect(find.text(AppStrings.workEmptyMyTasksTitle), findsOneWidget);
+      expect(find.text(AppStrings.addNewTaskAction), findsOneWidget);
     });
 
     testWidgets('one pending task renders correctly', (tester) async {
@@ -318,6 +364,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Phase 8.4: the temporal quick filters now live inside مهامي.
+      Future<void> openMyTasks() async {
+        await tester.tap(find.text(AppStrings.workTabMyTasks));
+        await tester.pumpAndSettle();
+      }
+
       Future<void> tapFilter(String label) async {
         final finder = find.text(label);
         await tester.ensureVisible(finder);
@@ -326,41 +378,51 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      // Default filter is 'الكل'
+      await openMyTasks();
+
+      /*
+       * مهامي holds PENDING personal tasks only — completed ones moved to
+       * their own tab in Phase 8.4, so the pill that used to select them
+       * would now duplicate a tab label.
+       */
       expect(find.text('مهمة اليوم'), findsOneWidget);
       expect(find.text('مهمة متأخرة'), findsOneWidget);
-      expect(find.text('مهمة مكتملة'), findsOneWidget);
+      expect(find.text('مهمة مكتملة'), findsNothing);
 
-      // Filter: اليوم
       await tapFilter('اليوم');
       expect(find.text('مهمة اليوم'), findsOneWidget);
       expect(find.text('مهمة متأخرة'), findsNothing);
-      expect(find.text('مهمة مكتملة'), findsNothing);
 
-      // Filter: متأخرة
       await tapFilter('متأخرة');
       expect(find.text('مهمة اليوم'), findsNothing);
       expect(find.text('مهمة متأخرة'), findsOneWidget);
-      expect(find.text('مهمة مكتملة'), findsNothing);
 
-      // Filter: مكتملة
-      await tapFilter('مكتملة');
+      // Back to all pending — the pill is labelled distinctly from the tab.
+      await tapFilter(AppStrings.workAllMyTasksFilter);
+      expect(find.text('مهمة اليوم'), findsOneWidget);
+      expect(find.text('مهمة متأخرة'), findsOneWidget);
+
+      // The completed task lives in the مكتملة tab.
+      await tester.tap(find.text(AppStrings.workTabCompleted));
+      await tester.pumpAndSettle();
+      expect(find.text('مهمة مكتملة'), findsOneWidget);
       expect(find.text('مهمة اليوم'), findsNothing);
       expect(find.text('مهمة متأخرة'), findsNothing);
-      expect(find.text('مهمة مكتملة'), findsOneWidget);
-
-      // Reset filters (tap الكل)
-      await tapFilter('الكل');
-      expect(find.text('مهمة اليوم'), findsOneWidget);
     });
 
     testWidgets('clearing filters returns to showing all tasks', (tester) async {
       _useNarrowScreen(tester);
+      /*
+       * A PENDING task with no due date: مهامي lists it by default, and the
+       * اليوم filter excludes it, which is exactly the state the clear-filters
+       * action has to recover from. A completed task would not appear in
+       * مهامي at all after Phase 8.4.
+       */
       final task = TaskModel(
         id: 't1',
         userId: 'student1',
-        title: 'مهمة مكتملة',
-        status: TaskStatus.completed,
+        title: 'مهمة بلا موعد',
+        status: TaskStatus.pending,
         createdAt: now,
         updatedAt: now,
       );
@@ -376,6 +438,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Phase 8.4: the temporal quick filters now live inside مهامي.
+      Future<void> openMyTasks() async {
+        await tester.tap(find.text(AppStrings.workTabMyTasks));
+        await tester.pumpAndSettle();
+      }
+
       Future<void> tapFilter(String label) async {
         final finder = find.text(label);
         await tester.ensureVisible(finder);
@@ -384,16 +452,17 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      // Tap 'اليوم' (which has no tasks)
+      await openMyTasks();
+
+      // Tap 'اليوم' (which this task does not match)
       await tapFilter('اليوم');
 
-      expect(find.text('لا توجد نتائج'), findsOneWidget);
+      expect(find.text(AppStrings.noSearchResultsTitle), findsOneWidget);
 
-      // Tap 'مسح الفلاتر'
-      await tester.tap(find.text('مسح الفلاتر'));
+      await tester.tap(find.text(AppStrings.clearFiltersAction));
       await tester.pumpAndSettle();
 
-      expect(find.text('مهمة مكتملة'), findsOneWidget);
+      expect(find.text('مهمة بلا موعد'), findsOneWidget);
     });
 
     testWidgets('no-course task vs linked-course task display details', (tester) async {

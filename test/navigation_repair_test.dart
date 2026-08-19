@@ -11,6 +11,7 @@ import 'package:academia/features/admin/screens/admin_course_details_screen.dart
 import 'package:academia/features/admin/screens/admin_dashboard_screen.dart';
 import 'package:academia/features/admin/widgets/admin_stat_card.dart';
 import 'package:academia/features/auth/models/app_user_model.dart';
+import 'package:academia/features/assignments/models/course_assignment_model.dart';
 import 'package:academia/features/auth/providers/auth_provider.dart';
 import 'package:academia/features/courses/models/course_model.dart';
 import 'package:academia/features/courses/models/student_course_view.dart';
@@ -658,8 +659,11 @@ void main() {
       ChangeNotifierProvider<StudentCoursesProvider>(
         create: (_) => FakeStudentCoursesProvider(),
       ),
-      // The dashboard's tasks summary reads this directly.
+      // The dashboard's tasks summary reads these directly.
       ChangeNotifierProvider<TaskProvider>(create: (_) => FakeTaskProvider()),
+      ChangeNotifierProvider<CourseAssignmentProvider>(
+        create: (_) => InertAssignmentProvider(),
+      ),
     ];
 
     testWidgets('the dashboard avatar opens the profile route', (tester) async {
@@ -755,4 +759,26 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+}
+
+/// Phase 8.4: the dashboard task summary now also reads academic
+/// assignments. Loaded and empty keeps these tests about what they test.
+class InertAssignmentProvider extends ChangeNotifier
+    implements CourseAssignmentProvider {
+  @override
+  List<CourseAssignmentModel> get assignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  List<CourseAssignmentModel> get activeAssignments =>
+      const <CourseAssignmentModel>[];
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

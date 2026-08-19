@@ -459,8 +459,14 @@ class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
 
   @override
   void dispose() {
-    // مرجع محفوظ: لا يمكن قراءة المزوّد من context أثناء dispose.
-    _assignmentProvider?.stopListening();
+    /*
+     * لا نوقف الاستماع بل نعيد اشتراك الطالب.
+     *
+     * هذا التبويب يستولي على المزوّد مؤقتًا لطرح واحد؛ إيقافه عند المغادرة
+     * كان يترك شاشة «المهام والواجبات» بلا واجبات إلى حين إشعار لاحق.
+     * مرجع محفوظ لأن قراءة المزوّد من context أثناء dispose غير ممكنة.
+     */
+    _assignmentProvider?.restoreStudentOfferings();
     super.dispose();
   }
 

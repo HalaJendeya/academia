@@ -1459,6 +1459,61 @@ abstract final class AppStrings {
       'ستُخفي الواجب عن الطلاب والمعلّم. لا يمكنك تعديل محتواه الأكاديمي، '
       'ولا إعادته بعد الأرشفة من هنا.';
   static const String assignmentTeacherLabel = 'المعلّم';
+
+  // ===== المرحلة 8.4: شاشة المهام والواجبات الموحَّدة =====
+  //
+  // العرض وحده هو ما يُدمج: /tasks تبقى مهام الطالب الشخصية، و/assignments
+  // تبقى واجبات المعلّم الأكاديمية، ولا تختلط المجموعتان في قاعدة البيانات.
+
+  static const String tasksAndAssignmentsTitle = 'المهام والواجبات';
+
+  // تبويبات الشاشة الموحَّدة.
+  static const String workTabAll = 'الكل';
+  static const String workTabAssignments = 'الواجبات';
+  static const String workTabMyTasks = 'مهامي';
+  static const String workTabCompleted = 'مكتملة';
+
+  /// تمييز مصدر العنصر داخل قائمة مدموجة.
+  static const String workKindAssignment = 'واجب';
+  static const String workKindPersonalTask = 'مهمة شخصية';
+
+  // حالات فارغة صادقة، كلٌّ منها يصف ما ينقص فعلًا.
+  static const String workEmptyAllTitle = 'لا توجد مهام أو واجبات حالياً';
+  static const String workEmptyAllDesc =
+      'ستظهر هنا واجبات مساقاتك ومهامك الشخصية القادمة.';
+  static const String workEmptyAssignmentsTitle = 'لا توجد واجبات حالياً';
+  static const String workEmptyAssignmentsDesc =
+      'لم يضف معلّمو مساقاتك أي واجب حتى الآن.';
+  static const String workEmptyMyTasksTitle = 'لا توجد مهام شخصية حالياً';
+  static const String workEmptyMyTasksDesc =
+      'أضف مهمة لتنظيم وقتك الدراسي.';
+  static const String workEmptyCompletedTitle = 'لا توجد مهام مكتملة';
+  static const String workEmptyCompletedDesc =
+      'ستظهر هنا مهامك الشخصية بعد إنجازها.';
+
+  /// يُعرض في تبويب «مكتملة».
+  ///
+  /// لا يوجد بعد نموذج تسليم أو إنجاز للواجب الأكاديمي لكل طالب، فلا يمكن
+  /// معرفة أن طالبًا بعينه أنهى واجبًا. الشاشة تقول ذلك بدل أن تعرض واجبات
+  /// كأنها مكتملة.
+  static const String workCompletedTasksOnlyNote =
+      'يعرض هذا القسم مهامك الشخصية المكتملة. تسليم الواجبات الأكاديمية غير '
+      'متاح بعد.';
+
+  /// فشل أحد المصدرين بينما نجح الآخر — تُعرض البيانات المتاحة مع تنبيه.
+  /// تسمية مرشِّح «كل المهام» داخل تبويب مهامي، مميَّزة عن تبويب «الكل».
+  static const String workAllMyTasksFilter = 'كل المهام';
+
+  static const String addNewTaskAction = 'إضافة مهمة جديدة';
+  static const String noSearchResultsTitle = 'لا توجد نتائج';
+  static const String noFilterResultsDesc =
+      'لا توجد مهام تطابق خيارات التصفية المحددة.';
+  static const String clearFiltersAction = 'مسح الفلاتر';
+
+  static const String workAssignmentsUnavailableNote =
+      'تعذر تحميل الواجبات. المعروض هنا مهامك الشخصية فقط.';
+  static const String workTasksUnavailableNote =
+      'تعذر تحميل مهامك الشخصية. المعروض هنا الواجبات فقط.';
   /// فعل الإرسال في نموذج الرفع، مميَّز عن عنوان الشاشة حتى لا يتشابه
   /// العنوان مع الزر في الواجهة.
   static const String confirmUploadAction = 'رفع الملف';

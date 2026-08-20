@@ -968,6 +968,64 @@ service cloud.firestore {
     //  covers any collection created before its rules are written.
     //  (This does not revoke grants from the more specific matches above.)
     // ===================================================================
+    // ===================================================================
+    //  المساحة المشتركة — منشورات وتعليقات وإعجابات وبلاغات
+    //
+    //  🔴 مصدر هذا القسم: النسخة المنشورة فعلًا في Firebase (ruleset
+    //  5d22e88d) لا هذا الفرع. زميلٌ نشر قواعد فرعه فحلّت محل قواعد
+    //  المهام والواجبات وطلبات الدعم، فتعطّلت الثلاثة بالرفض الافتراضي.
+    //
+    //  أُعيد نسخه هنا حرفيًا حتى لا يؤدي إصلاحُنا إلى كسر ميزتهم بدوره:
+    //  مجموعة posts تحوي مستندات حيّة. القواعد ملف عالمي واحد، وأي نشر
+    //  يستبدل كل شيء — فالدمج هو الطريقة الوحيدة الصحيحة.
+    // ===================================================================
+    match /posts/{postId} {
+
+      allow read: if isActiveUser();
+
+      allow create: if isActiveUser()
+        && request.resource.data.authorId == request.auth.uid;
+
+      allow update: if isActiveUser()
+        && (
+          request.auth.uid == resource.data.authorId
+          || isActiveAdmin()
+        );
+
+      allow delete: if (isActiveUser() && request.auth.uid == resource.data.authorId)
+        || isActiveAdmin();
+
+      // -----------------------------------------------------------------
+      //  posts/{postId}/comments/{commentId} — التعليقات
+      // -----------------------------------------------------------------
+      match /comments/{commentId} {
+        allow read: if isActiveUser();
+
+        allow create: if isActiveUser()
+          && request.resource.data.authorId == request.auth.uid;
+
+        allow update, delete: if (isActiveUser() && request.auth.uid == resource.data.authorId)
+          || isActiveAdmin();
+      }
+
+      // -----------------------------------------------------------------
+      //  posts/{postId}/likes/{userId} — الإعجابات
+      // -----------------------------------------------------------------
+      match /likes/{userId} {
+        allow read: if isActiveUser();
+        allow write: if isOwner(userId) && isActiveUser();
+      }
+    }
+
+    // ===================================================================
+    //  reports/{reportId} — البلاغات
+    // ===================================================================
+    match /reports/{reportId} {
+      allow create: if isActiveUser()
+        && request.resource.data.reportedBy == request.auth.uid;
+      allow read, update, delete: if isActiveAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

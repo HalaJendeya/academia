@@ -12,7 +12,6 @@ class TaskFilterBar extends StatelessWidget {
     required this.overdueCount,
     required this.onOpenAdvancedFilter,
     this.visibleFilters = TaskQuickFilter.values,
-    this.allLabel,
   });
 
   final TaskQuickFilter selected;
@@ -26,12 +25,6 @@ class TaskFilterBar extends StatelessWidget {
   /// الشاشة الموحَّدة يمرّر مجموعة أضيق: «الكل» و«مكتملة» صارا تبويبين،
   /// وتكرار التسمية نفسها في مستويين يجعل الاختيار غامضًا.
   final List<TaskQuickFilter> visibleFilters;
-
-  /// تسمية بديلة لمرشِّح «الكل».
-  ///
-  /// تُستعمل حين يوجد على الشاشة نفسها تبويب اسمه «الكل»: عنصرا تحكّم
-  /// بالتسمية ذاتها ومعنيين مختلفين يجعلان الاختيار غامضًا على المستخدم.
-  final String? allLabel;
 
   static const Map<TaskQuickFilter, String> _labels = {
     TaskQuickFilter.all: 'الكل',
@@ -52,9 +45,7 @@ class TaskFilterBar extends StatelessWidget {
           children: [
             for (final filter in visibleFilters)
               _FilterPill(
-                label: filter == TaskQuickFilter.all
-                    ? (allLabel ?? _labels[filter]!)
-                    : _labels[filter]!,
+                label: _labels[filter]!,
                 selected: selected == filter,
                 count: filter == TaskQuickFilter.overdue ? overdueCount : null,
                 onTap: () => onChanged(filter),

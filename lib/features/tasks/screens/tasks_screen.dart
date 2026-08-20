@@ -262,6 +262,7 @@ class _TasksScreenState extends State<TasksScreen>
     // فشل المصدرين معًا: لا شيء يُعرض، فالخطأ هو المحتوى.
     if (tasksFailed && assignmentsFailed) {
       return AppErrorState(
+        title: AppStrings.workAllErrorTitle,
         message: taskProvider.errorMessage!,
         onRetry: _retryTasks,
       );
@@ -368,7 +369,10 @@ class _TasksScreenState extends State<TasksScreen>
     }
 
     if (provider.errorMessage != null && provider.assignments.isEmpty) {
-      return AppErrorState(message: provider.errorMessage!);
+      return AppErrorState(
+        title: AppStrings.workAssignmentsErrorTitle,
+        message: provider.errorMessage!,
+      );
     }
 
     final assignments = provider.activeAssignments;
@@ -407,6 +411,7 @@ class _TasksScreenState extends State<TasksScreen>
 
     if (taskProvider.errorMessage != null) {
       return AppErrorState(
+        title: AppStrings.workTasksErrorTitle,
         message: taskProvider.errorMessage!,
         onRetry: _retryTasks,
       );
@@ -437,13 +442,18 @@ class _TasksScreenState extends State<TasksScreen>
           overdueCount: overdueCount,
           onOpenAdvancedFilter: () =>
               _openAdvancedFilter(studentCourses.currentCourses),
-          // «الكل» و«مكتملة» صارا تبويبين؛ تكرارهما هنا يجعل الاختيار غامضًا.
-          allLabel: AppStrings.workAllMyTasksFilter,
+          /*
+           * صف واحد أسفل التبويبات، وفي تبويب «مهامي» وحده.
+           *
+           * «مكتملة» غائبة لأن لها تبويبًا مستقلًا. و«الكل» هنا تعني «كل
+           * مهامي المعلَّقة» داخل هذا التبويب، لا تبويب «الكل» الذي يجمع
+           * المصدرين — ولذلك تأتي بعد المرشِّحات الزمنية لا قبلها.
+           */
           visibleFilters: const [
-            TaskQuickFilter.all,
             TaskQuickFilter.today,
             TaskQuickFilter.overdue,
             TaskQuickFilter.upcoming,
+            TaskQuickFilter.all,
           ],
         ),
         const SizedBox(height: AppSpacing.medium),
@@ -495,6 +505,7 @@ class _TasksScreenState extends State<TasksScreen>
 
     if (taskProvider.errorMessage != null) {
       return AppErrorState(
+        title: AppStrings.workTasksErrorTitle,
         message: taskProvider.errorMessage!,
         onRetry: _retryTasks,
       );

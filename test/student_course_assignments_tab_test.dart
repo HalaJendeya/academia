@@ -55,13 +55,26 @@ class FakeAssignmentProvider extends ChangeNotifier
   void stopListening() {}
 
   /*
-   * Phase 8.4: leaving the tab hands the provider back to the student's
-   * app-wide subscription rather than cancelling it outright.
+   * Regression fix: the tab drives the SELECTED scope only, so leaving it
+   * cannot disturb the student's aggregate subscription.
    */
-  int restoreCalls = 0;
+  int stopSelectedCalls = 0;
 
   @override
-  void restoreStudentOfferings() => restoreCalls++;
+  void stopListeningToSelected() => stopSelectedCalls++;
+
+  @override
+  List<CourseAssignmentModel> get selectedAssignments => assignmentsValue;
+
+  @override
+  List<CourseAssignmentModel> get activeSelectedAssignments =>
+      assignmentsValue.where((a) => a.isActive).toList();
+
+  @override
+  bool get isLoadingSelected => loading;
+
+  @override
+  String? get selectedErrorMessage => error;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

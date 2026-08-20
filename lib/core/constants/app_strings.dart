@@ -1501,14 +1501,29 @@ abstract final class AppStrings {
       'متاح بعد.';
 
   /// فشل أحد المصدرين بينما نجح الآخر — تُعرض البيانات المتاحة مع تنبيه.
-  /// تسمية مرشِّح «كل المهام» داخل تبويب مهامي، مميَّزة عن تبويب «الكل».
-  static const String workAllMyTasksFilter = 'كل المهام';
-
   static const String addNewTaskAction = 'إضافة مهمة جديدة';
   static const String noSearchResultsTitle = 'لا توجد نتائج';
   static const String noFilterResultsDesc =
       'لا توجد مهام تطابق خيارات التصفية المحددة.';
   static const String clearFiltersAction = 'مسح الفلاتر';
+
+  /*
+   * تمييز سبب فشل قراءة الواجبات.
+   *
+   * الرسالة العامة وحدها لا تخبر الطالب بما يفعل. «مرفوض» يعني مشكلة في
+   * الحساب أو التسجيل ويراجَع بها النظام، و«تعذر الاتصال» يعني إعادة
+   * المحاولة. لا يُعرض نص الاستثناء الخام في الحالتين.
+   */
+  static const String assignmentsPermissionDenied =
+      'لا تملك صلاحية عرض واجبات هذه المساقات. تأكد من تسجيلك في المساق أو '
+      'راجع إدارة النظام.';
+  static const String assignmentsUnavailableOffline =
+      'تعذر الاتصال بالخادم. تحقق من الإنترنت ثم أعد المحاولة.';
+
+  /// عناوين خطأ محددة بدل العنوان العام «حدث خطأ ما».
+  static const String workAssignmentsErrorTitle = 'تعذر تحميل الواجبات';
+  static const String workTasksErrorTitle = 'تعذر تحميل المهام';
+  static const String workAllErrorTitle = 'تعذر تحميل المهام والواجبات';
 
   static const String workAssignmentsUnavailableNote =
       'تعذر تحميل الواجبات. المعروض هنا مهامك الشخصية فقط.';

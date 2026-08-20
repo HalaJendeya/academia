@@ -460,13 +460,14 @@ class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
   @override
   void dispose() {
     /*
-     * لا نوقف الاستماع بل نعيد اشتراك الطالب.
+     * إيقاف نطاق «الطرح المختار» وحده.
      *
-     * هذا التبويب يستولي على المزوّد مؤقتًا لطرح واحد؛ إيقافه عند المغادرة
-     * كان يترك شاشة «المهام والواجبات» بلا واجبات إلى حين إشعار لاحق.
-     * مرجع محفوظ لأن قراءة المزوّد من context أثناء dispose غير ممكنة.
+     * لم يعد هذا التبويب يستولي على اشتراك الطالب الكلي: لكلٍّ نطاقه في
+     * المزوّد، فمغادرة الشاشة لا تمسّ شاشة «المهام والواجبات» ولا لوحة
+     * اليوم. مرجع محفوظ لأن قراءة المزوّد من context أثناء dispose غير
+     * ممكنة.
      */
-    _assignmentProvider?.restoreStudentOfferings();
+    _assignmentProvider?.stopListeningToSelected();
     super.dispose();
   }
 
@@ -484,22 +485,24 @@ class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
 
     final provider = context.watch<CourseAssignmentProvider>();
 
-    if (provider.isLoading && provider.assignments.isEmpty) {
+    if (provider.isLoadingSelected && provider.selectedAssignments.isEmpty) {
       return const AppLoadingState();
     }
 
-    if (provider.errorMessage != null && provider.assignments.isEmpty) {
+    if (provider.selectedErrorMessage != null &&
+        provider.selectedAssignments.isEmpty) {
       return AppErrorState(
-        message: provider.errorMessage!,
+        title: AppStrings.workAssignmentsErrorTitle,
+        message: provider.selectedErrorMessage!,
         onRetry: () {
           final assignmentProvider = context.read<CourseAssignmentProvider>();
-          assignmentProvider.stopListening();
+          assignmentProvider.stopListeningToSelected();
           assignmentProvider.listenToOfferingAssignments(offeringId);
         },
       );
     }
 
-    final assignments = provider.activeAssignments;
+    final assignments = provider.activeSelectedAssignments;
 
     if (assignments.isEmpty) {
       return const AppEmptyState(

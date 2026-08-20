@@ -13,6 +13,7 @@ import 'package:academia/features/courses/providers/student_courses_provider.dar
 import 'package:academia/features/enrollments/models/enrollment_model.dart';
 import 'package:academia/features/tasks/models/task_model.dart';
 import 'package:academia/features/tasks/providers/task_provider.dart';
+import 'package:academia/features/tasks/widgets/task_filter_bar.dart';
 import 'package:academia/features/tasks/screens/tasks_screen.dart';
 import 'package:academia/features/tasks/screens/task_detail_screen.dart';
 import 'package:academia/features/tasks/screens/create_edit_task_screen.dart';
@@ -397,8 +398,13 @@ void main() {
       expect(find.text('مهمة اليوم'), findsNothing);
       expect(find.text('مهمة متأخرة'), findsOneWidget);
 
-      // Back to all pending — the pill is labelled distinctly from the tab.
-      await tapFilter(AppStrings.workAllMyTasksFilter);
+      // Back to all pending. 'الكل' appears twice (tab + pill), so target
+      // the pill explicitly rather than by bare text.
+      await tester.tap(find.descendant(
+        of: find.byType(TaskFilterBar),
+        matching: find.text(AppStrings.workTabAll),
+      ));
+      await tester.pumpAndSettle();
       expect(find.text('مهمة اليوم'), findsOneWidget);
       expect(find.text('مهمة متأخرة'), findsOneWidget);
 

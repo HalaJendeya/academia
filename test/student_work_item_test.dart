@@ -381,35 +381,58 @@ void main() {
     });
 
     /*
-     * Course Detail takes the provider over for one offering; leaving it
-     * must hand the student's own subscription back rather than cancel it.
+     * THE DEVICE REGRESSION, pinned.
+     *
+     * Course Detail subscribes to one offering — possibly a historical one
+     * outside the student's current set. Before the scope split it shared
+     * the aggregate subscription, so opening a course silently emptied the
+     * unified Tasks screen and the dashboard. The two scopes are now
+     * independent and neither can disturb the other.
      */
-    test('restoreStudentOfferings re-subscribes after a screen took over', () {
+    test('opening a single offering does NOT disturb the aggregate', () {
       final service = FakeAssignmentService();
       final provider = CourseAssignmentProvider(service);
 
       provider.syncWithAuth(isActiveUser: true, role: 'student');
       provider.syncStudentOfferings(['off1', 'off2']);
 
-      // Course Detail narrows to a single, possibly historical, offering.
       provider.listenToOfferingAssignments('historical');
-      expect(service.perOffering['off1']!.hasListener, isFalse);
 
-      provider.restoreStudentOfferings();
-
+      // The student's aggregate listeners are untouched.
       expect(service.perOffering['off1']!.hasListener, isTrue);
       expect(service.perOffering['off2']!.hasListener, isTrue);
-      expect(service.perOffering['historical']!.hasListener, isFalse);
+      expect(service.perOffering['historical']!.hasListener, isTrue);
     });
 
-    test('restoreStudentOfferings is a no-op for a non-student session', () {
+    test('leaving the single-offering screen keeps the aggregate alive', () {
       final service = FakeAssignmentService();
       final provider = CourseAssignmentProvider(service);
 
-      provider.syncWithAuth(isActiveUser: true, role: 'teacher');
-      provider.restoreStudentOfferings();
+      provider.syncWithAuth(isActiveUser: true, role: 'student');
+      provider.syncStudentOfferings(['off1', 'off2']);
+      provider.listenToOfferingAssignments('historical');
 
-      expect(service.requestedOfferingIds, isEmpty);
+      provider.stopListeningToSelected();
+
+      expect(service.perOffering['historical']!.hasListener, isFalse);
+      expect(service.perOffering['off1']!.hasListener, isTrue);
+      expect(service.perOffering['off2']!.hasListener, isTrue);
+    });
+
+    test('the two scopes keep separate lists', () async {
+      final service = FakeAssignmentService();
+      final provider = CourseAssignmentProvider(service);
+
+      provider.syncWithAuth(isActiveUser: true, role: 'student');
+      provider.syncStudentOfferings(['off1']);
+      provider.listenToOfferingAssignments('historical');
+
+      service.controllerFor('off1').add([_assignment(id: 'agg')]);
+      service.controllerFor('historical').add([_assignment(id: 'sel')]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.assignments.single.id, 'agg');
+      expect(provider.selectedAssignments.single.id, 'sel');
     });
   });
 }

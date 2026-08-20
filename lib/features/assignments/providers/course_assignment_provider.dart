@@ -7,41 +7,69 @@ import '../services/course_assignment_service.dart';
 
 /// الواجبات الأكاديمية عبر الأدوار الثلاثة.
 ///
-/// يتبع النمط الذي أرساه CourseFileProvider: مستمع لكل طرح مصرَّح به، ودمج
-/// في الذاكرة. لا يوجد استعلام عالمي واحد يُصفّى محليًا — القواعد تقيّد
-/// القراءة بالطرح، فاستعلام غير مقيَّد يُرفض من الخادم أصلًا. الاستثناء
-/// الوحيد هو إشراف المشرف، وهو مصرَّح له عالميًا بنص القاعدة.
+/// مجموعة Firestore واحدة `/assignments` وخدمة واحدة، لكن **نطاقَي اشتراك
+/// مستقلين** داخل المزوّد:
 ///
-/// [activeAssignmentCount] استثناء مقصود ومحدود: لوحة المشرف تحتاج رقمًا
-/// واحدًا، ويُقرأ بتجميع من الخادم لا باشتراك.
+///   [aggregate] — عدة طروح دفعةً واحدة: طروح الطالب المسجَّل فيها، أو
+///                 طروح المعلّم المسندة إليه، أو الإشراف العالمي للمشرف.
+///                 لا يملك أي دور أكثر من واحد من هذه في وقت واحد.
+///
+///   [selected]  — طرح واحد بعينه: تبويب الواجبات في تفاصيل المساق.
+///                 قد يكون طرحًا من السجل خارج المجموعة الكلية.
+///
+/// 🔴 الفصل بينهما هو إصلاح انحدار المرحلة 8.4: كان النطاقان يتشاركان قائمة
+/// وقائمة اشتراكات واحدة، فكانت شاشة تفاصيل المساق تستولي عليها لطرح واحد
+/// ثم توقفها عند المغادرة، فتفقد شاشة «المهام والواجبات» ولوحة اليوم
+/// واجباتهما. الترقيع السابق كان دالة استعادة تُستدعى من dispose؛ الآن لا
+/// يوجد ما يُستعاد لأن الشاشتين لا تتشاركان حالة أصلًا.
 class CourseAssignmentProvider extends ChangeNotifier {
   final CourseAssignmentService _service;
 
   CourseAssignmentProvider(this._service);
 
+  // ---------------------------------------------------------- aggregate
+
   List<CourseAssignmentModel> _assignments = const <CourseAssignmentModel>[];
   bool _isLoading = false;
   String? _errorMessage;
 
-  /// مستمع واحد لكل طرح، مفتاحه معرّف الطرح.
+  /// مستمع لكل طرح، مفتاحه معرّف الطرح. لا استعلام عالمي غير مقيَّد إلا
+  /// للمشرف، وهو مصرَّح له بنص القاعدة.
   final Map<String, StreamSubscription<List<CourseAssignmentModel>>>
   _subscriptions = {};
   final Map<String, List<CourseAssignmentModel>> _byOffering = {};
 
   StreamSubscription<List<CourseAssignmentModel>>? _globalSubscription;
 
-  int? _activeAssignmentCount;
-  bool _isLoadingActiveAssignmentCount = false;
-
   List<CourseAssignmentModel> get assignments => _assignments;
 
-  /// النشطة وحدها. الاستعلامات الإنتاجية تُصفّي على الخادم، لكن الإشراف
-  /// العالمي وحالات التخبئة قد تحمل غير ذلك.
   List<CourseAssignmentModel> get activeAssignments =>
       _assignments.where((assignment) => assignment.isActive).toList();
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  // ----------------------------------------------------------- selected
+
+  List<CourseAssignmentModel> _selected = const <CourseAssignmentModel>[];
+  bool _isLoadingSelected = false;
+  String? _selectedErrorMessage;
+  String? _selectedOfferingId;
+  StreamSubscription<List<CourseAssignmentModel>>? _selectedSubscription;
+
+  List<CourseAssignmentModel> get selectedAssignments => _selected;
+
+  List<CourseAssignmentModel> get activeSelectedAssignments =>
+      _selected.where((assignment) => assignment.isActive).toList();
+
+  bool get isLoadingSelected => _isLoadingSelected;
+  String? get selectedErrorMessage => _selectedErrorMessage;
+  String? get selectedOfferingId => _selectedOfferingId;
+
+  // -------------------------------------------------------------- count
+
+  int? _activeAssignmentCount;
+  bool _isLoadingActiveAssignmentCount = false;
 
   /// عدد الواجبات النشطة، أو null إن لم يُقرأ بعد أو فشلت قراءته.
   ///
@@ -61,10 +89,7 @@ class CourseAssignmentProvider extends ChangeNotifier {
     try {
       _activeAssignmentCount = await _service.getActiveAssignmentCount();
     } catch (e) {
-      /*
-       * لا تُكتب رسالة في errorMessage: تلك تخص قائمة الواجبات، وفشل عدّاد
-       * إحصائي يجب ألا يُظهر لوحة المشرف كأنها فشلت.
-       */
+      // فشل عدّاد إحصائي لا يجب أن يُظهر لوحة المشرف كأنها فشلت.
       _activeAssignmentCount = null;
     } finally {
       _isLoadingActiveAssignmentCount = false;
@@ -72,25 +97,55 @@ class CourseAssignmentProvider extends ChangeNotifier {
     }
   }
 
-  /// واجبات طرح واحد: تفاصيل المساق للطالب، وتفاصيل الطرح للمعلّم.
+  // ------------------------------------------------- selected-scope reads
+
+  /// واجبات طرح واحد — تبويب الواجبات في تفاصيل المساق.
+  ///
+  /// نطاق مستقل تمامًا: لا يمسّ اشتراك [aggregate] ولا قائمته، فزيارة
+  /// تفاصيل مساق لم تعد تُفرغ شاشة «المهام والواجبات».
   void listenToOfferingAssignments(String offeringId) {
-    if (offeringId.trim().isEmpty) {
-      stopListening();
-      _assignments = const <CourseAssignmentModel>[];
-      _isLoading = false;
-      notifyListeners();
+    final id = offeringId.trim();
+
+    if (id.isEmpty) {
+      stopListeningToSelected();
       return;
     }
 
-    // المستمع نفسه قائم بالفعل: لا نعيد الاشتراك ولا نُظهر تحميلًا جديدًا.
-    if (_subscriptions.length == 1 &&
-        _subscriptions.containsKey(offeringId.trim()) &&
-        _globalSubscription == null) {
-      return;
-    }
+    if (_selectedOfferingId == id && _selectedSubscription != null) return;
 
-    listenToOfferingsAssignments([offeringId]);
+    _selectedSubscription?.cancel();
+    _selectedOfferingId = id;
+    _selected = const <CourseAssignmentModel>[];
+    _isLoadingSelected = true;
+    _selectedErrorMessage = null;
+    notifyListeners();
+
+    _selectedSubscription = _service.watchOfferingAssignments(id).listen(
+      (data) {
+        _selected = data;
+        _isLoadingSelected = false;
+        _selectedErrorMessage = null;
+        notifyListeners();
+      },
+      onError: (error) {
+        _selected = const <CourseAssignmentModel>[];
+        _isLoadingSelected = false;
+        _selectedErrorMessage = _messageFor(error);
+        notifyListeners();
+      },
+    );
   }
+
+  void stopListeningToSelected() {
+    _selectedSubscription?.cancel();
+    _selectedSubscription = null;
+    _selectedOfferingId = null;
+    _selected = const <CourseAssignmentModel>[];
+    _isLoadingSelected = false;
+    _selectedErrorMessage = null;
+  }
+
+  // ------------------------------------------------ aggregate-scope reads
 
   /// واجبات عدة طروح، بمستمع لكل طرح ودمج في الذاكرة.
   void listenToOfferingsAssignments(List<String> offeringIds) {
@@ -99,7 +154,6 @@ class CourseAssignmentProvider extends ChangeNotifier {
         .where((id) => id.isNotEmpty)
         .toSet();
 
-    // المجموعة نفسها مشتركة بالفعل: إعادة الاشتراك تُومض القائمة بلا سبب.
     if (_globalSubscription == null &&
         _subscriptions.isNotEmpty &&
         _subscriptions.length == unique.length &&
@@ -107,7 +161,7 @@ class CourseAssignmentProvider extends ChangeNotifier {
       return;
     }
 
-    stopListening();
+    _stopAggregate();
 
     if (unique.isEmpty) {
       _assignments = const <CourseAssignmentModel>[];
@@ -139,7 +193,7 @@ class CourseAssignmentProvider extends ChangeNotifier {
                */
               _byOffering.remove(offeringId);
               _isLoading = false;
-              _errorMessage = AppStrings.courseAssignmentsLoadError;
+              _errorMessage = _messageFor(error);
               _rebuildMerged();
               notifyListeners();
             },
@@ -151,7 +205,7 @@ class CourseAssignmentProvider extends ChangeNotifier {
   void listenToAllActiveAssignments() {
     if (_globalSubscription != null) return;
 
-    stopListening();
+    _stopAggregate();
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -166,16 +220,13 @@ class CourseAssignmentProvider extends ChangeNotifier {
       onError: (error) {
         _assignments = const <CourseAssignmentModel>[];
         _isLoading = false;
-        _errorMessage = AppStrings.courseAssignmentsLoadError;
+        _errorMessage = _messageFor(error);
         notifyListeners();
       },
     );
   }
 
-  /// دمج نتائج المستمعين مع إزالة التكرار بالمعرّف.
-  ///
-  /// التكرار ممكن نظريًا لو اشترك المزوّد بالطرح نفسه مرتين؛ المفتاح يمنع
-  /// ذلك، لكن الدمج بالمعرّف يجعل القائمة صحيحة مهما كان مصدرها.
+  /// دمج نتائج المستمعين مع إزالة التكرار بالمعرّف وترتيب حتمي.
   void _rebuildMerged() {
     final byId = <String, CourseAssignmentModel>{};
     for (final list in _byOffering.values) {
@@ -187,13 +238,12 @@ class CourseAssignmentProvider extends ChangeNotifier {
     final merged = byId.values.toList();
     merged.sort((a, b) {
       final byDue = a.dueAt.compareTo(b.dueAt);
-      // ترتيب ثابت عند تساوي الموعد، وإلا اهتزّ ترتيب القائمة بين البثّات.
       return byDue != 0 ? byDue : a.id.compareTo(b.id);
     });
     _assignments = merged;
   }
 
-  void stopListening() {
+  void _stopAggregate() {
     for (final subscription in _subscriptions.values) {
       subscription.cancel();
     }
@@ -204,18 +254,53 @@ class CourseAssignmentProvider extends ChangeNotifier {
     _globalSubscription = null;
   }
 
+  /// يوقف نطاق التجميع. لا يمسّ نطاق الطرح المختار.
+  void stopListening() {
+    _stopAggregate();
+  }
+
   void clearAssignments() {
-    stopListening();
+    _stopAggregate();
     _assignments = const <CourseAssignmentModel>[];
     _isLoading = false;
     _errorMessage = null;
     notifyListeners();
   }
 
+  /*
+   * ترجمة آمنة لأخطاء Firestore.
+   *
+   * لا يُعرض نص الاستثناء الخام للمستخدم أبدًا، لكن التمييز بين «مرفوض»
+   * و«تعذر الاتصال» يغيّر ما يفعله الطالب: الأول يراجع حسابه، والثاني
+   * يعيد المحاولة. الرسالة العامة السابقة لم تكن تفرّق.
+   */
+  static String _messageFor(Object? error) {
+    final code = _firebaseCode(error);
+    switch (code) {
+      case 'permission-denied':
+        return AppStrings.assignmentsPermissionDenied;
+      case 'unavailable':
+      case 'deadline-exceeded':
+        return AppStrings.assignmentsUnavailableOffline;
+      default:
+        return AppStrings.courseAssignmentsLoadError;
+    }
+  }
+
+  /// يقرأ `code` من FirebaseException دون استيراد الحزمة في المزوّد.
+  static String? _firebaseCode(Object? error) {
+    try {
+      final dynamic candidate = error;
+      final code = candidate?.code;
+      return code is String ? code : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ------------------------------------------------------------ lifecycle
+
   /// مجموعة الطروح المشترَك بها نيابةً عن الطالب، أو null إن لم تُضبط بعد.
-  ///
-  /// تُحفظ لتمييز «لم يشترك هذا المزوّد كطالب قط» عن «كان مشتركًا ثم خرج»،
-  /// وهو ما يمنع إيقاف اشتراكات المعلّم أو المشرف عن طريق الخطأ.
   List<String>? _studentOfferingIds;
 
   /// يتبع طروح الطالب المصرَّح له بها، من StudentCoursesProvider.
@@ -223,14 +308,14 @@ class CourseAssignmentProvider extends ChangeNotifier {
   /// يُستدعى من ProxyProvider حتى تكون واجبات الطالب متاحة في التطبيق كله —
   /// شاشة المهام ولوحة اليوم معًا — دون أن تدير كل شاشة اشتراكها بنفسها.
   ///
-  /// [offeringIds] تساوي null لأي جلسة ليست طالبًا نشطًا. في تلك الحالة لا
-  /// يفعل شيئًا إن لم يسبق للمزوّد أن اشترك كطالب: المعلّم والمشرف يقودان
-  /// اشتراكاتهما من شاشاتهما، وإيقافها هنا كان سيُفرغها فور بنائها.
+  /// [offeringIds] تساوي null لأي جلسة ليست طالبًا نشطًا. حينها لا يفعل
+  /// شيئًا ما لم يسبق للمزوّد أن اشترك كطالب: المعلّم والمشرف يقودان
+  /// اشتراكاتهما من شاشاتهما.
   void syncStudentOfferings(List<String>? offeringIds) {
     if (offeringIds == null) {
       if (_studentOfferingIds == null) return;
       _studentOfferingIds = null;
-      stopListening();
+      _stopAggregate();
       _assignments = const <CourseAssignmentModel>[];
       scheduleMicrotask(notifyListeners);
       return;
@@ -252,39 +337,11 @@ class CourseAssignmentProvider extends ChangeNotifier {
           (i) => current[i] == normalized[i],
         ).every((same) => same);
 
-    /*
-     * الخروج المبكر مشروط بأن تكون الاشتراكات الحيّة هي نفسها فعلًا، لا
-     * بأن تتطابق القائمة المحفوظة وحدها: شاشة تفاصيل المساق تشترك بطرح
-     * واحد ثم توقف، فلو اكتفينا بمقارنة القائمة لبقي الطالب بلا اشتراك
-     * حتى إشعار لاحق. المقارنة بالاشتراكات القائمة تجعل الحالة تُصحّح
-     * نفسها.
-     */
-    if (sameSet && _subscriptionsMatch(normalized)) return;
+    // لا حاجة لمقارنة الاشتراكات الحيّة: نطاق الطرح المختار لم يعد يمسّها.
+    if (sameSet) return;
 
     _studentOfferingIds = normalized;
     listenToOfferingsAssignments(normalized);
-  }
-
-  bool _subscriptionsMatch(List<String> offeringIds) {
-    if (_globalSubscription != null) return false;
-    if (_subscriptions.length != offeringIds.length) return false;
-    return offeringIds.every(_subscriptions.containsKey);
-  }
-
-  /// يعيد اشتراك الطالب بعد أن استولت شاشة على المزوّد مؤقتًا.
-  ///
-  /// شاشة تفاصيل المساق تشترك بطرح واحد — وقد يكون طرحًا من السجل ليس ضمن
-  /// مساقات الطالب الحالية — ثم تعيد الحال عند مغادرتها. بدون هذا الاستدعاء
-  /// كانت شاشة «المهام والواجبات» تفقد واجباتها بمجرد زيارة تفاصيل مساق.
-  void restoreStudentOfferings() {
-    final remembered = _studentOfferingIds;
-    if (remembered == null) {
-      // ليست جلسة طالب: المعلّم والمشرف يقودان اشتراكاتهما بأنفسهما.
-      stopListening();
-      return;
-    }
-    if (_subscriptionsMatch(remembered)) return;
-    listenToOfferingsAssignments(remembered);
   }
 
   bool _hadSession = false;
@@ -298,12 +355,12 @@ class CourseAssignmentProvider extends ChangeNotifier {
   void syncWithAuth({required bool isActiveUser, String? role}) {
     if (isActiveUser) {
       if (_hadSession && _lastRole != null && _lastRole != role) {
-        stopListening();
+        _stopAggregate();
+        stopListeningToSelected();
         _assignments = const <CourseAssignmentModel>[];
         _activeAssignmentCount = null;
         _isLoading = false;
         _errorMessage = null;
-        // الطروح المحفوظة تخص الحساب السابق؛ تركها يمنع إعادة الاشتراك.
         _studentOfferingIds = null;
       }
       _hadSession = true;
@@ -318,7 +375,8 @@ class CourseAssignmentProvider extends ChangeNotifier {
     _studentOfferingIds = null;
     if (!hadState) return;
 
-    stopListening();
+    _stopAggregate();
+    stopListeningToSelected();
     _assignments = const <CourseAssignmentModel>[];
     _activeAssignmentCount = null;
     _isLoading = false;

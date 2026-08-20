@@ -2478,6 +2478,115 @@ t('30z. teacher still cannot read a student personal task', {
   existing: { userId: 'student1', title: 'مهمة', status: 'pending' },
 });
 
+// --- 31. Shared space: posts / comments / likes / reports ----------------
+//
+// These rules came from a teammate's branch and were only ever present in
+// the DEPLOYED ruleset — never in git. Deploying this file without them
+// silently deleted them once already (and their branch's deploy deleted
+// tasks, assignments and supportRequests in turn, which is what broke the
+// app). They are pinned here so neither direction of that trade can happen
+// again unnoticed.
+
+t('31a. active user reads a post', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/p1',
+  method: 'get',
+  existing: { authorId: 'student2' },
+});
+t('31b. author creates their own post', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/p2',
+  method: 'create',
+  data: { authorId: 'student1' },
+});
+t('31c. creating a post as somebody else denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'posts/p2',
+  method: 'create',
+  data: { authorId: 'student2' },
+});
+t('31d. non-author editing a post denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'posts/p1',
+  method: 'update',
+  data: { authorId: 'student2', text: 'x' },
+  existing: { authorId: 'student2' },
+});
+t('31e. author deletes their own post', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/p1',
+  method: 'delete',
+  existing: { authorId: 'student1' },
+});
+t('31f. admin moderates any post', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'posts/p1',
+  method: 'delete',
+  existing: { authorId: 'student2' },
+});
+t('31g. author creates a comment', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/p1/comments/c1',
+  method: 'create',
+  data: { authorId: 'student1' },
+});
+t('31h. non-author deleting a comment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'posts/p1/comments/c1',
+  method: 'delete',
+  existing: { authorId: 'student2' },
+});
+t('31i. a user likes as themselves', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/p1/likes/student1',
+  method: 'create',
+  data: { createdAt: TIME },
+});
+t('31j. liking on behalf of someone else denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'posts/p1/likes/student2',
+  method: 'create',
+  data: { createdAt: TIME },
+});
+t('31k. user files a report as themselves', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'reports/r1',
+  method: 'create',
+  data: { reportedBy: 'student1', postId: 'p1' },
+});
+t('31l. reading reports is admin-only', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'reports/r1',
+  method: 'get',
+  existing: { reportedBy: 'student1' },
+});
+t('31m. admin reads reports', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'reports/r1',
+  method: 'get',
+  existing: { reportedBy: 'student1' },
+});
+t('31n. unauthenticated post read denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'posts/p1',
+  method: 'get',
+  existing: { authorId: 'student1' },
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {

@@ -28,7 +28,22 @@ class StudentWorkItem {
     required this.dueAt,
     this.task,
     this.assignment,
+    this.assignmentCompletedAt,
+    this.assignmentCompleted = false,
   });
+
+  /*
+   * إنجاز الواجب يُحقن ولا يُقرأ من النموذج.
+   *
+   * [CourseAssignmentModel] مشترك بين كل طلاب الطرح ولا يحمل — ولا يجوز أن
+   * يحمل — إنجاز طالب بعينه. العلامة تأتي من /assignmentProgress عبر
+   * [AssignmentProgressProvider]، ويمرّرها من يبني القائمة. المهمة الشخصية
+   * بخلاف ذلك تحمل حالتها في نموذجها لأن الطالب يملكها وحده.
+   */
+  final bool assignmentCompleted;
+
+  /// لحظة وضع علامة الإنجاز على الواجب، إن وُجدت.
+  final DateTime? assignmentCompletedAt;
 
   factory StudentWorkItem.fromTask(TaskModel task) {
     return StudentWorkItem._(
@@ -41,13 +56,19 @@ class StudentWorkItem {
     );
   }
 
-  factory StudentWorkItem.fromAssignment(CourseAssignmentModel assignment) {
+  factory StudentWorkItem.fromAssignment(
+    CourseAssignmentModel assignment, {
+    bool isCompleted = false,
+    DateTime? completedAt,
+  }) {
     return StudentWorkItem._(
       kind: StudentWorkKind.academicAssignment,
       id: 'assignment:${assignment.id}',
       title: assignment.title,
       dueAt: assignment.dueAt,
       assignment: assignment,
+      assignmentCompleted: isCompleted,
+      assignmentCompletedAt: completedAt,
     );
   }
 
@@ -66,20 +87,56 @@ class StudentWorkItem {
   bool get isPersonalTask => kind == StudentWorkKind.personalTask;
   bool get isAcademicAssignment => kind == StudentWorkKind.academicAssignment;
 
+  /// هل أنهى الطالب هذا العنصر؟
+  ///
+  /// للمهمة: حالتها المخزَّنة. للواجب: علامة الطالب الشخصية، لا حالة
+  /// الواجب — المؤرشف ليس منجزًا، بل مسحوبًا.
+  bool get isCompleted {
+    switch (kind) {
+      case StudentWorkKind.personalTask:
+        return task!.isCompleted;
+      case StudentWorkKind.academicAssignment:
+        return assignmentCompleted;
+    }
+  }
+
+  /// لحظة الإنجاز، للترتيب في تبويب «مكتملة».
+  DateTime? get completedAt {
+    switch (kind) {
+      case StudentWorkKind.personalTask:
+        return task!.completedAt;
+      case StudentWorkKind.academicAssignment:
+        return assignmentCompletedAt;
+    }
+  }
+
   /// هل يظهر هذا العنصر ضمن العمل المفتوح؟
   ///
   /// المهمة المكتملة والواجب المؤرشف كلاهما خارج «الكل»: الأول أنهاه
-  /// الطالب، والثاني سحبه المعلّم.
+  /// الطالب، والثاني سحبه المعلّم. والواجب الذي وضع الطالب عليه علامة
+  /// الإنجاز يخرج أيضًا، بالسلوك نفسه المطبَّق على المهمة المكتملة.
   bool get isOpen {
     switch (kind) {
       case StudentWorkKind.personalTask:
         return task!.isPending;
       case StudentWorkKind.academicAssignment:
-        return assignment!.isActive;
+        return assignment!.isActive && !assignmentCompleted;
     }
   }
 
+  /*
+   * الإنجاز يسبق الحالة الزمنية.
+   *
+   * واجب فات موعده ووضع الطالب عليه علامة الإنجاز ليس عملًا متأخرًا: لم
+   * يعد عليه شيء. [TaskModel] يفعل الشيء نفسه بالضبط — دواله الزمنية تعيد
+   * false للمهمة المكتملة — والواجب يتبع القاعدة نفسها حتى لا يختلف
+   * المصدران في عدّاد واحد.
+   *
+   * وهذا لا يمسّ [CourseAssignmentModel.isOverdue]: ذاك يصف الموعد الذي
+   * كتبه المعلّم ويبقى صحيحًا كما هو.
+   */
   bool isOverdue({DateTime? relativeTo}) {
+    if (isCompleted) return false;
     switch (kind) {
       case StudentWorkKind.personalTask:
         return task!.isOverdue(relativeTo: relativeTo);
@@ -89,6 +146,7 @@ class StudentWorkItem {
   }
 
   bool isDueToday({DateTime? relativeTo}) {
+    if (isCompleted) return false;
     switch (kind) {
       case StudentWorkKind.personalTask:
         return task!.isToday(relativeTo: relativeTo);
@@ -149,15 +207,27 @@ class StudentWorkItem {
   ///
   /// [tasks] و[assignments] تُقرآن من مزوّديهما دون تعديل: هذه الدالة لا
   /// تملك أيًّا منهما ولا تكتب فيهما.
+  /// [completedAssignmentIds] و[assignmentCompletionTimes] تأتيان من
+  /// [AssignmentProgressProvider]. تركهما فارغتين يعني «لا علامات إنجاز»،
+  /// وهو السلوك الصحيح لأي شاشة لم تُوصَّل بالمزوّد بعد.
   static List<StudentWorkItem> merge({
     required Iterable<TaskModel> tasks,
     required Iterable<CourseAssignmentModel> assignments,
     DateTime? relativeTo,
     bool openOnly = true,
+    Set<String> completedAssignmentIds = const <String>{},
+    Map<String, DateTime?> assignmentCompletionTimes =
+        const <String, DateTime?>{},
   }) {
     final items = <StudentWorkItem>[
       ...tasks.map(StudentWorkItem.fromTask),
-      ...assignments.map(StudentWorkItem.fromAssignment),
+      ...assignments.map(
+        (assignment) => StudentWorkItem.fromAssignment(
+          assignment,
+          isCompleted: completedAssignmentIds.contains(assignment.id),
+          completedAt: assignmentCompletionTimes[assignment.id],
+        ),
+      ),
     ];
 
     final filtered = openOnly

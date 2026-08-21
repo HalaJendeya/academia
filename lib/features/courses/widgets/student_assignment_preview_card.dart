@@ -18,10 +18,18 @@ class AssignmentPreviewCard extends StatelessWidget {
     super.key,
     required this.assignment,
     this.onViewDetailsTap,
+    this.isCompleted = false,
   });
 
   final CourseAssignmentModel assignment;
   final VoidCallback? onViewDetailsTap;
+
+  /// علامة الإنجاز الشخصية للطالب الحالي.
+  ///
+  /// تُمرَّر من الأعلى ولا تُقرأ من [assignment]: مستند الواجب مشترك بين كل
+  /// طلاب الطرح، والعلامة تخصّ طالبًا واحدًا. البطاقة نفسها تُستعمل في
+  /// سياقات لا إنجاز فيها (تفاصيل المساق) فتبقى القيمة الافتراضية false.
+  final bool isCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +38,13 @@ class AssignmentPreviewCard extends StatelessWidget {
      * مخزَّن: واجب «قريب» أمس هو «متأخر» اليوم دون أن يكتب أحد شيئًا.
      *
      * المتأخر يسبق المستحق اليوم — واجب فات موعده صباحًا متأخر لا مستحق.
+     *
+     * الإنجاز يلغيها كلها: واجب أنهاه الطالب ليس متأخرًا مهما فات موعده،
+     * فإبراز «متأخر» عليه يطالبه بعمل أدّاه فعلًا.
      */
-    final dueState = AssignmentDueStateBadge.resolve(assignment);
+    final dueState = isCompleted
+        ? null
+        : AssignmentDueStateBadge.resolve(assignment);
     final urgent = dueState != null;
 
     return AppCard(
@@ -89,7 +102,15 @@ class AssignmentPreviewCard extends StatelessWidget {
             runSpacing: 6,
             children: [
               AssignmentPriorityBadge(priority: assignment.priority),
-              AssignmentDueStateBadge(assignment: assignment),
+              if (isCompleted)
+                AppStatusBadge(
+                  label: AppStrings.assignmentCompletedBadge,
+                  backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
+                  foregroundColor: AppColors.secondary,
+                  icon: Icons.task_alt_rounded,
+                )
+              else
+                AssignmentDueStateBadge(assignment: assignment),
             ],
           ),
           /*

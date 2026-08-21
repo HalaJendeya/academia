@@ -20,6 +20,7 @@ import 'package:academia/features/courses/providers/student_courses_provider.dar
 import 'package:academia/features/courses/screens/student_courses_screen.dart';
 import 'package:academia/features/dashboard/screens/dashboard_screen.dart';
 import 'package:academia/features/enrollments/providers/enrollment_provider.dart';
+import 'package:academia/features/assignments/providers/assignment_progress_provider.dart';
 import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/files/providers/course_file_provider.dart';
 import 'package:academia/features/semesters/models/semester_model.dart';
@@ -63,6 +64,38 @@ const _studentUser = AppUserModel(
 );
 
 // ------------------------------------------------------------------ fakes
+
+/// A student with no completion marks.
+///
+/// The dashboard's workload summary now subtracts assignments the student
+/// has finished, so it needs this provider. Empty keeps these suites
+/// asserting exactly what they asserted before the feature existed.
+class InertProgressProvider extends ChangeNotifier
+    implements AssignmentProgressProvider {
+  @override
+  Set<String> get completedAssignmentIds => const <String>{};
+
+  @override
+  Map<String, DateTime?> get completionTimes => const <String, DateTime?>{};
+
+  @override
+  bool isCompleted(String assignmentId) => false;
+
+  @override
+  DateTime? completedAt(String assignmentId) => null;
+
+  @override
+  bool isSaving(String assignmentId) => false;
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
   FakeAuthProvider({required this.user});
@@ -359,6 +392,9 @@ void main() {
        */
       ChangeNotifierProvider<CourseAssignmentProvider>.value(
         value: assignmentProvider ?? FakeCourseAssignmentProvider(),
+      ),
+      ChangeNotifierProvider<AssignmentProgressProvider>(
+        create: (_) => InertProgressProvider(),
       ),
     ];
 
@@ -663,6 +699,9 @@ void main() {
       ChangeNotifierProvider<TaskProvider>(create: (_) => FakeTaskProvider()),
       ChangeNotifierProvider<CourseAssignmentProvider>(
         create: (_) => InertAssignmentProvider(),
+      ),
+      ChangeNotifierProvider<AssignmentProgressProvider>(
+        create: (_) => InertProgressProvider(),
       ),
     ];
 

@@ -16,7 +16,10 @@ import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../curriculum/models/curriculum_course_model.dart';
+import '../../assignments/models/course_assignment_model.dart';
 import '../../assignments/providers/course_assignment_provider.dart';
+import '../../assignments/screens/student_assignment_details_screen.dart';
+import '../../../app/app_routes.dart';
 import '../widgets/student_assignment_preview_card.dart';
 import '../../files/models/course_file_model.dart';
 import '../../files/providers/course_file_provider.dart';
@@ -471,6 +474,20 @@ class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
     super.dispose();
   }
 
+  /// يفتح تفاصيل الواجب فوق شاشة المساق، بمسار الطالب لا مسار المعلّم.
+  ///
+  /// push لا pushReplacement: شاشة المساق تبقى تحت، فيعود زرّ الرجوع إلى
+  /// التبويب نفسه ويبقى شريط التنقّل السفلي كما هو.
+  void _openAssignmentDetails(
+    BuildContext context,
+    CourseAssignmentModel assignment,
+  ) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.assignmentDetails,
+      arguments: StudentAssignmentDetailsArgs(assignment: assignment),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final offeringId = widget.offeringId;
@@ -518,7 +535,13 @@ class _CourseAssignmentsTabState extends State<_CourseAssignmentsTab> {
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.small),
-          child: AssignmentPreviewCard(assignment: assignments[index]),
+          child: AssignmentPreviewCard(
+            assignment: assignments[index],
+            onViewDetailsTap: () => _openAssignmentDetails(
+              context,
+              assignments[index],
+            ),
+          ),
         );
       },
     );

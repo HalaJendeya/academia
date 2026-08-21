@@ -21,7 +21,7 @@
  *
  * Usage:
  *   node tool/provision_teacher/provision_teacher.js \
- *     --email teacher@example.edu --name "د. سارة قاسم"
+ *     --email teacher@example.edu --name "Example Teacher"
  *
  *   --dry-run   report what would happen, write nothing
  *

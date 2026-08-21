@@ -43,7 +43,20 @@ class AppPrimaryButton extends StatelessWidget {
             Icon(icon, size: 20, color: Colors.white),
             const SizedBox(width: AppSpacing.small),
           ],
-          Text(label, style: AppTextStyles.primaryButton),
+          /*
+           * Flexible لا Text مباشرة: الزرّ ذو العرض الكامل يعطي المحتوى
+           * عرضًا محدودًا، ونصّ عربي طويل مع أيقونة كان يفيض عنه بدل أن
+           * يُقتطع. لا يغيّر هذا شيئًا للتسميات القصيرة.
+           */
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.primaryButton,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ],
     );

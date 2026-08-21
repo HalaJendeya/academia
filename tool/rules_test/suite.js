@@ -2558,26 +2558,137 @@ t('31j. liking on behalf of someone else denied', {
   method: 'create',
   data: { createdAt: TIME },
 });
+/*
+ * The report collection is postReports, not reports.
+ *
+ * An earlier merge copied the teammate's block verbatim and pinned the
+ * wrong collection name — PostService writes postReports, so the rules
+ * being tested guarded a collection nothing uses while the real one fell
+ * through to the default deny. These cases now follow the deployed shape:
+ * reporterId (not reportedBy), and the five required keys.
+ */
+const REPORT_DOC = {
+  postId: 'p1',
+  courseId: COURSE,
+  reporterId: 'student1',
+  reason: 'محتوى غير لائق',
+  status: 'pending',
+};
+
 t('31k. user files a report as themselves', {
   expect: 'ALLOW',
   uid: 'student1',
-  path: 'reports/r1',
+  path: 'postReports/r1',
   method: 'create',
-  data: { reportedBy: 'student1', postId: 'p1' },
+  data: REPORT_DOC,
+});
+t('31k2. filing a report as somebody else denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'postReports/r1',
+  method: 'create',
+  data: { ...REPORT_DOC, reporterId: 'student2' },
+});
+t('31k3. a report created already resolved denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'postReports/r1',
+  method: 'create',
+  data: { ...REPORT_DOC, status: 'resolved' },
 });
 t('31l. reading reports is admin-only', {
   expect: 'DENY',
   uid: 'student1',
-  path: 'reports/r1',
+  path: 'postReports/r1',
   method: 'get',
-  existing: { reportedBy: 'student1' },
+  existing: REPORT_DOC,
 });
 t('31m. admin reads reports', {
   expect: 'ALLOW',
   uid: 'admin1',
-  path: 'reports/r1',
+  path: 'postReports/r1',
   method: 'get',
-  existing: { reportedBy: 'student1' },
+  existing: REPORT_DOC,
+});
+t('31m2. admin resolves a report', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'postReports/r1',
+  method: 'update',
+  data: { ...REPORT_DOC, status: 'resolved' },
+  existing: REPORT_DOC,
+});
+t('31m3. reporter resolving their own report denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'postReports/r1',
+  method: 'update',
+  data: { ...REPORT_DOC, status: 'resolved' },
+  existing: REPORT_DOC,
+});
+
+/*
+ * In-app notifications, adopted from the deployed ruleset in the same
+ * reconciliation. The publisher writes the recipient's document — that is
+ * why create is not owner-scoped — so the read and update rules are the
+ * only thing standing between a user and someone else's notifications.
+ */
+const NOTIFICATION_DOC = {
+  recipientId: 'student2',
+  type: 'new_post',
+  isRead: false,
+};
+
+t('31o. recipient reads their own notification', {
+  expect: 'ALLOW',
+  uid: 'student2',
+  path: 'notifications/n1',
+  method: 'get',
+  existing: NOTIFICATION_DOC,
+});
+t('31p. reading another user notification denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/n1',
+  method: 'get',
+  existing: NOTIFICATION_DOC,
+});
+t('31q. active user notifies a classmate', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'notifications/n2',
+  method: 'create',
+  data: NOTIFICATION_DOC,
+});
+t('31r. a notification created already read denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/n2',
+  method: 'create',
+  data: { ...NOTIFICATION_DOC, isRead: true },
+});
+t('31s. recipient marks their notification read', {
+  expect: 'ALLOW',
+  uid: 'student2',
+  path: 'notifications/n1',
+  method: 'update',
+  data: { ...NOTIFICATION_DOC, isRead: true },
+  existing: NOTIFICATION_DOC,
+});
+t('31t. non-recipient marking a notification read denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/n1',
+  method: 'update',
+  data: { ...NOTIFICATION_DOC, isRead: true },
+  existing: NOTIFICATION_DOC,
+});
+t('31u. deleting a notification denied for its recipient', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'notifications/n1',
+  method: 'delete',
+  existing: NOTIFICATION_DOC,
 });
 t('31n. unauthenticated post read denied', {
   expect: 'DENY',
@@ -2585,6 +2696,200 @@ t('31n. unauthenticated post read denied', {
   path: 'posts/p1',
   method: 'get',
   existing: { authorId: 'student1' },
+});
+
+// --- 32. assignmentProgress: private per-student completion marks --------
+//
+// The whole point of this collection is that it is NOT a field on
+// /assignments. These cases pin both halves of that: a student owns their
+// own mark completely, and NOBODY else can read or write it — not a
+// classmate, not the teacher who set the assignment, not an admin.
+
+const ASSIGNMENT_ID = 'assign1';
+const PROGRESS_ID = `student1_${ASSIGNMENT_ID}`;
+const OTHER_PROGRESS_ID = `student2_${ASSIGNMENT_ID}`;
+
+const PROGRESS_DOC = {
+  studentId: 'student1',
+  assignmentId: ASSIGNMENT_ID,
+  isCompleted: true,
+  updatedAt: TIME,
+};
+
+const OTHER_PROGRESS_DOC = { ...PROGRESS_DOC, studentId: 'student2' };
+
+// ---- the owner has full control of their own mark ----
+t('32a. student reads own progress', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'get',
+  existing: PROGRESS_DOC,
+});
+t('32b. student creates own progress', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'create',
+  data: PROGRESS_DOC,
+});
+t('32c. student updates own progress (undo)', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'update',
+  data: { ...PROGRESS_DOC, isCompleted: false },
+  existing: PROGRESS_DOC,
+});
+t('32d. student deletes own progress', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'delete',
+  existing: PROGRESS_DOC,
+});
+
+// ---- nobody else, in either direction ----
+t('32e. student reading a classmate progress denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${OTHER_PROGRESS_ID}`,
+  method: 'get',
+  existing: OTHER_PROGRESS_DOC,
+});
+t('32f. student writing a classmate progress denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${OTHER_PROGRESS_ID}`,
+  method: 'update',
+  data: { ...OTHER_PROGRESS_DOC, isCompleted: false },
+  existing: OTHER_PROGRESS_DOC,
+});
+t('32g. student deleting a classmate progress denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${OTHER_PROGRESS_ID}`,
+  method: 'delete',
+  existing: OTHER_PROGRESS_DOC,
+});
+
+/*
+ * Spoofing, both shapes.
+ *
+ * 32h writes somebody else's uid into a path that matches it — the ID is
+ * consistent, the token is not. 32i keeps the caller's own path but claims
+ * a different studentId, so the ID and the field disagree. Either alone
+ * would be a hole; both are closed.
+ */
+t('32h. student creating progress as another student denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${OTHER_PROGRESS_ID}`,
+  method: 'create',
+  data: OTHER_PROGRESS_DOC,
+});
+t('32i. spoofed studentId that disagrees with the document ID denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'create',
+  data: { ...PROGRESS_DOC, studentId: 'student2' },
+});
+t('32j. progress at a mismatched document ID denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'assignmentProgress/whatever',
+  method: 'create',
+  data: PROGRESS_DOC,
+});
+
+// ---- the pair is frozen; only the mark moves ----
+t('32k. reassigning progress to another assignment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'update',
+  data: { ...PROGRESS_DOC, assignmentId: 'assign2' },
+  existing: PROGRESS_DOC,
+});
+t('32l. a non-boolean completion flag denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'create',
+  data: { ...PROGRESS_DOC, isCompleted: 'yes' },
+});
+t('32m. progress with no assignmentId denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'create',
+  data: { ...PROGRESS_DOC, assignmentId: '' },
+});
+
+// ---- staff are outsiders here ----
+//
+// The teacher owns the ASSIGNMENT; they do not own the student's private
+// note about it. This is the default expectation for the feature, and is
+// asserted rather than assumed.
+t('32n. teacher reading student progress denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'get',
+  existing: PROGRESS_DOC,
+});
+t('32o. teacher writing student progress denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'update',
+  data: { ...PROGRESS_DOC, isCompleted: false },
+  existing: PROGRESS_DOC,
+});
+t('32p. admin reading student progress denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'get',
+  existing: PROGRESS_DOC,
+});
+
+// ---- disabled and unauthenticated ----
+t('32q. a disabled student account has no access', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'assignmentProgress/disabled1_assign1',
+  method: 'create',
+  data: { ...PROGRESS_DOC, studentId: 'disabled1' },
+});
+t('32r. unauthenticated read denied', {
+  expect: 'DENY',
+  uid: null,
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'get',
+  existing: PROGRESS_DOC,
+});
+t('32s. unauthenticated write denied', {
+  expect: 'DENY',
+  uid: null,
+  path: `assignmentProgress/${PROGRESS_ID}`,
+  method: 'create',
+  data: PROGRESS_DOC,
+});
+
+/*
+ * The point of the whole design: completion never touches the shared
+ * assignment document. If a student could write /assignments, none of the
+ * isolation above would matter.
+ */
+t('32t. student still cannot write the shared assignment document', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `assignments/${ASSIGNMENT_ID}`,
+  method: 'update',
+  data: { ...TEST_ASSIGNMENT_DOC, status: 'archived' },
+  existing: TEST_ASSIGNMENT_DOC,
 });
 
 // ------------------------------------------------------------------- runner

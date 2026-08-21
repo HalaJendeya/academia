@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:academia/core/constants/app_strings.dart';
 import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/assignment_progress_provider.dart';
 import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
 import 'package:academia/features/auth/models/app_user_model.dart';
 import 'package:academia/features/auth/providers/auth_provider.dart';
@@ -17,6 +18,36 @@ import 'package:academia/features/tasks/widgets/task_filter_bar.dart';
 import 'package:academia/features/tasks/screens/tasks_screen.dart';
 import 'package:academia/features/tasks/screens/task_detail_screen.dart';
 import 'package:academia/features/tasks/screens/create_edit_task_screen.dart';
+
+/// No completion marks. These suites predate the feature and assert the
+/// behaviour of a student who has not marked anything done, so the empty
+/// provider keeps their expectations exactly as they were.
+class FakeProgressProvider extends ChangeNotifier
+    implements AssignmentProgressProvider {
+  @override
+  Set<String> get completedAssignmentIds => const <String>{};
+
+  @override
+  Map<String, DateTime?> get completionTimes => const <String, DateTime?>{};
+
+  @override
+  bool isCompleted(String assignmentId) => false;
+
+  @override
+  DateTime? completedAt(String assignmentId) => null;
+
+  @override
+  bool isSaving(String assignmentId) => false;
+
+  @override
+  bool get isLoading => false;
+
+  @override
+  String? get errorMessage => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class FakeAuthProvider extends ChangeNotifier implements AuthProvider {
   @override
@@ -206,6 +237,9 @@ Widget _wrap({
       ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
       ChangeNotifierProvider<CourseAssignmentProvider>.value(
         value: assignmentProvider ?? FakeAssignmentProvider(),
+      ),
+      ChangeNotifierProvider<AssignmentProgressProvider>(
+        create: (_) => FakeProgressProvider(),
       ),
     ],
     child: MaterialApp(

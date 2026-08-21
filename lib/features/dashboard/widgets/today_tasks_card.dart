@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../assignments/models/course_assignment_model.dart';
+import '../../assignments/providers/assignment_progress_provider.dart';
 import '../../assignments/providers/course_assignment_provider.dart';
 import '../../tasks/models/student_work_item.dart';
 import '../../tasks/providers/task_provider.dart';
@@ -47,6 +48,14 @@ class TodayTasksCard extends StatelessWidget {
     final provider = context.watch<TaskProvider>();
     // الواجبات مصدر ثانٍ مستقل؛ فشله لا يُسقط ملخص المهام والعكس.
     final assignmentProvider = context.watch<CourseAssignmentProvider>();
+    /*
+     * علامات الإنجاز الشخصية تدخل في العدّ.
+     *
+     * بدونها يبقى واجب أنهاه الطالب محسوبًا ضمن «متأخر»، فتناقض اللوحة
+     * شاشة «المهام والواجبات» التي أخرجته — وهو أسوأ من عدد خاطئ: عددان
+     * مختلفان لنفس السؤال.
+     */
+    final progressProvider = context.watch<AssignmentProgressProvider>();
     final reference = now ?? DateTime.now();
 
     return AppCard(
@@ -56,7 +65,13 @@ class TodayTasksCard extends StatelessWidget {
         children: [
           _buildHeader(context),
           const SizedBox(height: AppSpacing.small),
-          _buildBody(context, provider, assignmentProvider, reference),
+          _buildBody(
+            context,
+            provider,
+            assignmentProvider,
+            progressProvider,
+            reference,
+          ),
         ],
       ),
     );
@@ -116,6 +131,7 @@ class TodayTasksCard extends StatelessWidget {
     BuildContext context,
     TaskProvider provider,
     CourseAssignmentProvider assignmentProvider,
+    AssignmentProgressProvider progressProvider,
     DateTime reference,
   ) {
     /*
@@ -162,6 +178,8 @@ class TodayTasksCard extends StatelessWidget {
           ? const <CourseAssignmentModel>[]
           : assignmentProvider.activeAssignments,
       relativeTo: reference,
+      completedAssignmentIds: progressProvider.completedAssignmentIds,
+      assignmentCompletionTimes: progressProvider.completionTimes,
     );
 
     final overdueCount = items

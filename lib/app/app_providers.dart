@@ -11,7 +11,9 @@ import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
+import '../features/assignments/providers/assignment_progress_provider.dart';
 import '../features/assignments/providers/course_assignment_provider.dart';
+import '../features/assignments/services/assignment_progress_service.dart';
 import '../features/assignments/services/course_assignment_service.dart';
 import '../features/admin/providers/admin_teacher_provider.dart';
 import '../features/admin/services/admin_teacher_service.dart';
@@ -239,6 +241,33 @@ final List<SingleChildWidget> appProviders = [
       );
       return provider;
     },
+  ),
+  /*
+   * علامات الإنجاز الشخصية على الواجبات.
+   *
+   * الشرط "طالب نشط" لا "مسجَّل دخول"، للسبب نفسه الذي يقيّد TaskProvider:
+   * المعلّم والمشرف ليس لهما تقدّم شخصي، وفتح المستمع لهما ينتج استعلامًا
+   * على assignmentProgress ترفضه القاعدة بحق.
+   *
+   * مزوّد مستقل عن CourseAssignmentProvider: ذاك يخدم الأدوار الثلاثة،
+   * وهذا خاص بالطالب — والمجموعتان في Firestore منفصلتان أصلًا.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, AssignmentProgressProvider>(
+    create: (_) => AssignmentProgressProvider(AssignmentProgressService()),
+    update: (_, auth, provider) => provider!
+      ..syncWithUser(
+        /*
+         * المعرّف من الملف المحمَّل لا من FirebaseAuth مباشرةً.
+         *
+         * الشرط أعلاه يقرأ isStudent و isAccountActive من
+         * currentUserProfile أصلًا، فمتى تحقّق كان الملف موجودًا ومعرّفه
+         * هو معرّف المصادقة نفسه. قراءته من مصدر واحد تُغلق النافذة التي
+         * يكون فيها المستخدم معروفًا ودورُه لم يُقرأ بعد.
+         */
+        studentId: auth.isLoggedIn && auth.isStudent && auth.isAccountActive
+            ? auth.currentUserProfile?.uid
+            : null,
+      ),
   ),
   ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider, TaskProvider>(
     create: (_) => TaskProvider(TaskService()),

@@ -9,7 +9,10 @@ import 'package:provider/provider.dart';
 import 'package:academia/app/app_routes.dart';
 import 'package:academia/core/constants/app_strings.dart';
 import 'package:academia/features/assignments/models/course_assignment_model.dart';
+import 'package:academia/features/assignments/providers/assignment_progress_provider.dart';
 import 'package:academia/features/assignments/providers/course_assignment_provider.dart';
+import 'package:academia/features/assignments/models/assignment_progress_model.dart';
+import 'package:academia/features/assignments/services/assignment_progress_service.dart';
 import 'package:academia/features/assignments/services/course_assignment_service.dart';
 import 'package:academia/features/auth/models/app_user_model.dart';
 import 'package:academia/features/auth/providers/auth_provider.dart';
@@ -51,6 +54,28 @@ class FakeTaskService implements TaskService {
   Stream<List<TaskModel>> watchTasks(String userId) {
     watchedUserIds.add(userId);
     return controller.stream;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Progress reads that never resolve to a mark.
+///
+/// This suite mirrors app_providers with REAL providers over fake services,
+/// so the progress provider is wired the same way here — which also proves
+/// its auth gating opens no listener for a non-student session.
+class FakeProgressService implements AssignmentProgressService {
+  final watchedStudentIds = <String>[];
+
+  @override
+  Stream<List<AssignmentProgressModel>> watchStudentProgress(
+    String studentId,
+  ) {
+    watchedStudentIds.add(studentId);
+    return Stream<List<AssignmentProgressModel>>.value(
+      const <AssignmentProgressModel>[],
+    );
   }
 
   @override
@@ -222,6 +247,7 @@ class Harness {
   final FakeStudentCoursesProvider courses;
   final FakeTaskService taskService;
   final FakeAssignmentService assignmentService;
+  final FakeProgressService progressService = FakeProgressService();
 
   Widget build() {
     return MultiProvider(
@@ -229,6 +255,15 @@ class Harness {
         ChangeNotifierProvider<AuthProvider>.value(value: auth),
         ChangeNotifierProvider<StudentCoursesProvider>.value(value: courses),
         // The same ProxyProvider shapes app_providers registers.
+        ChangeNotifierProxyProvider<AuthProvider, AssignmentProgressProvider>(
+          create: (_) => AssignmentProgressProvider(progressService),
+          update: (_, a, provider) => provider!
+            ..syncWithUser(
+              studentId: a.isLoggedIn && a.isStudent && a.isAccountActive
+                  ? a.currentUserProfile?.uid
+                  : null,
+            ),
+        ),
         ChangeNotifierProxyProvider2<AuthProvider, StudentCoursesProvider,
             CourseAssignmentProvider>(
           create: (_) => CourseAssignmentProvider(assignmentService),

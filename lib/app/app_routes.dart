@@ -43,6 +43,13 @@ abstract final class AppRoutes {
   static const String taskDetail = '/tasks/detail';
   static const String createEditTask = '/tasks/create-edit';
 
+  /// تفاصيل واجب أكاديمي للطالب — قراءة فقط.
+  ///
+  /// مسار واحد يخدم كل مداخل الطالب: تبويبا «الكل» و«الواجبات» في شاشة
+  /// المهام، وتبويب واجبات المساق. شاشة المعلّم مسار مستقل
+  /// (teacherAssignmentDetails) لأنها تحمل أفعالًا لا يملكها الطالب.
+  static const String assignmentDetails = '/assignments/detail';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';

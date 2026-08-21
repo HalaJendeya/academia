@@ -259,9 +259,10 @@ abstract final class AppStrings {
    */
   static const String teacherProvisioningNoteTitle = 'إنشاء حساب معلّم';
   static const String teacherProvisioningNoteDesc =
-      'تُنشأ حسابات المعلّمين خارج التطبيق بصلاحيات إدارية، ثم يضبط المعلّم '
-      'كلمة مروره عبر «نسيت كلمة المرور». يمكنك من هنا تفعيل الحسابات '
-      'وتعطيلها وإسناد الطروحات إليها.';
+      'تُنشأ حسابات المعلّمين خارج التطبيق: يتولّى ذلك مسؤول النظام '
+      'بصلاحيات إدارية، ثم يضبط المعلّم كلمة مروره بنفسه عبر «نسيت كلمة '
+      'المرور». صلاحيتك من هنا هي تفعيل الحسابات وتعطيلها وإسناد الطروحات '
+      'إليها.';
 
   static const String teacherAccountActiveLabel = 'الحساب نشط';
   static const String teacherAccountDisabledLabel = 'الحساب معطّل';
@@ -1460,6 +1461,50 @@ abstract final class AppStrings {
       'ولا إعادته بعد الأرشفة من هنا.';
   static const String assignmentTeacherLabel = 'المعلّم';
 
+  // ===== تفاصيل الواجب للطالب =====
+  //
+  // شاشة قراءة فقط. لا تعديل ولا أرشفة ولا تسليم: الطالب لا يملك أيًّا منها
+  // في النموذج الحالي، وعرض زر لأيٍّ منها وعدٌ بما لا وجود له.
+
+  /// يُعرض مرّة واحدة أسفل التفاصيل، بدل أزرار لا يملكها الطالب.
+  static const String assignmentStudentReadOnlyNote =
+      'هذا واجب يضيفه معلّم المساق. لا يمكنك تعديله، ولا يتوفّر تسليم '
+      'إلكتروني للواجبات في هذه المرحلة.';
+
+  /// الواجب لم يعد ضمن ما يقرأه الطالب — أُرشف أو خرج المساق من فصله الحالي.
+  static const String assignmentUnavailableTitle = 'الواجب غير متاح';
+  static const String assignmentUnavailableDesc =
+      'قد يكون معلّم المساق قد أرشف هذا الواجب، أو لم يعد ضمن مساقاتك '
+      'الحالية.';
+
+  static const String backToAssignmentsAction = 'العودة إلى الواجبات';
+
+  // ===== تتبّع إنجاز الواجب (خاص بالطالب) =====
+  //
+  // 🔴 ليس تسليمًا. لا ملفات ولا درجات ولا مراجعة من المعلّم: مجرد علامة
+  // شخصية يضعها الطالب لنفسه في مجموعة منفصلة، ولا تمسّ مستند الواجب
+  // المشترك ولا يراها أحد غيره.
+
+  static const String assignmentMarkDoneAction = 'تم الإنجاز';
+  static const String assignmentUndoDoneAction = 'التراجع عن الإنجاز';
+  static const String assignmentCompletedTitle = 'تم إنجاز هذا الواجب';
+  static const String assignmentCompletedAtLabel = 'أُنجز في';
+
+  /// شارة مختصرة على البطاقة، مقابل شارات الحالة الزمنية.
+  static const String assignmentCompletedBadge = 'مُنجَز';
+
+  /// يوضّح خصوصية العلامة مرة واحدة، حتى لا يظنّها الطالب تسليمًا.
+  static const String assignmentCompletionPrivateNote =
+      'هذه علامة شخصية لتنظيم عملك: لا يراها معلّم المساق، ولا تُعدّ تسليمًا '
+      'للواجب.';
+
+  static const String assignmentMarkedDoneSuccess = 'تم تسجيل إنجاز الواجب';
+  static const String assignmentUndoneSuccess = 'تم التراجع عن الإنجاز';
+  static const String assignmentProgressSaveError =
+      'تعذر حفظ حالة الإنجاز. حاول مرة أخرى.';
+  static const String assignmentProgressLoadError =
+      'تعذر تحميل حالة إنجاز الواجبات';
+
   // ===== المرحلة 8.4: شاشة المهام والواجبات الموحَّدة =====
   //
   // العرض وحده هو ما يُدمج: /tasks تبقى مهام الطالب الشخصية، و/assignments
@@ -1489,16 +1534,16 @@ abstract final class AppStrings {
       'أضف مهمة لتنظيم وقتك الدراسي.';
   static const String workEmptyCompletedTitle = 'لا توجد مهام مكتملة';
   static const String workEmptyCompletedDesc =
-      'ستظهر هنا مهامك الشخصية بعد إنجازها.';
+      'ستظهر هنا مهامك الشخصية وواجباتك بعد وضع علامة الإنجاز عليها.';
 
   /// يُعرض في تبويب «مكتملة».
   ///
-  /// لا يوجد بعد نموذج تسليم أو إنجاز للواجب الأكاديمي لكل طالب، فلا يمكن
-  /// معرفة أن طالبًا بعينه أنهى واجبًا. الشاشة تقول ذلك بدل أن تعرض واجبات
-  /// كأنها مكتملة.
+  /// صار القسم يجمع المصدرين بعد إضافة تتبّع الإنجاز الشخصي للواجبات.
+  /// الصياغة تشدّد على أن علامة الواجب شخصية لا تسليم، حتى لا يظن الطالب
+  /// أن معلّمه اطّلع على شيء.
   static const String workCompletedTasksOnlyNote =
-      'يعرض هذا القسم مهامك الشخصية المكتملة. تسليم الواجبات الأكاديمية غير '
-      'متاح بعد.';
+      'يعرض هذا القسم مهامك الشخصية المكتملة والواجبات التي علّمتها كمنجزة. '
+      'علامة الواجب شخصية ولا تُعدّ تسليمًا.';
 
   /// فشل أحد المصدرين بينما نجح الآخر — تُعرض البيانات المتاحة مع تنبيه.
   static const String addNewTaskAction = 'إضافة مهمة جديدة';

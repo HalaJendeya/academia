@@ -14,7 +14,9 @@ import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
 import '../../assignments/models/course_assignment_model.dart';
+import '../../assignments/providers/assignment_progress_provider.dart';
 import '../../assignments/providers/course_assignment_provider.dart';
+import '../../assignments/screens/student_assignment_details_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../courses/models/student_course_view.dart';
 import '../../courses/providers/student_courses_provider.dart';
@@ -80,9 +82,6 @@ class _TasksScreenState extends State<TasksScreen>
 
   List<TaskModel> _pendingTasks(List<TaskModel> tasks) =>
       tasks.where((task) => task.isPending).toList();
-
-  List<TaskModel> _completedTasks(List<TaskModel> tasks) =>
-      tasks.where((task) => task.isCompleted).toList();
 
   /// مرشِّحات تبويب «مهامي» فقط.
   List<TaskModel> _applyTaskFilters(List<TaskModel> tasks) {
@@ -159,6 +158,9 @@ class _TasksScreenState extends State<TasksScreen>
     final taskProvider = context.watch<TaskProvider>();
     final assignmentProvider = context.watch<CourseAssignmentProvider>();
     final studentCourses = context.watch<StudentCoursesProvider>();
+    // علامات الإنجاز الشخصية: تُقرأ هنا مرة واحدة وتُمرَّر إلى التبويبات،
+    // فلا يشترك أي تبويب في مزوّد بمفرده ولا تختلف الحسابات بينها.
+    final progressProvider = context.watch<AssignmentProgressProvider>();
 
     return AuthenticatedPageScaffold(
       currentIndex: AcademiaBottomNavigation.tasksIndex,
@@ -195,10 +197,18 @@ class _TasksScreenState extends State<TasksScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildAllTab(taskProvider, assignmentProvider),
-                _buildAssignmentsTab(assignmentProvider),
+                _buildAllTab(
+                  taskProvider,
+                  assignmentProvider,
+                  progressProvider,
+                ),
+                _buildAssignmentsTab(assignmentProvider, progressProvider),
                 _buildMyTasksTab(taskProvider, studentCourses),
-                _buildCompletedTab(taskProvider),
+                _buildCompletedTab(
+                  taskProvider,
+                  assignmentProvider,
+                  progressProvider,
+                ),
               ],
             ),
           ),
@@ -242,6 +252,7 @@ class _TasksScreenState extends State<TasksScreen>
   Widget _buildAllTab(
     TaskProvider taskProvider,
     CourseAssignmentProvider assignmentProvider,
+    AssignmentProgressProvider progressProvider,
   ) {
     final tasksLoading = taskProvider.isLoading;
     final assignmentsLoading = assignmentProvider.isLoading;
@@ -268,11 +279,16 @@ class _TasksScreenState extends State<TasksScreen>
       );
     }
 
+    /*
+     * الواجب المنجَز يغادر «الكل» تمامًا كما تغادره المهمة المكتملة:
+     * التبويب يعرض ما بقي على الطالب فعله. مكانه تبويب «مكتملة».
+     */
     final items = StudentWorkItem.merge(
       tasks: tasksFailed ? const <TaskModel>[] : taskProvider.tasks,
       assignments: assignmentsFailed
           ? const <CourseAssignmentModel>[]
           : assignmentProvider.activeAssignments,
+      completedAssignmentIds: progressProvider.completedAssignmentIds,
     );
 
     // فشل أحدهما فقط: يبقى المتاح معروضًا مع تنبيه، لا شاشة خطأ كاملة.
@@ -325,7 +341,21 @@ class _TasksScreenState extends State<TasksScreen>
     return Padding(
       key: ValueKey(item.id),
       padding: const EdgeInsets.only(bottom: AppSpacing.small),
-      child: AssignmentPreviewCard(assignment: item.assignment!),
+      child: AssignmentPreviewCard(
+        assignment: item.assignment!,
+        onViewDetailsTap: () => _openAssignmentDetails(item.assignment!),
+      ),
+    );
+  }
+
+  /// يفتح تفاصيل الواجب فوق هذه الشاشة، فيبقى شريط التنقّل السفلي كما هو.
+  ///
+  /// الواجب يُمرَّر كاملًا لا بمعرّفه: القائمة تملكه أصلًا، فقراءته من
+  /// Firestore مرة أخرى طلب شبكة بلا معلومة جديدة.
+  void _openAssignmentDetails(CourseAssignmentModel assignment) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.assignmentDetails,
+      arguments: StudentAssignmentDetailsArgs(assignment: assignment),
     );
   }
 
@@ -363,7 +393,10 @@ class _TasksScreenState extends State<TasksScreen>
 
   // --------------------------------------------------------- الواجبات tab
 
-  Widget _buildAssignmentsTab(CourseAssignmentProvider provider) {
+  Widget _buildAssignmentsTab(
+    CourseAssignmentProvider provider,
+    AssignmentProgressProvider progressProvider,
+  ) {
     if (provider.isLoading && provider.assignments.isEmpty) {
       return const AppLoadingState();
     }
@@ -375,6 +408,19 @@ class _TasksScreenState extends State<TasksScreen>
       );
     }
 
+    /*
+     * كل الواجبات، منجَزةً كانت أو لا.
+     *
+     * 🔴 هذا التبويب سجلّ المساقات لا قائمة عمل: يجيب عن «ما الواجبات
+     * المفروضة عليّ هذا الفصل؟»، وهو سؤال لا تتغيّر إجابته بإنجاز الطالب.
+     * إخفاء المنجَز كان يُفرغ التبويب لطالب أنهى كل شيء — فيبدو كأن لا
+     * واجبات أصلًا.
+     *
+     * تبويب «الكل» هو الذي يسقط المنجَز، لأنه يعرض ما بقي يستحق الانتباه.
+     * الترتيب هنا يبقى بالموعد كما يأتي من المزوّد: السجلّ يُقرأ زمنيًا،
+     * ودفع المنجَز إلى الأسفل كان سيكسر تسلسله.
+     */
+    final completedIds = progressProvider.completedAssignmentIds;
     final assignments = provider.activeAssignments;
 
     if (assignments.isEmpty) {
@@ -393,11 +439,20 @@ class _TasksScreenState extends State<TasksScreen>
         AppSpacing.huge,
       ),
       itemCount: assignments.length,
-      itemBuilder: (context, index) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.small),
-        // للقراءة فقط: لا إنشاء ولا تعديل ولا أرشفة للطالب.
-        child: AssignmentPreviewCard(assignment: assignments[index]),
-      ),
+      itemBuilder: (context, index) {
+        final assignment = assignments[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.small),
+          // للقراءة فقط: لا إنشاء ولا تعديل ولا أرشفة للطالب. المنجَز
+          // يظهر بشارة «مُنجَز» بدل الحالة الزمنية، ويحتفظ بكل معلوماته
+          // وبزرّ «عرض التفاصيل» — ومنه يتراجع الطالب عن الإنجاز.
+          child: AssignmentPreviewCard(
+            assignment: assignment,
+            isCompleted: completedIds.contains(assignment.id),
+            onViewDetailsTap: () => _openAssignmentDetails(assignment),
+          ),
+        );
+      },
     );
   }
 
@@ -493,14 +548,20 @@ class _TasksScreenState extends State<TasksScreen>
   // --------------------------------------------------------- مكتملة tab
 
   /*
-   * المهام الشخصية المكتملة وحدها.
+   * المهام الشخصية المكتملة والواجبات التي علّمها الطالب كمنجزة.
    *
-   * 🔴 قيد منتج لا إغفال: لا يوجد نموذج تسليم أو إنجاز للواجب الأكاديمي
-   * لكل طالب. حالة الواجب في Firestore عامة (active/archived) ويكتبها
-   * المعلّم للجميع، فلا يمكن اشتقاق «أنهى هذا الطالب هذا الواجب». عرض
-   * واجبات هنا كان سيتطلب اختلاق حالة إنجاز لا وجود لها.
+   * صار المصدران يظهران هنا بعد إضافة /assignmentProgress. حالة الواجب في
+   * Firestore تبقى كما هي — عامة ويكتبها المعلّم للجميع — والإنجاز يأتي من
+   * مستند خاص بهذا الطالب وحده، فلا يرى زميله علامته ولا العكس.
+   *
+   * وهذا ليس تسليمًا: لا ملف ولا درجة ولا إشعار للمعلّم. النص أعلى القائمة
+   * يقول ذلك صراحةً حتى لا يُفهم خطأً.
    */
-  Widget _buildCompletedTab(TaskProvider taskProvider) {
+  Widget _buildCompletedTab(
+    TaskProvider taskProvider,
+    CourseAssignmentProvider assignmentProvider,
+    AssignmentProgressProvider progressProvider,
+  ) {
     if (taskProvider.isLoading) return const AppLoadingState();
 
     if (taskProvider.errorMessage != null) {
@@ -511,16 +572,30 @@ class _TasksScreenState extends State<TasksScreen>
       );
     }
 
-    final completed = _completedTasks(taskProvider.tasks)
-      ..sort((a, b) {
-        // الأحدث إنجازًا أولًا؛ ما لا تاريخ لإنجازه يتبع بترتيب ثابت.
-        final aDone = a.completedAt;
-        final bDone = b.completedAt;
-        if (aDone != null && bDone != null) return bDone.compareTo(aDone);
-        if (aDone != null) return -1;
-        if (bDone != null) return 1;
-        return a.id.compareTo(b.id);
-      });
+    final completed =
+        StudentWorkItem.merge(
+            tasks: taskProvider.tasks,
+            assignments: assignmentProvider.errorMessage != null
+                ? const <CourseAssignmentModel>[]
+                : assignmentProvider.activeAssignments,
+            // openOnly: false وإلا لأسقط الدمج كل ما أنجزه الطالب — وهو
+            // بالضبط ما يعرضه هذا التبويب.
+            openOnly: false,
+            completedAssignmentIds: progressProvider.completedAssignmentIds,
+            assignmentCompletionTimes: progressProvider.completionTimes,
+          ).where((item) => item.isCompleted).toList()
+          ..sort((a, b) {
+            // الأحدث إنجازًا أولًا؛ ما لا تاريخ لإنجازه يتبع بترتيب ثابت.
+            //
+            // التاريخ قد يغيب عن واجب منجَز فعلًا: الطابع الزمني من الخادم
+            // ولا يصل قبل المزامنة. ترتيبه أخيرًا أفضل من إخفائه.
+            final aDone = a.completedAt;
+            final bDone = b.completedAt;
+            if (aDone != null && bDone != null) return bDone.compareTo(aDone);
+            if (aDone != null) return -1;
+            if (bDone != null) return 1;
+            return a.id.compareTo(b.id);
+          });
 
     if (completed.isEmpty) {
       return const AppEmptyState(
@@ -552,13 +627,30 @@ class _TasksScreenState extends State<TasksScreen>
           );
         }
 
-        final task = completed[index - 1];
-        return TaskCard(
-          key: ValueKey(task.id),
-          task: task,
-          onTap: () => Navigator.of(
-            context,
-          ).pushNamed(AppRoutes.taskDetail, arguments: task.id),
+        final item = completed[index - 1];
+
+        if (item.isPersonalTask) {
+          final task = item.task!;
+          return TaskCard(
+            key: ValueKey(item.id),
+            task: task,
+            onTap: () => Navigator.of(
+              context,
+            ).pushNamed(AppRoutes.taskDetail, arguments: task.id),
+          );
+        }
+
+        // البطاقة نفسها المستعملة في بقية التبويبات، بحالة الإنجاز:
+        // تُبدَّل الشارة الزمنية بشارة «مُنجَز» فلا يظهر واجب أنهاه الطالب
+        // متأخرًا. ومنها يفتح التفاصيل ليتراجع عن الإنجاز إن أراد.
+        return Padding(
+          key: ValueKey(item.id),
+          padding: const EdgeInsets.only(bottom: AppSpacing.small),
+          child: AssignmentPreviewCard(
+            assignment: item.assignment!,
+            isCompleted: true,
+            onViewDetailsTap: () => _openAssignmentDetails(item.assignment!),
+          ),
         );
       },
     );

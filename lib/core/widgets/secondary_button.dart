@@ -43,7 +43,20 @@ class AppSecondaryButton extends StatelessWidget {
             Icon(icon, size: 20, color: AppColors.primary),
             const SizedBox(width: AppSpacing.small),
           ],
-          Text(label, style: AppTextStyles.secondaryButton),
+          /*
+           * Flexible لا Text مباشرة: الزرّ ذو العرض الكامل يعطي المحتوى
+           * عرضًا محدودًا، ونصّ عربي طويل مع أيقونة كان يفيض عنه بدل أن
+           * يُقتطع. لا يغيّر هذا شيئًا للتسميات القصيرة.
+           */
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.secondaryButton,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ],
     );

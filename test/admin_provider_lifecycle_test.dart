@@ -11,8 +11,11 @@ import 'package:academia/features/admin/models/admin_student_model.dart';
 import 'package:academia/features/courses/models/course_model.dart';
 import 'package:academia/features/courses/providers/course_provider.dart';
 import 'package:academia/features/courses/services/course_service.dart';
+import 'package:academia/features/admin/providers/admin_support_provider.dart';
 import 'package:academia/features/enrollments/providers/enrollment_provider.dart';
 import 'package:academia/features/enrollments/services/enrollment_service.dart';
+import 'package:academia/features/profile/models/support_request.dart';
+import 'package:academia/features/profile/services/support_service.dart';
 
 // ------------------------------------------------------------------ fakes
 //
@@ -35,6 +38,39 @@ class FakeEnrollmentService implements EnrollmentService {
 
   @override
   Stream<List<AdminStudentModel>> watchStudents() => students.stream;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Unlike the fakes above, this one hands out a **fresh** controller per call,
+/// because that is what `snapshots()` does: every `watchSupportRequests()`
+/// builds a new query stream. Keeping all of them lets a test prove that a
+/// second `listenToRequests()` leaves exactly one subscription alive rather
+/// than merely that *a* listener exists.
+class FakeSupportService implements SupportService {
+  final List<StreamController<List<SupportRequest>>> controllers = [];
+
+  /// The most recent stream handed out — the one currently in use.
+  StreamController<List<SupportRequest>> get controller => controllers.last;
+
+  int get liveListenerCount =>
+      controllers.where((c) => c.hasListener).length;
+
+  @override
+  Stream<List<SupportRequest>> watchSupportRequests() {
+    final controller = StreamController<List<SupportRequest>>();
+    controllers.add(controller);
+    return controller.stream;
+  }
+
+  /// Closes only what was actually listened to: closing an unlistened
+  /// single-subscription controller never completes.
+  Future<void> closeAll() async {
+    for (final c in controllers) {
+      if (c.hasListener) await c.close();
+    }
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -78,6 +114,16 @@ const _student = AdminStudentModel(
   major: '',
   status: 'active',
   onboardingCompleted: true,
+);
+
+const _supportRequest = SupportRequest(
+  id: 'req1',
+  uid: 'student1',
+  fullName: 'حلا جندية',
+  email: 's@test.com',
+  subject: 'مشكلة في تسجيل المساقات',
+  message: 'لا أستطيع رؤية مساقات الفصل الحالي.',
+  status: SupportRequest.statusOpen,
 );
 
 void main() {
@@ -175,6 +221,142 @@ void main() {
       expect(service.students.hasListener, isFalse);
       expect(provider.students, isEmpty);
       expect(provider.selectedStudent, isNull);
+    });
+  });
+
+  group('AdminSupportProvider — supportRequests listener', () {
+    test('an active admin may start the listener', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      service.controller.add([_supportRequest]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.controller.hasListener, isTrue);
+      expect(provider.requests, hasLength(1));
+      expect(provider.openRequests, hasLength(1));
+      expect(provider.isLoading, isFalse);
+    });
+
+    test('logout cancels the listener and clears admin state', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      service.controller.add([_supportRequest]);
+      await Future<void>.delayed(Duration.zero);
+      expect(service.controller.hasListener, isTrue);
+
+      // Sign-out.
+      provider.syncWithAuth(isActiveAdmin: false);
+      await Future<void>.delayed(Duration.zero);
+
+      // supportRequests is an admin-only read; a surviving listener is
+      // exactly what produces PERMISSION_DENIED after logout.
+      expect(service.controller.hasListener, isFalse);
+      expect(provider.requests, isEmpty);
+      expect(provider.errorMessage, isNull);
+      expect(provider.isLoading, isFalse);
+    });
+
+    test('switching admin → student leaves no listener alive', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      await Future<void>.delayed(Duration.zero);
+
+      // A student is an authenticated, active user — but not an admin.
+      provider.syncWithAuth(isActiveAdmin: false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.controller.hasListener, isFalse);
+      expect(provider.requests, isEmpty);
+    });
+
+    test('a disabled admin account keeps no listener', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      await Future<void>.delayed(Duration.zero);
+
+      // _isActiveAdmin folds "account disabled" into the same false, so the
+      // provider must tear down for it exactly as it does for a sign-out.
+      provider.syncWithAuth(isActiveAdmin: false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.controller.hasListener, isFalse);
+      expect(provider.requests, isEmpty);
+    });
+
+    test('repeated admin syncs do not stack duplicate listeners', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      // ProxyProvider.update runs on every rebuild; syncing must stay a
+      // no-op that never opens a second subscription.
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.syncWithAuth(isActiveAdmin: true);
+      await Future<void>.delayed(Duration.zero);
+
+      // One query stream requested, one subscription alive.
+      expect(service.controllers, hasLength(1));
+      expect(service.liveListenerCount, 1);
+
+      provider.syncWithAuth(isActiveAdmin: false);
+      await Future<void>.delayed(Duration.zero);
+      expect(service.liveListenerCount, 0);
+    });
+
+    test('calling listenToRequests twice leaves exactly one subscription',
+        () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      addTearDown(service.closeAll);
+
+      provider.syncWithAuth(isActiveAdmin: true);
+      provider.listenToRequests();
+      // The retry button calls this again. Cancelling before re-listening is
+      // what keeps the first subscription from being orphaned and left live.
+      provider.listenToRequests();
+      service.controller.add([_supportRequest]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(service.controllers, hasLength(2));
+      expect(service.liveListenerCount, 1);
+      expect(provider.requests, hasLength(1));
+
+      provider.stopListening();
+      expect(service.liveListenerCount, 0);
+    });
+
+    test('repeated non-admin syncs are cheap and do not notify', () async {
+      final service = FakeSupportService();
+      final provider = AdminSupportProvider(service);
+      // Deliberately never listened to; closing an unlistened
+      // single-subscription controller never completes.
+
+      var notifications = 0;
+      provider.addListener(() => notifications++);
+
+      provider.syncWithAuth(isActiveAdmin: false);
+      provider.syncWithAuth(isActiveAdmin: false);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(notifications, 0);
     });
   });
 

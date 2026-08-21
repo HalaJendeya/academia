@@ -17,6 +17,9 @@ import '../features/assignments/services/assignment_progress_service.dart';
 import '../features/assignments/services/course_assignment_service.dart';
 import '../features/admin/providers/admin_teacher_provider.dart';
 import '../features/admin/services/admin_teacher_service.dart';
+import '../features/admin/providers/admin_support_provider.dart';
+import '../features/admin/providers/admin_user_provider.dart';
+import '../features/admin/services/admin_user_service.dart';
 import '../features/academics/providers/academic_structure_provider.dart';
 import '../features/academics/services/department_service.dart';
 import '../features/academics/services/major_service.dart';
@@ -66,6 +69,28 @@ final List<SingleChildWidget> appProviders = [
     create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
   ),
   ChangeNotifierProvider(create: (_) => SupportProvider(SupportService())),
+  /*
+   * صندوق وارد الدعم للمشرف. مزوّد منفصل عن SupportProvider لأن ذاك يملك
+   * حالة إرسال الطالب وحدها، لكن الخدمة مشتركة: مجموعة supportRequests
+   * واحدة، لا مجموعة ثانية ولا خدمة ثانية.
+   *
+   * ProxyProvider لا ChangeNotifierProvider: هذا المزوّد يفتح مستمعًا على
+   * supportRequests، وقراءتها مسموحة للمشرف وحده. المزوّدات مركَّبة فوق
+   * MaterialApp فلا يُستدعى dispose أثناء الجلسة، فيجب إيقاف المستمع عند
+   * الخروج أو تبديل الحساب — تمامًا كبقية مزوّدات المشرف.
+   */
+  ChangeNotifierProxyProvider<AuthProvider, AdminSupportProvider>(
+    create: (_) => AdminSupportProvider(SupportService()),
+    update: (_, auth, provider) =>
+        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
+  ),
+  /*
+   * إدارة حالة حسابات الطلاب. مزوّد كتابة فقط: قائمة الطلاب تصل من
+   * EnrollmentProvider ببثّ مباشر، فلا نحتفظ بنسخة ثانية منها هنا.
+   */
+  ChangeNotifierProvider(
+    create: (_) => AdminUserProvider(AdminUserService()),
+  ),
   ChangeNotifierProvider(
     create: (_) => NotificationSettingsProvider(NotificationSettingsService()),
   ),

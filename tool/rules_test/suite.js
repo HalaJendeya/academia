@@ -943,12 +943,23 @@ t('23c. student reads supportRequests denied', {
   method: 'get',
   existing: { uid: 'student1', status: 'open' },
 });
-/*
- * The support inbox may move a request through its lifecycle and nothing
- * else. These pin the hardened update rule that is live in production —
- * without them a branch can silently ship the older, looser version, which
- * is exactly what happened once already.
- */
+
+t('23d. unmatched collection denied for admin', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'randomCollection/doc1',
+  method: 'get',
+});
+
+// --- 23e-23n. supportRequests admin inbox (Phase 7H5) -------------------------
+//
+// The inbox may move a request through open <-> resolved and nothing else.
+// What the student wrote is the record; only its handling state is the
+// admin's to change.
+//
+// These pin the hardened update rule that is live in production — without
+// them a branch can silently ship the older, looser version, which is
+// exactly what happened once already.
 const SUPPORT_OPEN = {
   uid: 'student1',
   fullName: 'حلا جندية',
@@ -959,7 +970,14 @@ const SUPPORT_OPEN = {
   source: 'mobile_app',
 };
 
-t('23e. admin marks a support request resolved allowed', {
+t('23e. admin reads a supportRequest allowed', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'get',
+  existing: SUPPORT_OPEN,
+});
+t('23f. admin marks a request resolved allowed', {
   expect: 'ALLOW',
   uid: 'admin1',
   path: 'supportRequests/req1',
@@ -967,23 +985,15 @@ t('23e. admin marks a support request resolved allowed', {
   data: { ...SUPPORT_OPEN, status: 'resolved' },
   existing: SUPPORT_OPEN,
 });
-t('23f. admin rewriting the student message denied', {
-  expect: 'DENY',
+t('23g. admin reopens a resolved request allowed', {
+  expect: 'ALLOW',
   uid: 'admin1',
   path: 'supportRequests/req1',
   method: 'update',
-  data: { ...SUPPORT_OPEN, status: 'resolved', message: 'نص مختلف' },
-  existing: SUPPORT_OPEN,
+  data: { ...SUPPORT_OPEN, status: 'open' },
+  existing: { ...SUPPORT_OPEN, status: 'resolved' },
 });
-t('23g. admin reassigning the request owner denied', {
-  expect: 'DENY',
-  uid: 'admin1',
-  path: 'supportRequests/req1',
-  method: 'update',
-  data: { ...SUPPORT_OPEN, status: 'resolved', uid: 'student2' },
-  existing: SUPPORT_OPEN,
-});
-t('23h. student updating a support request denied', {
+t('23h. student updating a request status denied', {
   expect: 'DENY',
   uid: 'student1',
   path: 'supportRequests/req1',
@@ -991,20 +1001,55 @@ t('23h. student updating a support request denied', {
   data: { ...SUPPORT_OPEN, status: 'resolved' },
   existing: SUPPORT_OPEN,
 });
-t('23i. teacher updating a support request denied', {
+t('23i. admin rewriting the student message denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', message: 'نص مختلف' },
+  existing: SUPPORT_OPEN,
+});
+t('23j. admin rewriting the subject denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, subject: 'موضوع آخر' },
+  existing: SUPPORT_OPEN,
+});
+t('23k. admin reassigning the request owner denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'resolved', uid: 'student2' },
+  existing: SUPPORT_OPEN,
+});
+t('23l. an unknown status value denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'update',
+  data: { ...SUPPORT_OPEN, status: 'escalated' },
+  existing: SUPPORT_OPEN,
+});
+t('23m. supportRequest hard delete denied for admin', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'supportRequests/req1',
+  method: 'delete',
+  existing: SUPPORT_OPEN,
+});
+// Kept from the develop side of the merge: the incoming branch covered
+// student but not teacher. A teacher is an active user, so without this the
+// isActiveAdmin() gate is only half proven.
+t('23n. teacher updating a support request denied', {
   expect: 'DENY',
   uid: 'teacher1',
   path: 'supportRequests/req1',
   method: 'update',
   data: { ...SUPPORT_OPEN, status: 'resolved' },
   existing: SUPPORT_OPEN,
-});
-
-t('23d. unmatched collection denied for admin', {
-  expect: 'DENY',
-  uid: 'admin1',
-  path: 'randomCollection/doc1',
-  method: 'get',
 });
 
 // --- 24. student tasks (Phase 7T1A) --------------------

@@ -11,6 +11,8 @@ import '../../../core/widgets/app_status_badge.dart';
 import '../../courses/models/student_course_view.dart';
 import '../../enrollments/providers/admin_student_record_provider.dart';
 import '../models/admin_student_model.dart';
+import '../providers/admin_user_provider.dart';
+import '../services/admin_user_service.dart';
 import '../widgets/admin_access_guard.dart';
 import '../widgets/admin_back_button.dart';
 
@@ -30,6 +32,15 @@ class AdminStudentDetailsScreen extends StatefulWidget {
 }
 
 class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
+  /*
+   * الحالة المعروضة محليًا.
+   *
+   * الطالب يصل عبر وسيطة المسار وهو كائن غير قابل للتعديل، فبعد نجاح
+   * الكتابة لا تتغيّر الوسيطة. نحتفظ بالحالة هنا ولا نحدّثها إلا بعد أن
+   * تؤكد الخدمة نجاح الكتابة. قائمة الطلاب تحدّث نفسها من بثّ users.
+   */
+  late String _status = widget.student.status;
+
   @override
   void initState() {
     super.initState();
@@ -42,10 +53,96 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
     });
   }
 
+  bool get _isActive => _status == AdminUserService.statusActive;
+
+  Future<void> _confirmAndApply() async {
+    final disabling = _isActive;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          disabling
+              ? AppStrings.disableAccountConfirmTitle
+              : AppStrings.activateAccountConfirmTitle,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.right,
+        ),
+        content: Text(
+          disabling
+              ? AppStrings.disableAccountConfirmBody
+              : AppStrings.activateAccountConfirmBody,
+          textAlign: TextAlign.right,
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: disabling
+                    ? AppColors.danger
+                    : AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text(AppStrings.confirmAction),
+            ),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.cancelAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final provider = context.read<AdminUserProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final success = disabling
+        ? await provider.disableStudent(widget.student.uid)
+        : await provider.activateStudent(widget.student.uid);
+
+    if (!mounted) return;
+
+    if (success) {
+      // الحالة تتغيّر بعد تأكيد الكتابة لا قبله.
+      setState(() {
+        _status = disabling
+            ? AdminUserService.statusDisabled
+            : AdminUserService.statusActive;
+      });
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            disabling
+                ? AppStrings.accountDisabledSuccess
+                : AppStrings.accountActivatedSuccess,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // فشل الكتابة يبقي الحالة السابقة كما هي.
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          provider.errorMessage ?? AppStrings.accountStatusUpdateError,
+        ),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final student = widget.student;
     final record = context.watch<AdminStudentRecordProvider>();
+    final userProvider = context.watch<AdminUserProvider>();
 
     return AdminAccessGuard(
       child: Scaffold(
@@ -65,9 +162,15 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _ProfileCard(student: student),
+                _ProfileCard(student: student, status: _status),
                 const SizedBox(height: AppSpacing.medium),
                 _ProgramCard(student: student, majorName: record.majorName),
+                const SizedBox(height: AppSpacing.medium),
+                _AccountActionsCard(
+                  isActive: _isActive,
+                  isSaving: userProvider.isSaving,
+                  onPressed: _confirmAndApply,
+                ),
                 const SizedBox(height: AppSpacing.medium),
                 _AssignActionCard(student: student),
                 const SizedBox(height: AppSpacing.medium),
@@ -109,15 +212,18 @@ class _AdminStudentDetailsScreenState extends State<AdminStudentDetailsScreen> {
 
 /// معلومات الطالب. لا تقرأ أي مزوّد: مصدرها وسيطة المسار وحدها.
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.student});
+  const _ProfileCard({required this.student, required this.status});
 
   final AdminStudentModel student;
 
+  /// الحالة المعروضة تأتي من الشاشة لا من الوسيطة: الوسيطة لا تتغيّر بعد
+  /// تعطيل الحساب أو تفعيله.
+  final String status;
+
   @override
   Widget build(BuildContext context) {
-    final statusColor = student.isActive
-        ? AppColors.activeStatus
-        : AppColors.danger;
+    final isActive = status == AdminUserService.statusActive;
+    final statusColor = isActive ? AppColors.activeStatus : AppColors.danger;
 
     return AppCard(
       child: Column(
@@ -149,7 +255,7 @@ class _ProfileCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     AppStatusBadge(
-                      label: student.isActive
+                      label: isActive
                           ? AppStrings.activeStatus
                           : AppStrings.disabledStatus,
                       backgroundColor: statusColor.withValues(alpha: 0.08),
@@ -256,6 +362,75 @@ class _ProgramCard extends StatelessWidget {
                 textAlign: TextAlign.right,
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// إجراءات الحساب: إجراء واحد ظاهر في كل حالة.
+///
+/// لا يُعرض الزران معًا: الحساب إمّا نشط فيُعطَّل، أو معطَّل فيُفعَّل.
+class _AccountActionsCard extends StatelessWidget {
+  const _AccountActionsCard({
+    required this.isActive,
+    required this.isSaving,
+    required this.onPressed,
+  });
+
+  final bool isActive;
+  final bool isSaving;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final actionColor = isActive ? AppColors.danger : AppColors.activeStatus;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            AppStrings.accountActionsTitle,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.secondary,
+            ),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: AppSpacing.small),
+          Text(
+            AppStrings.accountActionsDesc,
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+            textAlign: TextAlign.right,
+          ),
+          const SizedBox(height: AppSpacing.medium),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: actionColor,
+              foregroundColor: Colors.white,
+            ),
+            // التعطيل أثناء الحفظ يمنع ضغطة ثانية تُطلق كتابة موازية.
+            onPressed: isSaving ? null : onPressed,
+            icon: isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(
+                    isActive ? Icons.block_rounded : Icons.check_circle_outline,
+                    size: 18,
+                  ),
+            label: Text(
+              isActive
+                  ? AppStrings.disableAccountAction
+                  : AppStrings.activateAccountAction,
+            ),
+          ),
         ],
       ),
     );

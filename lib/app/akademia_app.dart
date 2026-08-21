@@ -56,6 +56,7 @@ import '../features/admin/screens/admin_announcements_screen.dart';
 import '../features/admin/screens/admin_announcement_form_screen.dart';
 import '../features/admin/screens/admin_reported_posts_screen.dart';
 import '../features/admin/screens/admin_settings_screen.dart';
+import '../features/admin/screens/admin_support_requests_screen.dart';
 import '../features/admin/screens/admin_profile_screen.dart';
 import '../features/admin/screens/admin_semester_list_screen.dart';
 import '../features/admin/screens/admin_semester_form_screen.dart';
@@ -194,6 +195,8 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.adminReportedPosts: (context) =>
             const AdminReportedPostsScreen(),
         AppRoutes.adminSettings: (context) => const AdminSettingsScreen(),
+        AppRoutes.adminSupportRequests: (context) =>
+            const AdminSupportRequestsScreen(),
         AppRoutes.adminProfile: (context) => const AdminProfileScreen(),
         AppRoutes.adminSemesters: (context) => const AdminSemesterListScreen(),
         AppRoutes.adminAddSemester: (context) =>

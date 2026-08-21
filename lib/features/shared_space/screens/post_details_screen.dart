@@ -1,8 +1,9 @@
-
 // lib/features/shared_space/screens/post_details_screen.dart
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -11,21 +12,15 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../models/comment_model.dart';
-import '../models/post_attachment.dart';
 import '../models/post_model.dart';
 import '../providers/post_provider.dart';
+import '../widgets/post_attachment_preview.dart';
 import '../widgets/report_post_sheet.dart';
+import 'create_post_screen.dart';
 
-/// تفاصيل منشور واحد + تعليقاته، مطابقة لتصميم الفيجما.
-///
-/// يستقبل [PostModel] كاملًا كوسيط بدل معرّف — نفس مبدأ
-/// CourseFilePreviewScreen: الشاشة التي فتحته أصلًا حمّلت قائمة المنشورات
-/// بالفعل، فلا داعي لاستعلام إضافي لجلب المنشور نفسه، فقط لتعليقاته.
-///
-/// [courseTitle] يُعرض كشارة سياق أعلى المنشور — على شاشة القائمة السياق
-/// معروف ضمنيًا (تبويب مساق واحد)، لكن هذه شاشة مستقلة تُدفع فوقها فتحتاج
-/// تذكير المستخدم بأي مساق ينتمي هذا المنشور.
+/// تفاصيل منشور واحد + تعليقاته — Firestore حقيقي (Stream حي للتعليقات).
 class PostDetailsScreen extends StatefulWidget {
   const PostDetailsScreen({
     super.key,
@@ -52,11 +47,14 @@ class PostDetailsScreen extends StatefulWidget {
 class _PostDetailsScreenState extends State<PostDetailsScreen> {
   final TextEditingController _replyController = TextEditingController();
 
+  bool get _isOwnPost =>
+      widget.post.authorId == FirebaseAuth.instance.currentUser?.uid;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PostProvider>().loadComments(widget.post.id);
+      context.read<PostProvider>().listenToComments(widget.post.id);
     });
   }
 
@@ -72,13 +70,32 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     if (content.isEmpty) return;
 
     final provider = context.read<PostProvider>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // اسم الكاتب الحقيقي من بروفايل الطالب — يُقرأ قبل أي await حتى لا
+    // يُستخدم context بعد فجوة غير متزامنة (lint use_build_context_synchronously).
+    final authorName = context.read<ProfileProvider>().profile?.fullName;
+    if (authorName == null || authorName.trim().isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('تعذر التعرف على بيانات حسابك، أعيدي تسجيل الدخول'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     _replyController.clear();
     FocusScope.of(context).unfocus();
 
-    final success = await provider.addComment(postId: widget.post.id, content: content);
+    final success = await provider.addComment(
+      postId: widget.post.id,
+      authorName: authorName,
+      content: content,
+    );
     if (!mounted || success) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    scaffoldMessenger.showSnackBar(
       const SnackBar(
         content: Text('تعذر إرسال الرد، حاول مرة أخرى'),
         backgroundColor: AppColors.error,
@@ -87,7 +104,25 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   }
 
   void _showReportSheet() {
-    ReportPostSheet.show(context, postId: widget.post.id);
+    ReportPostSheet.show(context, post: widget.post);
+  }
+
+  void _openEditPost(PostModel post) {
+    Navigator.of(context).push(
+      CreatePostScreen.editRoute(post: post, courseTitle: widget.courseTitle),
+    );
+  }
+
+  /// مشاركة المنشور نفسه (نصًا)، لا رابطًا — لا نسخة ويب للتطبيق بعد.
+  Future<void> _sharePost(PostModel post) async {
+    final buffer = StringBuffer(post.content);
+    if (post.attachment != null) {
+      buffer
+        ..writeln()
+        ..writeln()
+        ..write(post.attachment!.fileUrl);
+    }
+    await Share.share(buffer.toString(), subject: 'منشور من ${post.authorName}');
   }
 
   @override
@@ -109,9 +144,46 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0.5,
         actions: [
-          IconButton(
-            onPressed: _showReportSheet,
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMuted),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.small),
+            ),
+            onSelected: (value) {
+              if (value == 'report') _showReportSheet();
+              if (value == 'edit') _openEditPost(post);
+            },
+            itemBuilder: (context) => [
+              if (_isOwnPost)
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        'تعديل المنشور',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary),
+                      ),
+                      const SizedBox(width: AppSpacing.small),
+                      const Icon(Icons.edit_outlined, color: AppColors.primary, size: 18),
+                    ],
+                  ),
+                ),
+              PopupMenuItem(
+                value: 'report',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'الإبلاغ عن المنشور',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
+                    ),
+                    const SizedBox(width: AppSpacing.small),
+                    const Icon(Icons.flag_outlined, color: AppColors.error, size: 18),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -144,8 +216,9 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     );
   }
 
-  /// يعكس تحديثات الإعجاب/عدد التعليقات المتفائلة من القائمة الأصلية إن
-  /// كان المنشور نفسه لا يزال محمَّلًا فيها؛ وإلا يعرض النسخة الأصلية.
+  /// يعكس تحديثات الإعجاب/عدد التعليقات اللحظية من القائمة الأصلية إن كان
+  /// المنشور نفسه لا يزال محمَّلًا فيها (الـ Stream حدَّثه بالخلفية)؛ وإلا
+  /// يعرض النسخة الأصلية التي فُتحت بها الشاشة.
   PostModel _currentPost(PostProvider provider) {
     final match = provider.posts.where((p) => p.id == widget.post.id);
     return match.isNotEmpty ? match.first : widget.post;
@@ -174,9 +247,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                     const SizedBox(height: 2),
                     Text(
                       _timeAgo(post.createdAt),
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.textMuted,
-                      ),
+                      style: AppTextStyles.labelSmall.copyWith(color: AppColors.textMuted),
                     ),
                     const SizedBox(height: AppSpacing.extraSmall),
                     Container(
@@ -197,7 +268,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.small),
-              _buildAvatar(post.authorName, post.authorAvatarUrl),
+              _buildAvatar(post.authorName),
             ],
           ),
           const SizedBox(height: AppSpacing.small),
@@ -211,7 +282,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
           ),
           if (post.attachment != null) ...[
             const SizedBox(height: AppSpacing.small),
-            _buildAttachment(post.attachment!),
+            PostAttachmentPreview(attachment: post.attachment!),
           ],
           const SizedBox(height: AppSpacing.small),
           const Divider(height: 1, color: AppColors.divider),
@@ -219,13 +290,6 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                '${post.commentsCount} رد',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppColors.textMuted),
-              const SizedBox(width: AppSpacing.medium),
               InkWell(
                 onTap: () => context.read<PostProvider>().toggleLike(post.id),
                 borderRadius: BorderRadius.circular(AppRadius.small),
@@ -247,54 +311,30 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.medium),
+              Text(
+                '${post.commentsCount} رد',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chat_bubble_outline_rounded, size: 16, color: AppColors.textMuted),
+              const SizedBox(width: AppSpacing.medium),
+              InkWell(
+                onTap: () => _sharePost(post),
+                borderRadius: BorderRadius.circular(AppRadius.small),
+                child: Row(
+                  children: [
+                    Text(
+                      'مشاركة',
+                      style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.share_rounded, size: 16, color: AppColors.textMuted),
+                  ],
+                ),
+              ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAttachment(PostAttachment attachment) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.small),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(AppRadius.small),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.small),
-            ),
-            child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.warning, size: 20),
-          ),
-          const SizedBox(width: AppSpacing.small),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  attachment.fileName,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  attachment.sizeLabel,
-                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.download_rounded, color: AppColors.textMuted, size: 18),
         ],
       ),
     );
@@ -311,10 +351,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     if (provider.commentsError != null && provider.comments.isEmpty) {
       return AppErrorState(
         message: provider.commentsError!,
-        onRetry: () => context.read<PostProvider>().loadComments(
-          widget.post.id,
-          forceRefresh: true,
-        ),
+        onRetry: () => context.read<PostProvider>().listenToComments(widget.post.id),
       );
     }
 
@@ -369,7 +406,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
                 ),
               ),
               const SizedBox(width: AppSpacing.small),
-              _buildAvatar(comment.authorName, comment.authorAvatarUrl, size: 16),
+              _buildAvatar(comment.authorName, size: 16),
             ],
           ),
           const SizedBox(height: AppSpacing.small),
@@ -380,17 +417,6 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
               height: 1.5,
             ),
             textAlign: TextAlign.right,
-          ),
-          const SizedBox(height: AppSpacing.small),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'رد',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
         ],
       ),
@@ -467,20 +493,17 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     );
   }
 
-  Widget _buildAvatar(String name, String? avatarUrl, {double size = 18}) {
+  Widget _buildAvatar(String name, {double size = 18}) {
     return CircleAvatar(
       radius: size,
       backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-      child: avatarUrl == null
-          ? Text(
+      child: Text(
         name.isNotEmpty ? name[0] : '؟',
         style: AppTextStyles.bodySmall.copyWith(
           color: AppColors.primary,
           fontWeight: FontWeight.bold,
         ),
-      )
-          : null,
+      ),
     );
   }
 

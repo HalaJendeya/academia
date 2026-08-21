@@ -24,6 +24,7 @@ import '../models/student_course_view.dart';
 import '../providers/student_courses_provider.dart';
 import '../widgets/student_course_header_card.dart';
 import '../../shared_space/screens/shared_space_screen.dart';
+
 /// وسيطات شاشة التفاصيل.
 ///
 /// [offeringId] هو ما يفرّق السياقين: مساق من الخطة (بلا طرح) أو محاولة
@@ -36,10 +37,6 @@ class StudentCourseDetailArgs {
 }
 
 /// تفاصيل مساق للطالب.
-///
-/// التبويبات محفوظة كما صمّمها فريق الواجهة، لكن الواجبات والملفات
-/// والمساحة تعرض حالة "غير متاح بعد" صريحة: لا توجد مجموعات تغذّيها،
-/// وملؤها بقيم وهمية يجعل الشاشة تكذب على الطالب.
 class StudentCourseDetailScreen extends StatelessWidget {
   const StudentCourseDetailScreen({super.key});
 
@@ -54,8 +51,7 @@ class StudentCourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final args =
-    ModalRoute.of(context)?.settings.arguments
-    as StudentCourseDetailArgs?;
+    ModalRoute.of(context)?.settings.arguments as StudentCourseDetailArgs?;
     final provider = context.watch<StudentCoursesProvider>();
 
     final course = provider.courseById(args?.courseId);
@@ -100,25 +96,25 @@ class StudentCourseDetailScreen extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
+                  // 1. نظرة عامة
                   _buildOverviewTab(
                     course: course,
                     attempt: attempt,
-                    instructorName: attempt?.instructorName ??
-                        offering?.instructorName,
+                    instructorName:
+                    attempt?.instructorName ?? offering?.instructorName,
                     curriculumEntry: curriculumEntry,
                   ),
+                  // 2. الواجبات
                   _buildNotAvailableTab(),
 
-                  // الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
+                  // 3. الملفات
                   _CourseFilesTab(offeringId: args.offeringId),
-                  _buildNotAvailableTab(),
 
-                  _buildNotAvailableTab(),
+                  // 4. ساحة المشاركة
                   SharedSpaceScreen(
                     courseId: course.id,
                     courseTitle: course.title,
                   ),
-
                 ],
               ),
             ),
@@ -323,10 +319,6 @@ class StudentCourseDetailScreen extends StatelessWidget {
 }
 
 /// ملفات طرح واحد داخل تفاصيل المساق.
-///
-/// المسار: تسجيل الطالب ← offeringId ← courseFiles حيث offeringId يطابق.
-/// بلا طرح لا ملفات: مساق من الخطة لم يُسجَّل فيه الطالب لا يملك طرحًا،
-/// وقاعدة القراءة لا تمنحه شيئًا.
 class _CourseFilesTab extends StatefulWidget {
   const _CourseFilesTab({required this.offeringId});
 
@@ -355,7 +347,6 @@ class _CourseFilesTabState extends State<_CourseFilesTab> {
 
   @override
   void dispose() {
-    // مرجع محفوظ: لا يمكن قراءة المزوّد من context أثناء dispose.
     _fileProvider?.stopListening();
     super.dispose();
   }
@@ -400,7 +391,6 @@ class _CourseFilesTabState extends State<_CourseFilesTab> {
       );
     }
 
-    // النشطة وحدها: المؤرشف إزالة لا تُعرض للطالب.
     final files = provider.activeFiles;
 
     if (files.isEmpty) {

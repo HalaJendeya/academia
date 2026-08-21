@@ -7,13 +7,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/post_model.dart';
 import '../providers/post_provider.dart';
 
-/// أسباب الإبلاغ الثابتة، مطابقة للفيجما بالترتيب والنص.
-///
-/// القيم (يسار كل عنصر) هي ما يُخزَّن فعليًا عبر [PostProvider.reportPost]؛
-/// النصوص العربية للعرض فقط، تمامًا كمبدأ AppStrings.fileCategoryDisplay
-/// المستخدَم بميزة الملفات.
 class _ReportReason {
   const _ReportReason(this.value, this.label);
   final String value;
@@ -27,22 +23,21 @@ const List<_ReportReason> _reportReasons = [
   _ReportReason('unrelated', 'غير متعلق بالمساق'),
 ];
 
-/// نافذة الإبلاغ عن منشور، مطابقة لتصميم الفيجما: عنوان + وصف، 4 أسباب
-/// Radio، ملاحظات اختيارية، وزرا إرسال/إلغاء.
+/// نافذة الإبلاغ عن منشور، مطابقة لتصميم الفيجما.
 ///
-/// Mock بمرحلته الحالية — [PostProvider.reportPost] لا يخزّن البلاغ فعليًا
-/// بعد (انظر توثيق PostService)، فالإرسال هنا نجاح شكلي دائمًا ما دامت
-/// الشبكة "متاحة"، تمامًا كبقية ميزة ساحة المشاركة بمرحلة الـ Mock.
+/// تستقبل [PostModel] كاملًا بدل postId منفصل — postId وcourseId كلاهما
+/// موجودان أصلًا على أي منشور معروض، فلا داعي لتمرير معرّفين منفصلين قد
+/// يُنسى أحدهما أو يُخطأ ترتيبهما من مكان الاستدعاء.
 class ReportPostSheet extends StatefulWidget {
-  const ReportPostSheet({super.key, required this.postId});
+  const ReportPostSheet({super.key, required this.post});
 
-  final String postId;
+  final PostModel post;
 
-  static Future<void> show(BuildContext context, {required String postId}) {
+  static Future<void> show(BuildContext context, {required PostModel post}) {
     return showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (context) => ReportPostSheet(postId: postId),
+      builder: (context) => ReportPostSheet(post: post),
     );
   }
 
@@ -71,7 +66,8 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     final success = await provider.reportPost(
-      postId: widget.postId,
+      postId: widget.post.id,
+      courseId: widget.post.courseId,
       reason: _selectedReason!,
       notes: _notesController.text.trim(),
     );
@@ -92,102 +88,97 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-      ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.medium),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: AppSpacing.small),
-            Text(
-              'يساعدنا بلاغك في الحفاظ على مجتمع أكاديميا آمنًا ومفيدًا. '
-                  'يرجى تحديد سبب البلاغ:',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+    return RadioGroup<String>(
+      groupValue: _selectedReason,
+      onChanged: (value) => setState(() => _selectedReason = value),
+      child: Dialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.medium),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: AppSpacing.small),
+              Text(
+                'يساعدنا بلاغك في الحفاظ على مجتمع أكاديميا آمنًا ومفيدًا. '
+                    'يرجى تحديد سبب البلاغ:',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.right,
               ),
-              textAlign: TextAlign.right,
-            ),
-            const SizedBox(height: AppSpacing.medium),
-            ..._reportReasons.map(_buildReasonTile),
-            const SizedBox(height: AppSpacing.small),
-            Text(
-              'ملاحظات إضافية (اختياري)',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+              const SizedBox(height: AppSpacing.medium),
+              ..._reportReasons.map(_buildReasonTile),
+              const SizedBox(height: AppSpacing.small),
+              Text(
+                'ملاحظات إضافية (اختياري)',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.right,
               ),
-              textAlign: TextAlign.right,
-            ),
-            const SizedBox(height: AppSpacing.extraSmall),
-            TextField(
-              controller: _notesController,
-              textAlign: TextAlign.right,
-              maxLines: 3,
-              style: AppTextStyles.bodyMedium,
-              decoration: InputDecoration(
-                hintText: 'اكتب تفاصيل إضافية هنا...',
-                hintStyle: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textDisabled,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                  borderSide: const BorderSide(color: AppColors.border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                  borderSide: const BorderSide(color: AppColors.borderLight),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.input),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+              const SizedBox(height: AppSpacing.extraSmall),
+              TextField(
+                controller: _notesController,
+                textAlign: TextAlign.right,
+                maxLines: 3,
+                style: AppTextStyles.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: 'اكتب تفاصيل إضافية هنا...',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.input),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.input),
+                    borderSide: const BorderSide(color: AppColors.borderLight),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.input),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.medium),
-            ElevatedButton.icon(
-              onPressed: _isSubmitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
+              const SizedBox(height: AppSpacing.medium),
+              ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.button),
+                  ),
+                ),
+                icon: _isSubmitting
+                    ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary),
+                )
+                    : const Icon(Icons.send_rounded, size: 18, color: AppColors.textOnPrimary),
+                label: Text(
+                  'إرسال البلاغ',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textOnPrimary),
                 ),
               ),
-              icon: _isSubmitting
-                  ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.textOnPrimary,
+              const SizedBox(height: AppSpacing.small),
+              OutlinedButton(
+                onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.button),
+                  ),
                 ),
-              )
-                  : const Icon(Icons.send_rounded, size: 18, color: AppColors.textOnPrimary),
-              label: Text(
-                'إرسال البلاغ',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textOnPrimary),
+                child: const Text('إلغاء'),
               ),
-            ),
-            const SizedBox(height: AppSpacing.small),
-            OutlinedButton(
-              onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-                side: const BorderSide(color: AppColors.border),
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                ),
-              ),
-              child: const Text('إلغاء'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -223,14 +214,9 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
       borderRadius: BorderRadius.circular(AppRadius.small),
       child: Container(
         margin: const EdgeInsets.only(bottom: AppSpacing.small),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.small,
-          vertical: AppSpacing.small,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.small, vertical: AppSpacing.small),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.06)
-              : AppColors.surfaceSecondary,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.06) : AppColors.surfaceSecondary,
           borderRadius: BorderRadius.circular(AppRadius.small),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.borderLight,
@@ -241,9 +227,7 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
           children: [
             Radio<String>(
               value: reason.value,
-              groupValue: _selectedReason,
               activeColor: AppColors.primary,
-              onChanged: (value) => setState(() => _selectedReason = value),
             ),
             Expanded(
               child: Text(

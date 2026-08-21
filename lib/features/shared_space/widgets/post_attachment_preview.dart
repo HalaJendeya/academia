@@ -1,6 +1,7 @@
 // lib/features/shared_space/widgets/post_attachment_preview.dart
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
@@ -10,28 +11,62 @@ import '../models/post_attachment.dart';
 
 const List<String> _imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
-/// معاينة مرفق موحَّدة، تُستخدَم ببطاقة القائمة وشاشة التفاصيل معًا — بدل
-/// نسخ نفس منطق الأيقونة/الحجم مرتين. الصور تُعرض كصورة مصغَّرة حقيقية
-/// (Image.network على رابط Cloudinary الفعلي)، لا أيقونة عامة؛ باقي
-/// الصيغ بأيقونة ولون حسب الامتداد، بنفس نظام الألوان المستخدَم بأيقونة
-/// ملفات المساق (PDF/PPT بلون تحذيري، DOC وغيره بلون ثانوي).
+/// معاينة مرفق موحَّدة، تُستخدَم ببطاقة القائمة وشاشة التفاصيل معًا.
+///
+/// الفتح ذكي حسب النوع، ومُدار داخليًا هنا (لا حاجة لتمرير onTap من كل
+/// شاشة تستخدمها، ولا لتكرار نفس القرار مرتين):
+/// - صورة: عارض كامل الشاشة داخل التطبيق نفسه (InteractiveViewer قابل
+///   للتكبير)، لا متصفح خارجي — الصورة سياق بصري سريع، لا ملفًا يُحمَّل.
+/// - أي نوع آخر (PDF أساسًا): متصفح خارجي عبر url_launcher، كما كان.
 class PostAttachmentPreview extends StatelessWidget {
-  const PostAttachmentPreview({
-    super.key,
-    required this.attachment,
-    this.onTap,
-  });
+  const PostAttachmentPreview({super.key, required this.attachment});
 
   final PostAttachment attachment;
-  final VoidCallback? onTap;
 
   bool get _isImage =>
       _imageExtensions.contains(attachment.fileExtension.toLowerCase());
 
+  Future<void> _handleTap(BuildContext context) async {
+    if (attachment.fileUrl.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('رابط الملف غير صالح')),
+      );
+      return;
+    }
+
+    if (_isImage) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _FullScreenImageViewer(
+            imageUrl: attachment.fileUrl,
+            title: attachment.fileName,
+          ),
+          fullscreenDialog: true,
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri.tryParse(attachment.fileUrl);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('رابط الملف غير صالح')),
+      );
+      return;
+    }
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!context.mounted) return;
+    if (!launched) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الملف')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       borderRadius: BorderRadius.circular(AppRadius.small),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.small),
@@ -81,8 +116,6 @@ class PostAttachmentPreview extends StatelessWidget {
           width: 44,
           height: 44,
           fit: BoxFit.cover,
-          // فشل التحميل (رابط تالف، انقطاع شبكة) يسقط للأيقونة الاحتياطية
-          // بدل مساحة مكسورة فارغة.
           errorBuilder: (context, error, stackTrace) => _buildIcon(),
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
@@ -159,4 +192,44 @@ class _AttachmentIconConfig {
   const _AttachmentIconConfig({required this.icon, required this.color});
   final IconData icon;
   final Color color;
+}
+
+/// عارض صورة كامل الشاشة، داخل التطبيق نفسه — لا يفتح متصفحًا خارجيًا.
+/// InteractiveViewer يسمح بالتكبير/التصغير باللمس، كأي عارض صور عادي.
+class _FullScreenImageViewer extends StatelessWidget {
+  const _FullScreenImageViewer({required this.imageUrl, required this.title});
+
+  final String imageUrl;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(title, overflow: TextOverflow.ellipsis),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 4,
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return const CircularProgressIndicator(color: Colors.white);
+            },
+            errorBuilder: (context, error, stackTrace) => const Icon(
+              Icons.broken_image_outlined,
+              color: Colors.white54,
+              size: 64,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

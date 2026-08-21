@@ -93,26 +93,26 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.register: (context) => const RegisterScreen(),
         AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
         AppRoutes.studentVerification: (context) =>
-            const StudentVerificationScreen(),
+        const StudentVerificationScreen(),
         AppRoutes.dashboard: (context) => const DashboardScreen(),
         AppRoutes.adminDashboard: (context) => const AdminDashboardScreen(),
         AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
 
         // Onboarding Routes
         AppRoutes.onboardingWelcome: (context) =>
-            const OnboardingWelcomeScreen(),
+        const OnboardingWelcomeScreen(),
         AppRoutes.studyDaysSetup: (context) => const StudyDaysSetupScreen(),
         AppRoutes.sessionDurationSetup: (context) =>
-            const SessionDurationSetupScreen(),
+        const SessionDurationSetupScreen(),
         AppRoutes.notificationPreferencesSetup: (context) =>
-            const NotificationPreferencesSetupScreen(),
+        const NotificationPreferencesSetupScreen(),
         AppRoutes.setupComplete: (context) => const SetupCompleteScreen(),
 
         //Profile Routes
         AppRoutes.profile: (context) => const ProfileScreen(),
         AppRoutes.editProfile: (context) => const EditProfileScreen(),
         AppRoutes.profileNotificationSettings: (context) =>
-            const NotificationSettingsScreen(),
+        const NotificationSettingsScreen(),
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
@@ -121,7 +121,7 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.courses: (context) => const StudentCoursesScreen(),
         AppRoutes.courseDetail: (context) => const StudentCourseDetailScreen(),
         AppRoutes.coursesArchive: (context) =>
-            const StudentCoursesArchiveScreen(),
+        const StudentCoursesArchiveScreen(),
 
         //Student Files Routes
         AppRoutes.allFiles: (context) => const AllFilesScreen(),
@@ -150,44 +150,43 @@ class AkademiaApp extends StatelessWidget {
           return AdminStudentDetailsScreen(student: arguments);
         },
         AppRoutes.adminAssignCourses: (context) =>
-            const AdminAssignCoursesScreen(),
+        const AdminAssignCoursesScreen(),
         AppRoutes.adminShell: (context) => const AdminShellScreen(),
         AppRoutes.adminCourseDetails: (context) =>
-            const AdminCourseDetailsScreen(),
+        const AdminCourseDetailsScreen(),
         AppRoutes.adminAssignments: (context) =>
-            const AdminAssignmentListScreen(),
+        const AdminAssignmentListScreen(),
         AppRoutes.adminAddAssignment: (context) =>
-            const AdminAssignmentFormScreen(),
+        const AdminAssignmentFormScreen(),
         AppRoutes.adminAssignmentDetails: (context) =>
-            const AdminAssignmentDetailsScreen(),
+        const AdminAssignmentDetailsScreen(),
         AppRoutes.adminCourseFiles: (context) => const AdminCourseFilesScreen(),
+        AppRoutes.adminReportedPosts: (context) => const AdminReportedPostsScreen(),
         AppRoutes.adminUploadFile: (context) => const AdminUploadFileScreen(),
         AppRoutes.adminContent: (context) => const AdminContentScreen(),
         AppRoutes.adminAnnouncements: (context) =>
-            const AdminAnnouncementsScreen(),
+        const AdminAnnouncementsScreen(),
         AppRoutes.adminAddAnnouncement: (context) =>
-            const AdminAnnouncementFormScreen(),
-        AppRoutes.adminReportedPosts: (context) =>
-            const AdminReportedPostsScreen(),
+        const AdminAnnouncementFormScreen(),
         AppRoutes.adminSettings: (context) => const AdminSettingsScreen(),
         AppRoutes.adminProfile: (context) => const AdminProfileScreen(),
         AppRoutes.adminSemesters: (context) => const AdminSemesterListScreen(),
         AppRoutes.adminAddSemester: (context) =>
-            const AdminSemesterFormScreen(),
+        const AdminSemesterFormScreen(),
         AppRoutes.adminDepartments: (context) =>
-            const AdminDepartmentListScreen(),
+        const AdminDepartmentListScreen(),
         AppRoutes.adminAddDepartment: (context) =>
-            const AdminDepartmentFormScreen(),
+        const AdminDepartmentFormScreen(),
         AppRoutes.adminMajors: (context) => const AdminMajorListScreen(),
         AppRoutes.adminAddMajor: (context) => const AdminMajorFormScreen(),
         AppRoutes.adminCurriculum: (context) => const AdminCurriculumScreen(),
         AppRoutes.adminCurriculumEntry: (context) =>
-            const AdminCurriculumEntryFormScreen(),
+        const AdminCurriculumEntryFormScreen(),
         AppRoutes.adminOfferings: (context) => const AdminOfferingListScreen(),
         AppRoutes.adminAddOffering: (context) =>
-            const AdminOfferingFormScreen(),
+        const AdminOfferingFormScreen(),
         AppRoutes.adminOfferingRoster: (context) =>
-            const AdminOfferingRosterScreen(),
+        const AdminOfferingRosterScreen(),
       },
     );
   }

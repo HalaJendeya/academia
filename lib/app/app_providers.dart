@@ -33,13 +33,10 @@ import '../features/tasks/providers/task_provider.dart';
 import '../features/tasks/services/task_service.dart';
 import '../features/shared_space/providers/post_provider.dart';
 import '../features/shared_space/services/post_service.dart';
+import '../features/admin/providers/admin_post_reports_provider.dart';
+import '../features/notifications/providers/notification_provider.dart';
+import '../features/notifications/services/notification_service.dart';
 
-/// مشرف نشط ومسجَّل الدخول فعلًا.
-///
-/// شرط واحد لكل المزوّدات الإدارية: أي شيء دون ذلك — خروج، أو حساب طالب،
-/// أو حساب غير نشط — يعني إيقاف الاستماع.
-bool _isActiveAdmin(AuthProvider auth) =>
-    auth.isLoggedIn && auth.isAdmin && auth.isAccountActive;
 
 final List<SingleChildWidget> appProviders = [
   ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -65,45 +62,18 @@ final List<SingleChildWidget> appProviders = [
    * المساقات، فالطروحات التي تربط مساقًا بفصل، فالخطة الدراسية، ثم
    * التسجيلات التي تشير إلى طرح.
    */
-  /*
-   * كل مزوّد إداري يستمع إلى Firestore مربوط بـ AuthProvider.
-   *
-   * هذه المزوّدات مركَّبة عالميًا فوق MaterialApp، فلا يُستدعى dispose
-   * أثناء عمل التطبيق. قبل هذا الربط كان الاستماع إلى courses و users و
-   * departments يبقى حيًّا بعد تسجيل الخروج، فتعيد القواعد المشدَّدة تقييمه
-   * بلا مصادقة وتظهر PERMISSION_DENIED متكررة. الحل إيقاف المستمع لا
-   * إضعاف القاعدة.
-   */
-  ChangeNotifierProxyProvider<AuthProvider, SemesterProvider>(
-    create: (_) => SemesterProvider(SemesterService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
-  ),
-  ChangeNotifierProxyProvider<AuthProvider, AcademicStructureProvider>(
+  ChangeNotifierProvider(create: (_) => SemesterProvider(SemesterService())),
+  ChangeNotifierProvider(
     create: (_) =>
         AcademicStructureProvider(DepartmentService(), MajorService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
-  ChangeNotifierProxyProvider<AuthProvider, CourseProvider>(
-    create: (_) => CourseProvider(CourseService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
-  ),
-  ChangeNotifierProxyProvider<AuthProvider, CourseOfferingProvider>(
+  ChangeNotifierProvider(create: (_) => CourseProvider(CourseService())),
+  ChangeNotifierProvider(
     create: (_) => CourseOfferingProvider(CourseOfferingService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
-  ChangeNotifierProxyProvider<AuthProvider, CurriculumProvider>(
-    create: (_) => CurriculumProvider(CurriculumService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
-  ),
-  ChangeNotifierProxyProvider<AuthProvider, EnrollmentProvider>(
+  ChangeNotifierProvider(create: (_) => CurriculumProvider(CurriculumService())),
+  ChangeNotifierProvider(
     create: (_) => EnrollmentProvider(EnrollmentService()),
-    update: (_, auth, provider) =>
-        provider!..syncWithAuth(isActiveAdmin: _isActiveAdmin(auth)),
   ),
   /*
    * السجل الأكاديمي لطالب واحد في شاشة المشرف، منفصل عن EnrollmentProvider:
@@ -115,16 +85,9 @@ final List<SingleChildWidget> appProviders = [
    * Cloudinary. المزوّد يجمع الخدمتين ليضمن الترتيب — الرفع أولًا، ثم
    * كتابة البيانات الوصفية — فلا يوجد مستند يشير إلى ملف غير مرفوع.
    */
-  /*
-   * ملفات المساقات يخدم الدورين: المشرف يرفع ويدير، والطالب يقرأ ملفات
-   * الطروح المسجَّل فيها. لذلك شرطه "مستخدم نشط" لا "مشرف" — وإلا لأفرغنا
-   * ملفات الطالب فور تحميلها.
-   */
-  ChangeNotifierProxyProvider<AuthProvider, CourseFileProvider>(
+  ChangeNotifierProvider(
     create: (_) =>
         CourseFileProvider(CourseFileService(), CloudinaryUploadService()),
-    update: (_, auth, provider) => provider!
-      ..syncWithAuth(isActiveUser: auth.isLoggedIn && auth.isAccountActive),
   ),
   ChangeNotifierProvider(
     create: (_) => AdminStudentRecordProvider(
@@ -173,8 +136,21 @@ final List<SingleChildWidget> appProviders = [
   ),
   /*
    * ساحة المشاركة: منشورات مقيَّدة بمساق واحد في كل مرة، بنفس مبدأ
-   * CourseFileProvider مع offeringId. Mock بالكامل حاليًا (PostService لا
-   * يتصل بـ Firestore بعد)، وسيُستبدل لاحقًا دون تغيير في الشاشات.
+   * CourseFileProvider مع offeringId. Firestore حقيقي بالكامل عبر Streams.
    */
   ChangeNotifierProvider(create: (_) => PostProvider(PostService())),
+  /*
+
+   * قائمة بلاغات المنشورات لدى الأدمن (M-10 Reported Posts Queue) — تشترك
+   * مع PostProvider في PostService نفسها، فيُنشأ نسخة منفصلة هنا (لا تُمرَّر
+   * PostService واحدة بين الاثنين) لأن كل Provider له دورة حياة مختلفة:
+   * قائمة الطالب مرتبطة بتبويب مساق واحد، وقائمة الأدمن مرتبطة بجلسة
+   * المراجعة كلها.
+   */
+  ChangeNotifierProvider(create: (_) => AdminPostReportsProvider(PostService())),
+  /*
+   * إشعارات الطالب داخل التطبيق (In-App) — Firestore حقيقي عبر Stream،
+   * انظر توثيق NotificationService حول قيد خطة Spark المجانية.
+   */
+  ChangeNotifierProvider(create: (_) => NotificationProvider(NotificationService())),
 ];

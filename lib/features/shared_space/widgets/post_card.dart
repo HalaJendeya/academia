@@ -1,17 +1,24 @@
 // lib/features/shared_space/widgets/post_card.dart
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
-import '../models/post_attachment.dart';
 import '../models/post_model.dart';
+import 'post_attachment_preview.dart';
 
 /// بطاقة منشور واحد بساحة مشاركة المساق، مطابقة لتصميم الفيجما: كاتب
 /// ودوره، قائمة خيارات (⋮)، النص، مرفق اختياري، وصف إعجاب/تعليق بالأسفل.
+///
+/// قائمة الخيارات ديناميكية حسب الملكية: "تعديل المنشور" لصاحبه فقط،
+/// "الإبلاغ عن المنشور" لغيره — طالب لا يُبلِغ عن نفسه، ولا يعدّل منشور
+/// زميله؛ نفس الشرط الذي تفرضه قاعدة posts.update بـ Firestore، معروضًا
+/// هنا كواجهة لا كتحقق أمني بديل عنها.
 class PostCard extends StatelessWidget {
   const PostCard({
     super.key,
@@ -19,12 +26,16 @@ class PostCard extends StatelessWidget {
     this.onTap,
     this.onLikeTap,
     this.onReportTap,
+    this.onEditTap,
   });
 
   final PostModel post;
   final VoidCallback? onTap;
   final VoidCallback? onLikeTap;
   final VoidCallback? onReportTap;
+  final VoidCallback? onEditTap;
+
+  bool get _isOwnPost => post.authorId == FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +56,12 @@ class PostCard extends StatelessWidget {
           ),
           if (post.attachment != null) ...[
             const SizedBox(height: AppSpacing.small),
-            _buildAttachment(post.attachment!),
+            PostAttachmentPreview(attachment: post.attachment!),
           ],
           const SizedBox(height: AppSpacing.small),
           const Divider(height: 1, color: AppColors.divider),
           const SizedBox(height: AppSpacing.small),
-          _buildFooter(),
+          _buildFooter(context),
         ],
       ),
     );
@@ -72,8 +83,24 @@ class PostCard extends StatelessWidget {
           ),
           onSelected: (value) {
             if (value == 'report') onReportTap?.call();
+            if (value == 'edit') onEditTap?.call();
           },
           itemBuilder: (context) => [
+            if (_isOwnPost)
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'تعديل المنشور',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary),
+                    ),
+                    const SizedBox(width: AppSpacing.small),
+                    const Icon(Icons.edit_outlined, color: AppColors.primary, size: 18),
+                  ],
+                ),
+              ),
             PopupMenuItem(
               value: 'report',
               child: Row(
@@ -81,16 +108,10 @@ class PostCard extends StatelessWidget {
                 children: [
                   Text(
                     'الإبلاغ عن المنشور',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.error,
-                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error),
                   ),
                   const SizedBox(width: AppSpacing.small),
-                  const Icon(
-                    Icons.flag_outlined,
-                    color: AppColors.error,
-                    size: 18,
-                  ),
+                  const Icon(Icons.flag_outlined, color: AppColors.error, size: 18),
                 ],
               ),
             ),
@@ -129,87 +150,31 @@ class PostCard extends StatelessWidget {
     return CircleAvatar(
       radius: 18,
       backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-      backgroundImage: post.authorAvatarUrl != null
-          ? NetworkImage(post.authorAvatarUrl!)
-          : null,
-      child: post.authorAvatarUrl == null
-          ? Text(
+      child: Text(
         post.authorName.isNotEmpty ? post.authorName[0] : '؟',
         style: AppTextStyles.bodyMedium.copyWith(
           color: AppColors.primary,
           fontWeight: FontWeight.bold,
         ),
-      )
-          : null,
-    );
-  }
-
-  Widget _buildAttachment(PostAttachment attachment) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.small),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceSecondary,
-        borderRadius: BorderRadius.circular(AppRadius.small),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.warning.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.small),
-            ),
-            child: const Icon(
-              Icons.picture_as_pdf_rounded,
-              color: AppColors.warning,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.small),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  attachment.fileName,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  attachment.sizeLabel,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _buildFooter() {
+  Future<void> _sharePost() async {
+    final buffer = StringBuffer(post.content);
+    if (post.attachment != null) {
+      buffer
+        ..writeln()
+        ..writeln()
+        ..write(post.attachment!.fileUrl);
+    }
+    await Share.share(buffer.toString(), subject: 'منشور من ${post.authorName}');
+  }
+
+  Widget _buildFooter(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Text(
-          'تعليق (${post.commentsCount})',
-          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-        ),
-        const SizedBox(width: 4),
-        const Icon(
-          Icons.chat_bubble_outline_rounded,
-          size: 16,
-          color: AppColors.textMuted,
-        ),
-        const SizedBox(width: AppSpacing.medium),
         InkWell(
           onTap: onLikeTap,
           borderRadius: BorderRadius.circular(AppRadius.small),
@@ -238,6 +203,35 @@ class PostCard extends StatelessWidget {
                       ? AppColors.primary
                       : AppColors.textMuted,
                 ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.medium),
+        Text(
+          'تعليق (${post.commentsCount})',
+          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.chat_bubble_outline_rounded,
+          size: 16,
+          color: AppColors.textMuted,
+        ),
+        const SizedBox(width: AppSpacing.medium),
+        InkWell(
+          onTap: _sharePost,
+          borderRadius: BorderRadius.circular(AppRadius.small),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+            child: Row(
+              children: [
+                Text(
+                  'مشاركة',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(width: 4),
+                const Icon(Icons.share_rounded, size: 16, color: AppColors.textMuted),
               ],
             ),
           ),

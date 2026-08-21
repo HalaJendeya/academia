@@ -219,6 +219,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Navigator.of(context).pushNamed(AppRoutes.adminOfferings);
                   },
                 ),
+                /*
+                 * ملاحظة على مؤقتية النص: "بلاغات المنشورات" نص مباشر لا
+                 * AppStrings.* — نفس مبدأ الالتزام المتّبع بميزة ساحة
+                 * المشاركة كلها: نصوصها لم تُدمَج بعد في app_strings.dart
+                 * المركزي، على أن تُنقَل لاحقًا دفعة واحدة مع باقي نصوص
+                 * الميزة، لا سطرًا سطرًا بمناسبات متفرقة.
+                 */
+                AdminQuickActionCard(
+                  title: 'بلاغات المنشورات',
+                  icon: Icons.flag_rounded,
+                  color: AppColors.error,
+                  onTap: () {
+                    Navigator.of(
+                      context,
+                    ).pushNamed(AppRoutes.adminReportedPosts);
+                  },
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.large),

@@ -20,7 +20,7 @@ class NotificationSettingsService {
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
   }) : _auth = auth ?? FirebaseAuth.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   Future<NotificationSettings> getCurrentSettings() async {
     final currentUser = _auth.currentUser;

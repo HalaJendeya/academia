@@ -96,8 +96,8 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     if (!mounted || success) return;
 
     scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Text('تعذر إرسال الرد، حاول مرة أخرى'),
+      SnackBar(
+        content: Text('خطأ حقيقي: ${provider.lastCommentError ?? "غير معروف"}'),
         backgroundColor: AppColors.error,
       ),
     );
@@ -514,6 +514,10 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
+    // فرق أقل من دقيقة (أو سالب — ساعة الجهاز متقدّمة قليلًا عن سيرفر
+    // Firebase) يظهر "الآن"، لا رقمًا مضلِّلًا. القيم الأكبر تبقى تعتمد
+    // على ساعة الجهاز، فقد تختلف قليلًا إن لم تكن مزامَنة تلقائيًا.
+    if (diff.inSeconds < 60) return 'الآن';
     if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
     if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
     if (diff.inDays < 30) return 'منذ ${diff.inDays} يوم';

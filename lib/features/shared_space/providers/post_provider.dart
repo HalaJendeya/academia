@@ -151,6 +151,9 @@ class PostProvider extends ChangeNotifier {
     } catch (e) {
       final currentIndex = _posts.indexWhere((p) => p.id == postId);
       if (currentIndex != -1) _posts[currentIndex] = previous;
+      // تشخيص مؤقت: نص الاستثناء الحقيقي، لا رسالة عامة — لتحديد سبب
+      // فشل الإعجاب في مساقات بعينها قبل إرجاعه لرسالة نهائية نظيفة.
+      _errorMessage = 'خطأ إعجاب حقيقي: $e';
       notifyListeners();
     }
   }
@@ -292,6 +295,10 @@ class PostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// تشخيص مؤقت: نص الاستثناء الحقيقي بدل true/false فقط، لتحديد سبب فشل
+  /// التعليق في مساقات بعينها.
+  String? lastCommentError;
+
   Future<bool> addComment({
     required String postId,
     required String authorName,
@@ -300,6 +307,7 @@ class PostProvider extends ChangeNotifier {
     if (_isSendingComment || content.trim().isEmpty) return false;
 
     _isSendingComment = true;
+    lastCommentError = null;
     notifyListeners();
 
     try {
@@ -310,6 +318,7 @@ class PostProvider extends ChangeNotifier {
       );
       return true;
     } catch (e) {
+      lastCommentError = e.toString();
       return false;
     } finally {
       _isSendingComment = false;

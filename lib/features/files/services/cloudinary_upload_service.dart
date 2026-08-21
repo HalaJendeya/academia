@@ -38,7 +38,7 @@ class CloudinaryUploadService {
   final http.Client _client;
 
   CloudinaryUploadService({http.Client? client})
-    : _client = client ?? http.Client();
+      : _client = client ?? http.Client();
 
   /// التحقق قبل الرفع.
   ///
@@ -117,6 +117,27 @@ class CloudinaryUploadService {
       fileName: fileName,
       uploadPreset: CloudinaryConfig.profileImageUploadPreset,
       folder: CloudinaryConfig.folderForProfileImage(uid),
+    );
+  }
+
+  /// رفع مرفق منشور بساحة المشاركة.
+  ///
+  /// منفصلة عن [upload] عمدًا: مرفقات المنشورات مرتبطة بـ courseId لا
+  /// offeringId (منشور ساحة المشاركة عابر لفصول الطرح المختلفة لنفس
+  /// المساق)، فاستعمال folderForOffering هنا كان سيُدخل معرّف مساق مكان
+  /// معرّف طرح بنفس الحقل — تسمية مضلِّلة للمجلدات على المدى الطويل.
+  Future<CloudinaryUploadResult> uploadPostAttachment({
+    required List<int> bytes,
+    required String fileName,
+    required String courseId,
+  }) {
+    validate(fileName: fileName, sizeBytes: bytes.length);
+
+    return _send(
+      bytes: bytes,
+      fileName: fileName,
+      uploadPreset: CloudinaryConfig.uploadPreset,
+      folder: 'academia/shared_space_attachments/$courseId',
     );
   }
 

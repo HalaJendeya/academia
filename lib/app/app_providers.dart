@@ -38,6 +38,11 @@ import '../features/semesters/services/semester_service.dart';
 import '../features/teacher/providers/teacher_offerings_provider.dart';
 import '../features/tasks/providers/task_provider.dart';
 import '../features/tasks/services/task_service.dart';
+import '../features/shared_space/providers/post_provider.dart';
+import '../features/shared_space/services/post_service.dart';
+import '../features/admin/providers/admin_post_reports_provider.dart';
+import '../features/notifications/providers/notification_provider.dart';
+import '../features/notifications/services/notification_service.dart';
 
 /// مشرف نشط ومسجَّل الدخول فعلًا.
 ///
@@ -289,5 +294,27 @@ final List<SingleChildWidget> appProviders = [
       );
       return taskProvider;
     },
+  ),
+  /*
+   * ساحة المشاركة: منشورات مقيَّدة بمساق واحد في كل مرة، بنفس مبدأ
+   * CourseFileProvider مع offeringId. Firestore حقيقي بالكامل عبر Streams.
+   */
+  ChangeNotifierProvider(create: (_) => PostProvider(PostService())),
+  /*
+   * قائمة بلاغات المنشورات لدى الأدمن (M-10 Reported Posts Queue) — تشترك
+   * مع PostProvider في PostService نفسها، فيُنشأ نسخة منفصلة هنا (لا تُمرَّر
+   * PostService واحدة بين الاثنين) لأن كل Provider له دورة حياة مختلفة:
+   * قائمة الطالب مرتبطة بتبويب مساق واحد، وقائمة الأدمن مرتبطة بجلسة
+   * المراجعة كلها.
+   */
+  ChangeNotifierProvider(
+    create: (_) => AdminPostReportsProvider(PostService()),
+  ),
+  /*
+   * إشعارات الطالب داخل التطبيق (In-App) — Firestore حقيقي عبر Stream،
+   * انظر توثيق NotificationService حول قيد خطة Spark المجانية.
+   */
+  ChangeNotifierProvider(
+    create: (_) => NotificationProvider(NotificationService()),
   ),
 ];

@@ -28,6 +28,7 @@ import '../models/course_model.dart';
 import '../models/student_course_view.dart';
 import '../providers/student_courses_provider.dart';
 import '../widgets/student_course_header_card.dart';
+import '../../shared_space/screens/shared_space_screen.dart';
 
 /// وسيطات شاشة التفاصيل.
 ///
@@ -42,10 +43,9 @@ class StudentCourseDetailArgs {
 
 /// تفاصيل مساق للطالب.
 ///
-/// التبويبات محفوظة كما صمّمها فريق الواجهة. الواجبات والملفات تقرآن من
-/// Firestore مقيَّدتين بالطرح الذي يملك الطالب تسجيلًا فيه؛ «المساحة
-/// المشتركة» وحدها تبقى تعرض حالة «غير متاح بعد» صريحة، إذ لا مجموعة
-/// تغذّيها، وملؤها بقيم وهمية يجعل الشاشة تكذب على الطالب.
+/// التبويبات محفوظة كما صمّمها فريق الواجهة، وكلها تقرأ من Firestore الآن:
+/// الواجبات والملفات مقيَّدتان بالطرح الذي يملك الطالب تسجيلًا فيه، وساحة
+/// المشاركة مقيَّدة بالمساق. لا تبويب يعرض بيانات وهمية.
 class StudentCourseDetailScreen extends StatelessWidget {
   const StudentCourseDetailScreen({super.key});
 
@@ -60,8 +60,7 @@ class StudentCourseDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final args =
-        ModalRoute.of(context)?.settings.arguments
-            as StudentCourseDetailArgs?;
+    ModalRoute.of(context)?.settings.arguments as StudentCourseDetailArgs?;
     final provider = context.watch<StudentCoursesProvider>();
 
     final course = provider.courseById(args?.courseId);
@@ -106,18 +105,25 @@ class StudentCourseDetailScreen extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
+                  // 1. نظرة عامة
                   _buildOverviewTab(
                     course: course,
                     attempt: attempt,
-                    instructorName: attempt?.instructorName ??
-                        offering?.instructorName,
+                    instructorName:
+                    attempt?.instructorName ?? offering?.instructorName,
                     curriculumEntry: curriculumEntry,
                   ),
-                  // الواجبات: مقيَّدة بالطرح نفسه — الخطة وحدها لا تكفي.
+                  // 2. الواجبات: مقيَّدة بالطرح نفسه — الخطة وحدها لا تكفي.
                   _CourseAssignmentsTab(offeringId: args.offeringId),
-                  // الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
+
+                  // 3. الملفات: مقيَّدة بالطرح الذي يملك الطالب تسجيلًا فيه.
                   _CourseFilesTab(offeringId: args.offeringId),
-                  _buildNotAvailableTab(),
+
+                  // 4. ساحة المشاركة
+                  SharedSpaceScreen(
+                    courseId: course.id,
+                    courseTitle: course.title,
+                  ),
                 ],
               ),
             ),
@@ -163,13 +169,11 @@ class StudentCourseDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNotAvailableTab() {
-    return const AppEmptyState(
-      title: AppStrings.featureNotAvailableYetTitle,
-      description: AppStrings.featureNotAvailableYetDesc,
-      icon: Icons.hourglass_empty_rounded,
-    );
-  }
+  /*
+   * لا يوجد تبويب «غير متاح بعد» في هذه الشاشة بعد الآن: التبويبات الأربعة
+   * كلها تقرأ من Firestore — الواجبات والملفات وساحة المشاركة. أُزيل
+   * _buildNotAvailableTab عند دمج ساحة المشاركة لأنه فقد آخر مستدعٍ له.
+   */
 
   Widget _buildOverviewTab({
     required CourseModel course,

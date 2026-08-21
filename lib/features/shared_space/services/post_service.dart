@@ -260,6 +260,7 @@ class PostService {
   Future<void> reportPost({
     required String postId,
     required String courseId,
+    required String reporterName,
     required String reason,
     String notes = '',
   }) async {
@@ -268,6 +269,7 @@ class PostService {
         'postId': postId,
         'courseId': courseId,
         'reporterId': _requireUserId,
+        'reporterName': reporterName,
         'reason': reason,
         'notes': notes,
         'status': 'pending',

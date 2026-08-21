@@ -227,6 +227,7 @@ class PostProvider extends ChangeNotifier {
   Future<bool> reportPost({
     required String postId,
     required String courseId,
+    required String reporterName,
     required String reason,
     String notes = '',
   }) async {
@@ -234,6 +235,7 @@ class PostProvider extends ChangeNotifier {
       await _service.reportPost(
         postId: postId,
         courseId: courseId,
+        reporterName: reporterName,
         reason: reason,
         notes: notes,
       );

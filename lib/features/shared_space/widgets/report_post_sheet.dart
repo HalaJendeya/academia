@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../models/post_model.dart';
 import '../providers/post_provider.dart';
 
@@ -59,15 +60,29 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
   Future<void> _submit() async {
     if (_selectedReason == null || _isSubmitting) return;
 
-    setState(() => _isSubmitting = true);
-
     final provider = context.read<PostProvider>();
     final navigator = Navigator.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
+    // اسم المُبلِّغ الحقيقي من بروفايله — يُقرأ قبل أي await، ولو غاب لا
+    // نرسل بلاغًا منسوبًا لاسم فارغ؛ نوقف ونطلب تسجيل دخول من جديد.
+    final reporterName = context.read<ProfileProvider>().profile?.fullName;
+    if (reporterName == null || reporterName.trim().isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('تعذر التعرف على بيانات حسابك، أعيدي تسجيل الدخول'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
     final success = await provider.reportPost(
       postId: widget.post.id,
       courseId: widget.post.courseId,
+      reporterName: reporterName,
       reason: _selectedReason!,
       notes: _notesController.text.trim(),
     );
@@ -88,97 +103,93 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return RadioGroup<String>(
-      groupValue: _selectedReason,
-      onChanged: (value) => setState(() => _selectedReason = value),
-      child: Dialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.card),
-        ),
-        insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.medium),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: AppSpacing.small),
-              Text(
-                'يساعدنا بلاغك في الحفاظ على مجتمع أكاديميا آمنًا ومفيدًا. '
-                    'يرجى تحديد سبب البلاغ:',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-                textAlign: TextAlign.right,
-              ),
-              const SizedBox(height: AppSpacing.medium),
-              ..._reportReasons.map(_buildReasonTile),
-              const SizedBox(height: AppSpacing.small),
-              Text(
-                'ملاحظات إضافية (اختياري)',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
-                textAlign: TextAlign.right,
-              ),
-              const SizedBox(height: AppSpacing.extraSmall),
-              TextField(
-                controller: _notesController,
-                textAlign: TextAlign.right,
-                maxLines: 3,
-                style: AppTextStyles.bodyMedium,
-                decoration: InputDecoration(
-                  hintText: 'اكتب تفاصيل إضافية هنا...',
-                  hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.input),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.input),
-                    borderSide: const BorderSide(color: AppColors.borderLight),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.input),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                  ),
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.large),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.medium),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: AppSpacing.small),
+            Text(
+              'يساعدنا بلاغك في الحفاظ على مجتمع أكاديميا آمنًا ومفيدًا. '
+                  'يرجى تحديد سبب البلاغ:',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: AppSpacing.medium),
+            ..._reportReasons.map(_buildReasonTile),
+            const SizedBox(height: AppSpacing.small),
+            Text(
+              'ملاحظات إضافية (اختياري)',
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: AppSpacing.extraSmall),
+            TextField(
+              controller: _notesController,
+              textAlign: TextAlign.right,
+              maxLines: 3,
+              style: AppTextStyles.bodyMedium,
+              decoration: InputDecoration(
+                hintText: 'اكتب تفاصيل إضافية هنا...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(color: AppColors.borderLight),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                 ),
               ),
-              const SizedBox(height: AppSpacing.medium),
-              ElevatedButton.icon(
-                onPressed: _isSubmitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                  ),
-                ),
-                icon: _isSubmitting
-                    ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary),
-                )
-                    : const Icon(Icons.send_rounded, size: 18, color: AppColors.textOnPrimary),
-                label: Text(
-                  'إرسال البلاغ',
-                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textOnPrimary),
+            ),
+            const SizedBox(height: AppSpacing.medium),
+            ElevatedButton.icon(
+              onPressed: _isSubmitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.button),
                 ),
               ),
-              const SizedBox(height: AppSpacing.small),
-              OutlinedButton(
-                onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  side: const BorderSide(color: AppColors.border),
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                  ),
-                ),
-                child: const Text('إلغاء'),
+              icon: _isSubmitting
+                  ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textOnPrimary),
+              )
+                  : const Icon(Icons.send_rounded, size: 18, color: AppColors.textOnPrimary),
+              label: Text(
+                'إرسال البلاغ',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textOnPrimary),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: AppSpacing.small),
+            OutlinedButton(
+              onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                side: const BorderSide(color: AppColors.border),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.small),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+              ),
+              child: const Text('إلغاء'),
+            ),
+          ],
         ),
       ),
     );
@@ -227,7 +238,9 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
           children: [
             Radio<String>(
               value: reason.value,
+              groupValue: _selectedReason,
               activeColor: AppColors.primary,
+              onChanged: (value) => setState(() => _selectedReason = value),
             ),
             Expanded(
               child: Text(

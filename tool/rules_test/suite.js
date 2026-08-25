@@ -2937,6 +2937,214 @@ t('32t. student still cannot write the shared assignment document', {
   existing: TEST_ASSIGNMENT_DOC,
 });
 
+// --- 33. studySessions (Study Hub V1) ---------------------------------------
+//
+// A study session is the most private document in the system: it belongs to
+// one student and to nobody else. Most of these cases are DENY on purpose —
+// the risk here is not that a student cannot read their own session, it is
+// that somebody else can.
+const SESSION_DOC = {
+  userId: 'student1',
+  plannedMinutes: 45,
+  actualMinutes: 0,
+  status: 'active',
+  startedAt: TIME,
+  createdAt: TIME,
+  updatedAt: TIME,
+};
+const SESSION_WITH_COURSE = {
+  ...SESSION_DOC,
+  offeringId: OFFERING,
+  courseId: COURSE,
+};
+const SESSION_DONE = {
+  ...SESSION_DOC,
+  status: 'completed',
+  actualMinutes: 45,
+  endedAt: TIME,
+};
+
+t('33a. student reads own study session allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'get',
+  existing: SESSION_DOC,
+});
+t('33b. student creates own general study session allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s2',
+  method: 'create',
+  data: SESSION_DOC,
+});
+t('33c. student creates session linked to an enrolled offering allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s3',
+  method: 'create',
+  data: SESSION_WITH_COURSE,
+});
+t('33d. student completes own session allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: SESSION_DONE,
+  existing: SESSION_DOC,
+});
+t('33e. student cancels own session allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DOC, status: 'cancelled', actualMinutes: 0, endedAt: TIME },
+  existing: SESSION_DOC,
+});
+t('33f. student deletes own session allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'delete',
+  existing: SESSION_DOC,
+});
+
+// ---- the isolation that matters ----
+t('33g. another student reading the session denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'studySessions/s1',
+  method: 'get',
+  existing: SESSION_DOC,
+});
+t('33h. another student updating the session denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: SESSION_DONE,
+  existing: SESSION_DOC,
+});
+t('33i. another student deleting the session denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'studySessions/s1',
+  method: 'delete',
+  existing: SESSION_DOC,
+});
+t('33j. creating a session owned by someone else denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'studySessions/s4',
+  method: 'create',
+  data: SESSION_DOC,
+});
+t('33k. teacher reading a student session denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'studySessions/s1',
+  method: 'get',
+  existing: SESSION_DOC,
+});
+t('33l. admin reading a student session denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'studySessions/s1',
+  method: 'get',
+  existing: SESSION_DOC,
+});
+t('33m. admin updating a student session denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: SESSION_DONE,
+  existing: SESSION_DOC,
+});
+t('33n. unauthenticated read denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'studySessions/s1',
+  method: 'get',
+  existing: SESSION_DOC,
+});
+t('33o. unauthenticated create denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'studySessions/s5',
+  method: 'create',
+  data: SESSION_DOC,
+});
+t('33p. disabled student denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'studySessions/s6',
+  method: 'create',
+  data: { ...SESSION_DOC, userId: 'disabled1' },
+});
+
+// ---- field integrity ----
+t('33q. session linked to an offering the student is not enrolled in denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s7',
+  method: 'create',
+  data: { ...SESSION_DOC, offeringId: OTHER_OFFERING, courseId: COURSE },
+});
+t('33r. half a course link denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s8',
+  method: 'create',
+  data: { ...SESSION_DOC, offeringId: OFFERING },
+});
+t('33s. a session created already completed denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s9',
+  method: 'create',
+  data: { ...SESSION_DOC, status: 'completed' },
+});
+t('33t. an out-of-range duration denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s10',
+  method: 'create',
+  data: { ...SESSION_DOC, plannedMinutes: 240 },
+});
+t('33u. rewriting plannedMinutes on close denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DONE, plannedMinutes: 90 },
+  existing: SESSION_DOC,
+});
+t('33v. re-pointing a session at another course on close denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DONE, offeringId: OTHER_OFFERING, courseId: COURSE },
+  existing: SESSION_DOC,
+});
+t('33w. claiming more study time than planned denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DONE, actualMinutes: 500 },
+  existing: SESSION_DOC,
+});
+t('33x. reopening a session back to active denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DOC, actualMinutes: 10 },
+  existing: SESSION_DONE,
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {

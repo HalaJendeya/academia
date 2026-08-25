@@ -28,7 +28,7 @@ void handleMainNavigation(
       break;
 
     case AcademiaBottomNavigation.studyIndex:
-      _navigateOrShowUnderDevelopment(context, '/study');
+      _navigateOrShowUnderDevelopment(context, AppRoutes.study);
       break;
 
     case AcademiaBottomNavigation.profileIndex:

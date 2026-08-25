@@ -50,6 +50,15 @@ abstract final class AppRoutes {
   /// (teacherAssignmentDetails) لأنها تحمل أفعالًا لا يملكها الطالب.
   static const String assignmentDetails = '/assignments/detail';
 
+  /// المذاكرة (تبويب رئيسي في شريط التنقّل السفلي).
+  ///
+  /// المسار نفسه الذي كان handleMainNavigation يبحث عنه نصًّا قبل وجود
+  /// الشاشة، فيبقى سلوك التبويب كما هو دون تغيير في الشريط.
+  static const String study = '/study';
+
+  /// الجلسة الجارية — شاشة فرعية فوق المذاكرة، بشريط رجوع لا تبويب سفلي.
+  static const String activeStudySession = '/study/session';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';

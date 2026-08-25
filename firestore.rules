@@ -920,6 +920,91 @@ service cloud.firestore {
     }
 
     // ===================================================================
+    //  studySessions/{sessionId}
+    //  A student's own focus-study sessions. Strictly private.
+    //
+    //  Nobody but the owner: not another student, not a teacher, not an
+    //  admin. A study session is a personal time-management record, not
+    //  academic work — it carries no grade and no submission, so no role
+    //  has an academic reason to read it. There is deliberately no
+    //  isActiveAdmin() escape hatch here; if oversight is ever required it
+    //  must be argued for and added explicitly, not inherited by default.
+    // ===================================================================
+    match /studySessions/{sessionId} {
+
+      function isActiveStudent() {
+        return hasValidAccount() && userData().role == 'student';
+      }
+
+      function d() {
+        return request.resource.data;
+      }
+
+      function validSession() {
+        return isNonEmptyString(d().userId)
+          && d().plannedMinutes is int
+          && d().plannedMinutes >= 5
+          && d().plannedMinutes <= 180
+          && d().actualMinutes is int
+          && d().actualMinutes >= 0
+          && d().status in ['active', 'completed', 'cancelled']
+          && validCourseLink();
+      }
+
+      /*
+       * The course link is optional, but never arbitrary.
+       *
+       * Absent = a general study session, which is a legitimate choice.
+       * Present = both ids must be there AND the student must actually be
+       * enrolled in that offering. Without the enrolment lookup a student
+       * could attribute study time to a course they never took, which
+       * would make the history quietly untrue.
+       */
+      function validCourseLink() {
+        return (isAbsent(d(), 'offeringId') && isAbsent(d(), 'courseId'))
+          || (isNonEmptyString(d().offeringId)
+               && isNonEmptyString(d().courseId)
+               && exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + d().offeringId))
+               && get(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + d().offeringId)).data.userId == request.auth.uid);
+      }
+
+      allow read: if isActiveStudent() && isOwner(resource.data.userId);
+
+      allow create: if isActiveStudent()
+        && isOwner(d().userId)
+        && validSession()
+        && d().status == 'active'
+        && d().actualMinutes == 0
+        && d().keys().hasAll(
+             ['userId', 'plannedMinutes', 'actualMinutes', 'status',
+              'startedAt', 'createdAt', 'updatedAt']);
+
+      /*
+       * Update exists to close a session, not to rewrite it.
+       *
+       * The owner, the planned duration and the course link are all fixed
+       * at creation: letting them change afterwards would allow a finished
+       * session to be re-pointed at another course, or its plan inflated
+       * after the fact.
+       */
+      allow update: if isActiveStudent()
+        && isOwner(resource.data.userId)
+        && d().userId == resource.data.userId
+        && d().plannedMinutes == resource.data.plannedMinutes
+        && d().get('offeringId', '') == resource.data.get('offeringId', '')
+        && d().get('courseId', '') == resource.data.get('courseId', '')
+        && d().status in ['completed', 'cancelled']
+        && d().actualMinutes is int
+        && d().actualMinutes >= 0
+        && d().actualMinutes <= resource.data.plannedMinutes
+        && changedKeys().hasOnly(
+             ['status', 'actualMinutes', 'endedAt', 'updatedAt']);
+
+      // The owner may remove their own record; nobody else can.
+      allow delete: if isActiveStudent() && isOwner(resource.data.userId);
+    }
+
+    // ===================================================================
     //  tasks/{taskId}
     //  Personal tasks for students.
     // ===================================================================

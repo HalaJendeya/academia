@@ -44,103 +44,15 @@ class _StudyPreferencesScreenState extends State<StudyPreferencesScreen> {
 
   Future<void> _pickCustomDuration(int currentDuration) async {
     final provider = context.read<StudyPreferencesProvider>();
-    final textController = TextEditingController();
-    String? errorText;
 
-    await showModalBottomSheet(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      AppStrings.customDurationTitle,
-                      style: AppTextStyles.headlineSmall.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.secondary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: textController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      textAlign: TextAlign.left,
-                      decoration: InputDecoration(
-                        hintText: '5 - 180',
-                        errorText: errorText,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              final text = textController.text.trim();
-                              final val = int.tryParse(text);
-                              if (val == null || val < 5 || val > 180) {
-                                setModalState(() {
-                                  errorText = AppStrings.invalidCustomDuration;
-                                });
-                              } else {
-                                provider.setPreferredSessionDuration(val);
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: const Text(AppStrings.confirm),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text(AppStrings.cancel),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    ).then((_) {
-      textController.dispose();
-    });
+      builder: (_) => _CustomDurationSheet(
+        onConfirm: provider.setPreferredSessionDuration,
+      ),
+    );
   }
 
   void _savePreferences() async {
@@ -436,16 +348,23 @@ class _StudyPreferencesScreenState extends State<StudyPreferencesScreen> {
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    selectedDuration != 25 &&
-                            selectedDuration != 45 &&
-                            selectedDuration != 60 &&
-                            selectedDuration != 90
-                        ? '${AppStrings.customDuration}: $selectedDuration ${AppStrings.minutes}'
-                        : AppStrings.customDuration,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textSecondary,
+                  // Flexible لا Text عارٍ: عند اختيار مدة مخصّصة يصير النص
+                  // «مدة مخصصة: 50 دقيقة» فيتجاوز عرض 360 ويفيض الصف.
+                  // Flexible لا Expanded حتى يبقى النص القصير في الوسط.
+                  Flexible(
+                    child: Text(
+                      selectedDuration != 25 &&
+                              selectedDuration != 45 &&
+                              selectedDuration != 60 &&
+                              selectedDuration != 90
+                          ? '${AppStrings.customDuration}: $selectedDuration ${AppStrings.minutes}'
+                          : AppStrings.customDuration,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -480,6 +399,129 @@ class _StudyPreferencesScreenState extends State<StudyPreferencesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// محتوى ورقة «مدة مخصّصة».
+///
+/// 🔴 StatefulWidget لا StatefulBuilder، والسبب هو عمر المتحكّم.
+///
+/// كان المتحكّم يُنشأ داخل _pickCustomDuration ويُتلَف في
+/// `showModalBottomSheet(...).then((_) => controller.dispose())`. لكن
+/// مستقبل الورقة يكتمل لحظة `Navigator.pop`، بينما محتواها يبقى مركَّبًا
+/// طوال حركة الإغلاق. فيُتلَف المتحكّم و TextFormField ما زال يشير إليه،
+/// ثم تعيد زخرفة الحقل المتحرّكة الاشتراكَ عليه في الإطار التالي
+/// (_AnimatedState.didUpdateWidget ← _MergingListenable.addListener) فترمي
+/// «A TextEditingController was used after being disposed»، وما يليها من
+/// أخطاء متتالية في الشجرة.
+///
+/// المالك الآن واحد وواضح: هذا State ينشئ المتحكّم مرة، ويُتلفه مرة عند
+/// فكّ التركيب الفعلي — بعد انتهاء الحركة لا قبلها.
+class _CustomDurationSheet extends StatefulWidget {
+  const _CustomDurationSheet({required this.onConfirm});
+
+  /// تُستدعى بالقيمة الصالحة وحدها؛ الورقة لا تعرف المزوّد ولا تكتب فيه.
+  final void Function(int minutes) onConfirm;
+
+  @override
+  State<_CustomDurationSheet> createState() => _CustomDurationSheetState();
+}
+
+class _CustomDurationSheetState extends State<_CustomDurationSheet> {
+  final TextEditingController _controller = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirm() {
+    final value = int.tryParse(_controller.text.trim());
+
+    // نفس الحدود التي كانت في الدالة الأصلية، وهي حدود
+    // StudyPreferencesService نفسها.
+    if (value == null || value < 5 || value > 180) {
+      setState(() => _errorText = AppStrings.invalidCustomDuration);
+      return;
+    }
+
+    widget.onConfirm(value);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AppStrings.customDurationTitle,
+              style: AppTextStyles.headlineSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.secondary,
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              textAlign: TextAlign.left,
+              onFieldSubmitted: (_) => _confirm(),
+              decoration: InputDecoration(
+                hintText: '5 - 180',
+                errorText: _errorText,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _confirm,
+                    child: const Text(AppStrings.confirm),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(AppStrings.cancel),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

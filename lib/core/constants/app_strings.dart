@@ -488,15 +488,45 @@ abstract final class AppStrings {
   static const String studyPreferencesNotAvailable =
       'تفضيلات الدراسة غير متوفرة';
 
+  /*
+   * لوحة التحليلات.
+   *
+   * أُزيلت من هنا ثلاث قيم مختلقة كانت تُعرض كأنها بيانات: اتجاه أسبوعي
+   * ثابت («+3 هذا الأسبوع») لا يوجد ما يحسبه، وهدف ساعات («الهدف: 30 س»)
+   * لا وجود له في نموذج البيانات، واسم مساق وهمي. البديل محسوب من
+   * المهام والواجبات وجلسات المذاكرة المخزَّنة.
+   */
   static const String analyticsDashboardDescription =
-      'نظرة عامة على تقدمك الدراسي وأدائك';
+      'أرقام محسوبة من مهامك وواجباتك وجلسات مذاكرتك المسجَّلة';
+
+  /// لا يوجد تصفية زمنية في هذه الشاشة، فيُقال ذلك صراحةً بدل الإيحاء
+  /// بأنها أرقام أسبوع أو فصل.
+  static const String analyticsCumulativeNote =
+      'الإجماليات تشمل كل ما سجّلته حتى الآن';
+
   static const String completedTasksTitle = 'المهام المكتملة';
-  static const String weeklyTasksIncrease = '+3 هذا الأسبوع';
-  static const String studyHoursTitle = 'ساعات الدراسة';
-  static const String studyHoursGoal = 'الهدف: 30 س';
-  static const String commitmentRateTitle = 'نسبة الالتزام';
+  static const String completedWorkTitle = 'إجمالي الأعمال المنجزة';
+  static const String completedAssignmentsTitle = 'الواجبات المكتملة';
+  static const String studyHoursTitle = 'وقت المذاكرة';
+  static const String completionRateTitle = 'نسبة الإنجاز';
+  static const String completionRateOf = 'من';
   static const String mostStudiedCourseTitle = 'أكثر مساق تمت دراسته';
-  static const String mostStudiedCourseMockName = 'هندسة البرمجيات';
+
+  static const String minutesUnit = 'دقيقة';
+  static const String oneHour = 'ساعة';
+  static const String twoHours = 'ساعتان';
+  static const String hoursPlural = 'ساعات';
+  static const String hoursSingularCounted = 'ساعة';
+  static const String andSeparator = 'و';
+
+  static const String analyticsEmptyTitle = 'لا توجد بيانات بعد';
+  static const String analyticsEmptyDesc =
+      'أنجز مهمة أو واجبًا، أو ابدأ جلسة مذاكرة، وستظهر أرقامك هنا.';
+  static const String analyticsNoStudySessions =
+      'لم تسجّل جلسات مذاكرة مكتملة بعد';
+  static const String analyticsNoCompletionRate =
+      'لا توجد مهام أو واجبات لحساب نسبة الإنجاز';
+  static const String analyticsLoadError = 'تعذر تحميل بعض بيانات التحليلات';
 
   static const String helpSupportScreenTitle = 'الدعم والمساعدة';
   static const String helpSupportHeroTitle = 'كيف يمكننا مساعدتك اليوم؟';
@@ -1730,4 +1760,60 @@ abstract final class AppStrings {
   static const String coursesArchiveCompletedPrefix = 'تم إنجاز';
   static const String coursesArchiveCompletedSuffix = 'مساقات';
   static const String reactivateCourseAction = 'إعادة تنشيط';
+
+  // ===== المذاكرة: مركز المذاكرة وجلسات التركيز =====
+
+  static const String studyHubTitle = 'المذاكرة';
+  static const String studyHubIntro =
+      'ابدأ جلسة تركيز، وتابع ما أنجزته من جلسات سابقة.';
+
+  static const String studySessionSectionTitle = 'جلسة مذاكرة';
+  static const String startStudySession = 'ابدأ جلسة مذاكرة';
+  static const String studySessionDurationLabel = 'مدة الجلسة';
+  static const String studySessionCourseLabel = 'اختر المساق';
+  static const String studySessionNoCourse = 'مذاكرة عامة (بدون مساق)';
+  static const String studySessionMinutesUnit = 'دقيقة';
+
+  static const String studyPreferencesSectionTitle = 'تفضيلاتك الدراسية';
+  static const String preferredStudyDaysLabel = 'أيام المذاكرة المفضلة';
+  static const String defaultSessionDurationLabel = 'مدة الجلسة الافتراضية';
+  static const String editStudyPreferencesAction = 'تعديل التفضيلات';
+
+  static const String activeSessionTitle = 'جلسة جارية';
+  static const String pauseSessionAction = 'إيقاف مؤقت';
+  static const String resumeSessionAction = 'استئناف';
+  static const String finishSessionAction = 'إنهاء الجلسة';
+  static const String cancelSessionAction = 'إلغاء الجلسة';
+  static const String sessionPausedLabel = 'الجلسة متوقفة مؤقتًا';
+  static const String sessionCompletedTitle = 'اكتملت الجلسة';
+  static const String sessionCompletedBody =
+      'أحسنت! سُجّلت جلستك في سجل المذاكرة.';
+  static const String sessionCancelledMessage = 'أُلغيت الجلسة ولم تُحتسب.';
+
+  static const String cancelSessionConfirmTitle = 'إلغاء الجلسة؟';
+  static const String cancelSessionConfirmBody =
+      'لن تُحتسب هذه الجلسة في سجل المذاكرة. هل تريد إلغاءها؟';
+  static const String finishSessionConfirmTitle = 'إنهاء الجلسة الآن؟';
+  static const String finishSessionConfirmBody =
+      'ستُحتسب المدة التي ذاكرتها فعلًا حتى الآن.';
+  static const String keepStudyingAction = 'متابعة المذاكرة';
+
+  static const String recentSessionsTitle = 'آخر الجلسات';
+  static const String noStudySessionsTitle = 'لا توجد جلسات مذاكرة بعد';
+  static const String noStudySessionsDesc =
+      'ابدأ جلستك الأولى وستظهر هنا بعد انتهائها.';
+  static const String sessionStatusCompleted = 'مكتملة';
+  static const String sessionStatusCancelled = 'ملغاة';
+  static const String sessionGeneralStudy = 'مذاكرة عامة';
+  static const String sessionActualDurationPrefix = 'ذاكرت';
+
+  static const String studySessionsLoadError = 'تعذر تحميل جلسات المذاكرة';
+  static const String studySessionStartError = 'تعذر بدء الجلسة، حاول مجددًا';
+  static const String studySessionCloseError = 'تعذر حفظ الجلسة، حاول مجددًا';
+  static const String studySessionNotFound = 'الجلسة غير موجودة';
+  static const String studySessionInvalidDuration =
+      'اختر مدة بين 5 و180 دقيقة';
+  static const String studySessionInvalidCourse =
+      'المساق المختار غير متاح، اختر مساقًا من مساقاتك المسجَّلة';
+  static const String studySessionAlreadyRunning = 'لديك جلسة جارية بالفعل';
 }

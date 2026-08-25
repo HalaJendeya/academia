@@ -27,8 +27,18 @@ class AppSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Expanded لا Text عارٍ: العنوان بحجم 20 وعريض، وعنوان من
+              // بضع كلمات يتجاوز 360 فيفيض الصف. الآن يتقلّص ويُقصّ بدل
+              // أن يكسر التخطيط.
               if (title != null)
-                Text(title!, style: AppTextStyles.sectionTitle),
+                Expanded(
+                  child: Text(
+                    title!,
+                    style: AppTextStyles.sectionTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ?action,
             ],
           ),

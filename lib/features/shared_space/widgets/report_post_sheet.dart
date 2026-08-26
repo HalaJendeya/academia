@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../profile/providers/profile_provider.dart';
 import '../models/post_model.dart';
 import '../providers/post_provider.dart';
 
@@ -66,23 +65,14 @@ class _ReportPostSheetState extends State<ReportPostSheet> {
 
     // اسم المُبلِّغ الحقيقي من بروفايله — يُقرأ قبل أي await، ولو غاب لا
     // نرسل بلاغًا منسوبًا لاسم فارغ؛ نوقف ونطلب تسجيل دخول من جديد.
-    final reporterName = context.read<ProfileProvider>().profile?.fullName;
-    if (reporterName == null || reporterName.trim().isEmpty) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('تعذر التعرف على بيانات حسابك، أعيدي تسجيل الدخول'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
+    // اسم المُبلِّغ يُقرأ في الخدمة من مستند المستخدم العام، لا من مزوّد
+    // ملف الطالب.
 
     setState(() => _isSubmitting = true);
 
     final success = await provider.reportPost(
       postId: widget.post.id,
       courseId: widget.post.courseId,
-      reporterName: reporterName,
       reason: _selectedReason!,
       notes: _notesController.text.trim(),
     );

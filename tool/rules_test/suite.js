@@ -1271,6 +1271,348 @@ t('25t. admin hard-deleting a course file denied', {
   existing: FILE_DOC,
 });
 
+// =========================================================================
+//  26–29. Shared space — posts, likes, comments, reports, notifications
+//
+//  Every payload below is the EXACT document the app writes, copied field
+//  for field from PostModel.toFirestore, CommentModel.toFirestore,
+//  PostService.toggleLike / addComment / reportPost and
+//  AppNotification.toFirestore — not a simplified stand-in. The Redmi
+//  failure was invisible to a simplified payload: the write that Firestore
+//  rejected was not the comment or the like itself but the counter update
+//  on the PARENT post document, which a stand-in payload never performs.
+//
+//  POST_ID is authored by student2, so student1 is a non-author throughout.
+//  That is the real case: liking and commenting on someone else's post.
+// =========================================================================
+
+const POST_ID = 'p1';
+const TEACHER = { role: 'teacher', status: 'active' };
+
+// posts/{postId} exactly as PostModel.toFirestore writes it.
+const POST_DOC = {
+  courseId: COURSE,
+  authorId: 'student2',
+  authorName: 'زميلة',
+  authorRole: '',
+  content: 'سؤال عن محاضرة اليوم',
+  attachment: {
+    fileName: 'IMG-20260821-WA0002.jpg',
+    fileUrl: 'https://res.cloudinary.com/xmrgiypo/image/upload/v1/a.jpg',
+    sizeLabel: '38 KB',
+    fileExtension: 'jpg',
+  },
+  createdAt: TIME,
+  commentsCount: 0,
+  likesCount: 0,
+  status: 'active',
+};
+
+const LIKE_PATH = `posts/${POST_ID}/likes/student1`;
+const post = (over) => ({ ...POST_DOC, ...over });
+
+// The like document is what decides the allowed direction of the counter,
+// so every counter case must state whether it exists. Leaving it unmocked
+// would let a DENY pass for the wrong reason (lookup error, not rule).
+const NO_LIKE = { missing: [LIKE_PATH] };
+const HAS_LIKE = { world: { ...WORLD, [LIKE_PATH]: { createdAt: TIME } } };
+
+// --- 26. posts -----------------------------------------------------------
+
+t('26a. unauthenticated post read denied', {
+  expect: 'DENY', uid: null, path: `posts/${POST_ID}`, method: 'get',
+  existing: POST_DOC,
+});
+
+t('26b. active student reads a post', {
+  expect: 'ALLOW', uid: 'student1', path: `posts/${POST_ID}`, method: 'get',
+  existing: POST_DOC,
+});
+
+t('26c. disabled student reads a post denied', {
+  expect: 'DENY', uid: 'disabled1', path: `posts/${POST_ID}`, method: 'get',
+  existing: POST_DOC,
+});
+
+t('26d. student creates a post authored by themselves', {
+  expect: 'ALLOW', uid: 'student1', path: 'posts/new1', method: 'create',
+  data: post({ authorId: 'student1', authorName: 'طالبة' }),
+});
+
+t('26e. student creates a post attributed to someone else denied', {
+  expect: 'DENY', uid: 'student1', path: 'posts/new1', method: 'create',
+  data: post({ authorId: 'student2' }),
+});
+
+t('26f. author edits their own post', {
+  expect: 'ALLOW', uid: 'student2', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ content: 'نص محرَّر' }),
+});
+
+// The whole point of the counter carve-out is that it does NOT open the
+// post body to strangers. These two must stay denied.
+t('26g. non-author editing someone else\'s post content denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ content: 'نص دخيل' }),
+});
+
+t('26h. non-author smuggling a content edit alongside a like denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC,
+  data: post({ content: 'نص دخيل', likesCount: 1 }),
+  ...NO_LIKE,
+});
+
+t('26i. non-author archiving someone else\'s post denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ status: 'archived' }),
+});
+
+t('26j. admin archives a reported post', {
+  expect: 'ALLOW', uid: 'admin1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ status: 'archived' }),
+});
+
+// --- 27. likes — the exact transaction PostService.toggleLike performs ----
+//
+// The transaction issues TWO writes. Rules evaluate each independently, so
+// both must be tested: the like document AND the parent counter. Only the
+// second one was failing in production, which is why the like appeared and
+// then vanished — the subcollection write was fine all along.
+
+t('27a. student writes their own like document', {
+  expect: 'ALLOW', uid: 'student1', path: LIKE_PATH, method: 'create',
+  data: { createdAt: TIME },
+});
+
+t('27b. student writing a like document at another uid denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}/likes/student2`,
+  method: 'create', data: { createdAt: TIME },
+});
+
+t('27c. non-author increments likesCount 0 -> 1 (the Redmi failure)', {
+  expect: 'ALLOW', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ likesCount: 1 }),
+  ...NO_LIKE,
+});
+
+t('27d. non-author decrements likesCount 1 -> 0 when their like exists', {
+  expect: 'ALLOW', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: post({ likesCount: 1 }), data: post({ likesCount: 0 }),
+  ...HAS_LIKE,
+});
+
+t('27e. unlike clamps at zero rather than going negative', {
+  expect: 'ALLOW', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: post({ likesCount: 0 }), data: post({ likesCount: 0 }),
+  ...HAS_LIKE,
+});
+
+t('27f. setting likesCount to an arbitrary number denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ likesCount: 999 }),
+  ...NO_LIKE,
+});
+
+// Direction is pinned to the like document, so one account can move the
+// counter by at most +1 on any post — exactly one legitimate like.
+t('27g. incrementing twice when a like already exists denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: post({ likesCount: 1 }), data: post({ likesCount: 2 }),
+  ...HAS_LIKE,
+});
+
+t('27h. decrementing without an existing like denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: post({ likesCount: 5 }), data: post({ likesCount: 4 }),
+  ...NO_LIKE,
+});
+
+t('27i. disabled student incrementing likesCount denied', {
+  expect: 'DENY', uid: 'disabled1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ likesCount: 1 }),
+  missing: [`posts/${POST_ID}/likes/disabled1`],
+});
+
+t('27j. unauthenticated like denied', {
+  expect: 'DENY', uid: null, path: LIKE_PATH, method: 'create',
+  data: { createdAt: TIME },
+});
+
+t('27k. negative likesCount write rejected', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ likesCount: -1 }),
+  ...NO_LIKE,
+});
+
+// --- 28. comments — the exact batch PostService.addComment performs -------
+
+const COMMENT_DOC = {
+  authorId: 'student1',
+  authorName: 'حلا جندية',
+  content: 'شكرًا على التوضيح',
+  createdAt: TIME,
+};
+const COMMENT_PATH = `posts/${POST_ID}/comments/cm1`;
+
+t('28a. student comments on another student\'s post', {
+  expect: 'ALLOW', uid: 'student1', path: COMMENT_PATH, method: 'create',
+  data: COMMENT_DOC,
+});
+
+t('28b. non-author increments commentsCount 0 -> 1 (the Redmi failure)', {
+  expect: 'ALLOW', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ commentsCount: 1 }),
+});
+
+t('28c. inflating commentsCount by more than one denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ commentsCount: 5 }),
+});
+
+t('28d. decrementing commentsCount denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: post({ commentsCount: 3 }), data: post({ commentsCount: 2 }),
+});
+
+t('28d2. student smuggling a content edit alongside commentsCount increment denied', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC,
+  data: post({ content: 'نص دخيل', commentsCount: 1 }),
+});
+
+t('28d3. negative commentsCount write rejected', {
+  expect: 'DENY', uid: 'student1', path: `posts/${POST_ID}`, method: 'update',
+  existing: POST_DOC, data: post({ commentsCount: -1 }),
+});
+
+t('28e. comment with a forged authorId denied', {
+  expect: 'DENY', uid: 'student1', path: COMMENT_PATH, method: 'create',
+  data: { ...COMMENT_DOC, authorId: 'student2' },
+});
+
+t('28f. unauthenticated comment denied', {
+  expect: 'DENY', uid: null, path: COMMENT_PATH, method: 'create',
+  data: COMMENT_DOC,
+});
+
+t('28g. disabled student commenting denied', {
+  expect: 'DENY', uid: 'disabled1', path: COMMENT_PATH, method: 'create',
+  data: { ...COMMENT_DOC, authorId: 'disabled1' },
+});
+
+// Identity is role-agnostic by design: the app resolves the author name
+// from users/{uid}.fullName, which all three roles have.
+t('28h. active teacher comments on a student post', {
+  expect: 'ALLOW', uid: 'teacher1', path: COMMENT_PATH, method: 'create',
+  data: { ...COMMENT_DOC, authorId: 'teacher1', authorName: 'د. مشرف' },
+  world: { ...WORLD, 'users/teacher1': TEACHER },
+});
+
+t('28i. admin comments on a student post', {
+  expect: 'ALLOW', uid: 'admin1', path: COMMENT_PATH, method: 'create',
+  data: { ...COMMENT_DOC, authorId: 'admin1', authorName: 'مشرف النظام' },
+});
+
+t('28j. comment author edits their own comment', {
+  expect: 'ALLOW', uid: 'student1', path: COMMENT_PATH, method: 'update',
+  existing: COMMENT_DOC, data: { ...COMMENT_DOC, content: 'تعديل' },
+});
+
+t('28k. another student editing someone else\'s comment denied', {
+  expect: 'DENY', uid: 'student2', path: COMMENT_PATH, method: 'update',
+  existing: COMMENT_DOC, data: { ...COMMENT_DOC, content: 'تعديل دخيل' },
+});
+
+t('28l. admin removes any comment', {
+  expect: 'ALLOW', uid: 'admin1', path: COMMENT_PATH, method: 'delete',
+  existing: COMMENT_DOC,
+});
+
+// --- 29. postReports and notifications -----------------------------------
+
+// Exactly what PostService.reportPost writes, notes field included.
+const REPORT_DOC = {
+  postId: POST_ID,
+  courseId: COURSE,
+  reporterId: 'student1',
+  reporterName: 'حلا جندية',
+  reason: 'inappropriate_content',
+  notes: 'تفاصيل إضافية',
+  status: 'pending',
+  createdAt: TIME,
+};
+
+t('29a. student files a report', {
+  expect: 'ALLOW', uid: 'student1', path: 'postReports/r1', method: 'create',
+  data: REPORT_DOC,
+});
+
+t('29b. report with a forged reporterId denied', {
+  expect: 'DENY', uid: 'student1', path: 'postReports/r1', method: 'create',
+  data: { ...REPORT_DOC, reporterId: 'student2' },
+});
+
+t('29c. report created already resolved denied', {
+  expect: 'DENY', uid: 'student1', path: 'postReports/r1', method: 'create',
+  data: { ...REPORT_DOC, status: 'resolved' },
+});
+
+t('29d. student reading the report queue denied', {
+  expect: 'DENY', uid: 'student1', path: 'postReports/r1', method: 'get',
+  existing: REPORT_DOC,
+});
+
+t('29e. admin reads the report queue', {
+  expect: 'ALLOW', uid: 'admin1', path: 'postReports/r1', method: 'get',
+  existing: REPORT_DOC,
+});
+
+// Exactly what AppNotification.toFirestore writes. The publisher writes the
+// classmate's notification, which is why create is not owner-scoped.
+const NOTIFICATION_DOC = {
+  recipientId: 'student2',
+  type: 'new_shared_space_post',
+  title: 'منشور جديد في المساحة المشتركة',
+  body: 'حلا جندية نشر منشورًا جديدًا في مساقك.',
+  courseId: COURSE,
+  postId: POST_ID,
+  createdAt: TIME,
+  isRead: false,
+};
+
+t('29f. publisher writes a notification for a classmate', {
+  expect: 'ALLOW', uid: 'student1', path: 'notifications/n1', method: 'create',
+  data: NOTIFICATION_DOC,
+});
+
+t('29g. notification created already read denied', {
+  expect: 'DENY', uid: 'student1', path: 'notifications/n1', method: 'create',
+  data: { ...NOTIFICATION_DOC, isRead: true },
+});
+
+t('29h. recipient reads their own notification', {
+  expect: 'ALLOW', uid: 'student2', path: 'notifications/n1', method: 'get',
+  existing: NOTIFICATION_DOC,
+});
+
+t('29i. reading someone else\'s notification denied', {
+  expect: 'DENY', uid: 'student1', path: 'notifications/n1', method: 'get',
+  existing: NOTIFICATION_DOC,
+});
+
+t('29j. recipient marks their notification read', {
+  expect: 'ALLOW', uid: 'student2', path: 'notifications/n1', method: 'update',
+  existing: NOTIFICATION_DOC,
+  data: { ...NOTIFICATION_DOC, isRead: true },
+});
+
+t('29k. rewriting a notification body denied', {
+  expect: 'DENY', uid: 'student2', path: 'notifications/n1', method: 'update',
+  existing: NOTIFICATION_DOC,
+  data: { ...NOTIFICATION_DOC, body: 'نص آخر' },
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {

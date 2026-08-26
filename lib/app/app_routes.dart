@@ -24,7 +24,120 @@ abstract final class AppRoutes {
   static const String profileAnalytics = '/profile/analytics';
   static const String helpSupport = '/profile/help-support';
 
+  // Student courses (Phase 7S2).
+  // أسماء المسارات مطابقة لما اعتمده فرع واجهة المساقات حتى لا تتغيّر
+  // الروابط التي بُنيت عليها الشاشات.
+  static const String courses = '/courses';
+  static const String courseDetail = '/courses/detail';
+  static const String coursesArchive = '/courses/archive';
+
+  // Files feature.
+  //
+  // لا مسار للملفات غير المتصلة: التنزيل مؤجَّل، ومسار بلا شاشة قابلة
+  // للوصول هو دَين لا ميزة.
+  static const String allFiles = '/files';
+  static const String filePreview = '/files/preview';
+
+  // Student tasks (Phase 7T1B).
+  static const String tasks = '/tasks';
+  static const String taskDetail = '/tasks/detail';
+  static const String createEditTask = '/tasks/create-edit';
+
+  /// تفاصيل واجب أكاديمي للطالب — قراءة فقط.
+  ///
+  /// مسار واحد يخدم كل مداخل الطالب: تبويبا «الكل» و«الواجبات» في شاشة
+  /// المهام، وتبويب واجبات المساق. شاشة المعلّم مسار مستقل
+  /// (teacherAssignmentDetails) لأنها تحمل أفعالًا لا يملكها الطالب.
+  static const String assignmentDetails = '/assignments/detail';
+
+  /// المذاكرة (تبويب رئيسي في شريط التنقّل السفلي).
+  ///
+  /// المسار نفسه الذي كان handleMainNavigation يبحث عنه نصًّا قبل وجود
+  /// الشاشة، فيبقى سلوك التبويب كما هو دون تغيير في الشريط.
+  static const String study = '/study';
+
+  /// الجلسة الجارية — شاشة فرعية فوق المذاكرة، بشريط رجوع لا تبويب سفلي.
+  static const String activeStudySession = '/study/session';
+
+  /// إنشاء جلسة مذاكرة (Figma 96:515).
+  static const String createStudySession = '/study/session/create';
+
+  /// نتيجة الجلسة بعد إغلاقها (Figma 96:379).
+  static const String sessionComplete = '/study/session/complete';
+
+  /// سجل الجلسات مع التصفية (Figma 96:608).
+  static const String sessionHistory = '/study/history';
+
+  /// الملخص الأسبوعي (Figma 143:23).
+  static const String weeklySummary = '/study/weekly';
+
+  /// نموذج خطة المذاكرة (Figma 96:763). التوليد نفسه غير مفعَّل بعد.
+  static const String studyPlan = '/study/plan';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';
+
+  static const String adminStudents = '/admin/students';
+  static const String adminStudentDetails = '/admin/students/details';
+  static const String adminAssignCourses = '/admin/students/assign-courses';
+
+  static const String adminShell = '/admin/shell';
+
+  // إدارة المعلّمين (المرحلة 8.1). لا مسار "إضافة": إنشاء الحساب يتم عبر
+  // أداة تزويد بصلاحيات إدارية، لا من داخل التطبيق.
+  static const String adminTeachers = '/admin/teachers';
+  static const String adminTeacherDetails = '/admin/teachers/details';
+
+  /// واجهة المعلّم (المرحلة 8A). مسار واحد يكفي: التنقّل داخلها عبر
+  /// IndexedStack لا عبر مسارات مستقلة، كما في واجهة المشرف.
+  static const String teacherShell = '/teacher/shell';
+
+  /// تفاصيل طرح واحد داخل واجهة المعلّم، ومنها قائمة الطلاب المسجّلين.
+  static const String teacherOfferingDetail = '/teacher/offerings/detail';
+  static const String teacherOfferingFiles = '/teacher/offerings/files';
+
+  // الواجبات الأكاديمية (المرحلة 8.3). شاشة الإضافة تخدم التعديل أيضًا:
+  // يُمرَّر الواجب عبر arguments للتعديل ويُترك فارغًا للإنشاء، كما في
+  // شاشات الطروحات والفصول الدراسية.
+  static const String teacherAddAssignment = '/teacher/assignments/add';
+  static const String teacherAssignmentDetails =
+      '/teacher/assignments/details';
+  static const String teacherUploadFile = '/teacher/offerings/files/upload';
+  static const String adminCourseDetails = '/admin/courses/details';
+  static const String adminAssignments = '/admin/assignments';
+  static const String adminAssignmentDetails = '/admin/assignments/details';
+  static const String adminCourseFiles = '/admin/files';
+  static const String adminUploadFile = '/admin/files/upload';
+  static const String adminContent = '/admin/content';
+  static const String adminAnnouncements = '/admin/announcements';
+  static const String adminAddAnnouncement = '/admin/announcements/add';
+  static const String adminReportedPosts = '/admin/reported-posts';
+  static const String adminSettings = '/admin/settings';
+
+  /// صندوق وارد طلبات الدعم (المرحلة 7H5).
+  static const String adminSupportRequests = '/admin/support-requests';
+
+  static const String adminProfile = '/admin/profile';
+
+  // Semesters (Phase 6B).
+  // adminAddSemester يخدم الإنشاء والتعديل معًا: يُمرَّر SemesterModel
+  // عبر arguments للتعديل ويُترك فارغًا للإنشاء.
+  static const String adminSemesters = '/admin/semesters';
+  static const String adminAddSemester = '/admin/semesters/add';
+
+  // Academic structure (Phase 7D).
+  // كل شاشة "add" تخدم الإنشاء والتعديل معًا: يُمرَّر النموذج عبر arguments
+  // للتعديل ويُترك فارغًا للإنشاء، كما في شاشة الفصول الدراسية.
+  static const String adminDepartments = '/admin/departments';
+  static const String adminAddDepartment = '/admin/departments/add';
+  static const String adminMajors = '/admin/majors';
+  static const String adminAddMajor = '/admin/majors/add';
+  static const String adminCurriculum = '/admin/curriculum';
+  static const String adminCurriculumEntry = '/admin/curriculum/entry';
+
+  // Course offerings (Phase 7E): مساق × فصل × شعبة.
+  static const String adminOfferings = '/admin/offerings';
+  static const String adminAddOffering = '/admin/offerings/add';
+  static const String adminOfferingRoster = '/admin/offerings/roster';
 }

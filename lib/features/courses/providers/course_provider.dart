@@ -23,6 +23,37 @@ class CourseProvider extends ChangeNotifier {
   bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
 
+  /// يتبع حالة المصادقة. يُستدعى من ProxyProvider في app_providers.
+  ///
+  /// هذا المزوّد مركَّب عالميًا فوق MaterialApp، فلا يُستدعى dispose أثناء
+  /// عمل التطبيق. بدون هذا الربط يبقى الاستماع إلى courses حيًّا بعد تسجيل
+  /// الخروج، فتعيد القواعد المشدَّدة تقييمه بلا مصادقة وتظهر
+  /// PERMISSION_DENIED متكررة. القواعد صحيحة؛ ما كان خاطئًا هو دورة حياة
+  /// المستمع.
+  void syncWithAuth({required bool isActiveAdmin}) {
+    if (isActiveAdmin) {
+      _isAdminSession = true;
+      return;
+    }
+
+    final hadAdminState =
+        _isAdminSession || _subscription != null || _courses.isNotEmpty;
+    _isAdminSession = false;
+    if (!hadAdminState) return;
+
+    stopListening();
+    _courses = [];
+    _selectedCourse = null;
+    _isLoading = false;
+    _errorMessage = null;
+
+    // التنبيه مؤجَّل: syncWithAuth يُستدعى أثناء البناء، والتنبيه المتزامن
+    // داخل البناء يرمي استثناءً.
+    scheduleMicrotask(notifyListeners);
+  }
+
+  bool _isAdminSession = false;
+
   Future<void> loadCourses() async {
     _isLoading = true;
     _errorMessage = null;
@@ -125,22 +156,11 @@ class CourseProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> deleteCourse(String courseId) async {
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      await _service.deleteCourse(courseId);
-      return true;
-    } on CourseException catch (e) {
-      _errorMessage = e.message;
-      return false;
-    } catch (e) {
-      _errorMessage = AppStrings.courseSaveError;
-      return false;
-    } finally {
-      notifyListeners();
-    }
-  }
+  /*
+   * أُزيلت deleteCourse في المرحلة 6C. الإزالة المعتمدة للمساق هي
+   * archiveCourse، لأن الحذف النهائي يترك سجلات التسجيل بلا مساق
+   * وتمنعه قواعد Firestore.
+   */
 
   void clearError() {
     _errorMessage = null;

@@ -1,3 +1,5 @@
+// lib/core/widgets/app_top_bar.dart
+
 import 'package:flutter/material.dart';
 
 import '../constants/app_strings.dart';
@@ -17,6 +19,8 @@ class AcademiaMainAppBar extends StatelessWidget
     this.showNotifications = true,
     this.showProfile = true,
     this.hasUnreadNotifications = false,
+    this.showBackButton = false,
+    this.onBackPressed,
   });
 
   final String title;
@@ -27,6 +31,14 @@ class AcademiaMainAppBar extends StatelessWidget
   final bool showNotifications;
   final bool showProfile;
   final bool hasUnreadNotifications;
+
+  /// When true, shows a back button in the leading slot instead of
+  /// the profile avatar. Used by sub-screens (e.g. Files) that need
+  /// to visually match the main app bar while still allowing
+  /// navigation back. Defaults to false so all existing screens
+  /// using this app bar are unaffected.
+  final bool showBackButton;
+  final VoidCallback? onBackPressed;
 
   @override
   Size get preferredSize => const Size.fromHeight(60.0);
@@ -42,20 +54,31 @@ class AcademiaMainAppBar extends StatelessWidget
         bottom: BorderSide(color: AppColors.borderLight, width: 1.0),
       ),
       title: Text(title, style: AppTextStyles.appBarTitle),
-      leading: showProfile
+      leading: showBackButton
           ? IconButton(
-              tooltip: AppStrings.profile,
-              icon: CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: AppColors.secondary,
-                  size: 20,
-                ),
-              ),
-              onPressed: onProfilePressed,
-            )
+        tooltip: AppStrings.back,
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: AppColors.secondary,
+        ),
+        onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+      )
+          : showProfile
+          ? IconButton(
+        tooltip: AppStrings.profile,
+        icon: CircleAvatar(
+          radius: 16,
+          backgroundColor: AppColors.secondary.withValues(
+            alpha: 0.1,
+          ),
+          child: const Icon(
+            Icons.person_rounded,
+            color: AppColors.secondary,
+            size: 20,
+          ),
+        ),
+        onPressed: onProfilePressed,
+      )
           : null,
       actions: [
         if (showSearch)

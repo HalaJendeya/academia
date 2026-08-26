@@ -7,6 +7,15 @@ import 'app/akademia_app.dart';
 import 'app/app_providers.dart';
 import 'firebase_options.dart';
 
+/*
+ * لا تهيئة عامة لـ Cloudinary هنا.
+ *
+ * الرفع في هذه المرحلة طلب multipart غير موقَّع إلى preset معلن، ولا يمر
+ * بحزم Cloudinary إطلاقًا؛ واسم السحابة يعيش في CloudinaryConfig. الحاوية
+ * العامة CloudinaryContext مهملة في الحزمة ولم يكن يقرأها أي شيء، فوجودها
+ * كان إعدادًا ميتًا. عند الحاجة إلى عرض وسائط عبر CldImageWidget يُنشأ
+ * CloudinaryObject عند نقطة الاستخدام.
+ */
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

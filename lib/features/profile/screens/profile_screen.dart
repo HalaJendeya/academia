@@ -118,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Student summary card
-              _buildSummaryCard(context, profileProvider, profile),
+              _buildSummaryCard(context, profile),
               const SizedBox(height: AppSpacing.large),
               // First settings section
               _buildFirstSection(context),
@@ -137,11 +137,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSummaryCard(
-    BuildContext context,
-    ProfileProvider profileProvider,
-    StudentProfile profile,
-  ) {
+  /// الصورة الشخصية من الرابط المخزَّن، وإلا الأيقونة الافتراضية.
+  ///
+  /// الرابط وحده مصدر الصورة: لم تعد هناك نسخة محلية مؤقتة تعيش في الذاكرة
+  /// وتختفي عند إعادة التشغيل.
+  Widget _buildAvatar(StudentProfile profile) {
+    final photoUrl = profile.photoUrl?.trim() ?? '';
+    final hasPhoto = photoUrl.isNotEmpty;
+
+    return Semantics(
+      label: AppStrings.studentAvatarSemantics,
+      child: CircleAvatar(
+        radius: 32,
+        backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
+        backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+        child: hasPhoto
+            ? null
+            : const Icon(
+                Icons.person_rounded,
+                color: AppColors.secondary,
+                size: 40,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(BuildContext context, StudentProfile profile) {
     final displayName = profile.fullName.trim().isEmpty
         ? AppStrings.profileNameUnavailable
         : profile.fullName;
@@ -153,29 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         children: [
           // Circular avatar on the far right (index 0 in RTL)
-          Semantics(
-            label: AppStrings.studentAvatarSemantics,
-            child: CircleAvatar(
-              radius: 32,
-              backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
-              backgroundImage: profileProvider.localPhotoBytes != null
-                  ? MemoryImage(profileProvider.localPhotoBytes!)
-                  : (profile.photoUrl != null &&
-                        profile.photoUrl!.trim().isNotEmpty)
-                  ? NetworkImage(profile.photoUrl!) as ImageProvider
-                  : null,
-              child:
-                  (profileProvider.localPhotoBytes != null ||
-                      (profile.photoUrl != null &&
-                          profile.photoUrl!.trim().isNotEmpty))
-                  ? null
-                  : const Icon(
-                      Icons.person_rounded,
-                      color: AppColors.secondary,
-                      size: 40,
-                    ),
-            ),
-          ),
+          _buildAvatar(profile),
           const SizedBox(width: AppSpacing.medium),
           // Student details in the middle
           Expanded(
@@ -293,8 +292,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  Directionality.of(context) == TextDirection.rtl
-                      ? Icons.chevron_right_rounded
+                  Directionality.of(context) == TextDirection.ltr
+                      ? Icons.chevron_left_rounded
                       : Icons.chevron_right_rounded,
                   color: AppColors.textSecondary,
                   size: 24,

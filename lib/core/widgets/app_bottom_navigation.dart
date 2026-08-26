@@ -4,7 +4,6 @@ import '../constants/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../theme/app_text_styles.dart';
 
 class AcademiaBottomNavigation extends StatelessWidget {
   const AcademiaBottomNavigation({
@@ -87,11 +86,18 @@ class AcademiaBottomNavigation extends StatelessWidget {
     required String label,
   }) {
     final isSelected = currentIndex == index;
-    return _AcademiaNavigationItem(
-      icon: icon,
-      label: label,
-      selected: isSelected,
-      onTap: () => onTap(index),
+    /*
+     * العنصر المحدَّد وحده يعرض نصه، فيصبح أعرض من البقية. على شاشة بعرض
+     * 360 لا يتسع الصف لخمسة عناصر أحدها بنص، لذلك يُجعل كل عنصر مرنًا
+     * ليتقلّص النص عند الحاجة بدل أن يفيض الصف.
+     */
+    return Flexible(
+      child: _AcademiaNavigationItem(
+        icon: icon,
+        label: label,
+        selected: isSelected,
+        onTap: () => onTap(index),
+      ),
     );
   }
 }
@@ -128,26 +134,12 @@ class _AcademiaNavigationItem extends StatelessWidget {
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  color: selected
-                      ? AppColors.bottomNavigationSelectedIcon
-                      : AppColors.bottomNavigationUnselected,
-                  size: 24,
-                ),
-                if (selected) ...[
-                  const SizedBox(width: AppSpacing.extraSmall),
-                  Text(
-                    label,
-                    style: AppTextStyles.bottomNavigationSelected.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ],
+            child: Icon(
+              icon,
+              color: selected
+                  ? AppColors.bottomNavigationSelectedIcon
+                  : AppColors.bottomNavigationUnselected,
+              size: 24,
             ),
           ),
         ),

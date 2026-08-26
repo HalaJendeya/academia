@@ -6,7 +6,13 @@ abstract final class AppColors {
   // ---------------------------------------------------------------------------
   // Brand colors
   // ---------------------------------------------------------------------------
+  // lib/core/theme/app_colors.dart
 
+  // ---------------------------------------------------------------------------
+  // Success colors
+  // ---------------------------------------------------------------------------
+
+  static const Color success = Color(0xFF2E7D32);
   static const Color primary = Color(0xFFFF8B00);
   static const Color primaryDark = Color(0xFFC27803);
   static const Color primaryDarker = Color(0xFF713B00);
@@ -183,4 +189,13 @@ abstract final class AppColors {
     surface: surface,
     onSurface: textPrimary,
   );
+
+  // ---------------------------------------------------------------------------
+  // Admin UI Accents and Status Colors
+  // ---------------------------------------------------------------------------
+  static const Color activeStatus = Color(0xFF4CAF50);
+  static const Color accentPurple = Color(0xFF9C27B0);
+  static const Color accentPurpleLight = Color(0xFFF3E5F5);
+  static const Color accentTeal = Color(0xFF009688);
+  static const Color accentTealLight = Color(0xFFE0F2F1);
 }

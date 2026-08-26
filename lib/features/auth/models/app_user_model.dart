@@ -1,6 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum UserRole { student, admin }
+/// أدوار التطبيق.
+///
+/// [unknown] ليس دورًا يُخزَّن، بل نتيجة قراءة مستند لا يحمل دورًا مفهومًا.
+/// وجوده صريحًا هو ما يجعل التحليل يفشل مغلقًا: قبل ذلك كان أي دور غير
+/// معروف يُقرأ كطالب، فيحصل مستند تالف أو دور مستقبلي على صلاحيات الطالب
+/// كاملة دون أن يطلبها أحد.
+enum UserRole { student, admin, teacher, unknown }
 
 class AppUserModel {
   const AppUserModel({
@@ -14,7 +20,9 @@ class AppUserModel {
     required this.onboardingStatus,
     this.studentId,
     this.major,
-    this.semester,
+    this.majorId,
+    this.academicLevel,
+    this.photoUrl,
     this.createdAt,
     this.updatedAt,
   });
@@ -29,8 +37,28 @@ class AppUserModel {
   final String onboardingStatus;
 
   final String? studentId;
+
+  /// اسم التخصص كما أدخله الطالب في التسجيل، نص حر بلا ارتباط بمجموعة.
   final String? major;
-  final int? semester;
+
+  /// مرجع إلى مستند التخصص، وهو ما تُبنى عليه الخطة الدراسية.
+  ///
+  /// null يعني أن المشرف لم يربط الطالب ببرنامج أكاديمي بعد، وتعرض واجهة
+  /// الطالب حالة فارغة واضحة بدل خطة فارغة.
+  final String? majorId;
+
+  /// المستوى الأكاديمي كرقم صحيح (1..8).
+  ///
+  /// يُخزَّن رقمًا في Firestore ويُبنى نصه العربي في طبقة العرض فقط. مستند
+  /// المستخدم هو مصدر الحقيقة للمستوى، ومنه تشتق واجهة المساقات "الموصى
+  /// لمستواي" بدل أن تسأل الشاشة عن المستوى أو تفترضه.
+  final int? academicLevel;
+
+  /// رابط الصورة الشخصية في Cloudinary.
+  ///
+  /// المستند يحمل الرابط فقط؛ الصورة نفسها في Cloudinary. null يعني ألا
+  /// صورة، وتعرض الواجهة الأيقونة الافتراضية.
+  final String? photoUrl;
 
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -38,6 +66,11 @@ class AppUserModel {
   bool get isStudent => role == UserRole.student;
 
   bool get isAdmin => role == UserRole.admin;
+
+  bool get isTeacher => role == UserRole.teacher;
+
+  /// دور مفهوم لهذا الإصدار. الحساب بدونه لا يدخل التطبيق.
+  bool get hasKnownRole => role != UserRole.unknown;
 
   bool get isActive => status == 'active';
 
@@ -64,7 +97,9 @@ class AppUserModel {
       ),
       studentId: _readNullableString(data['studentId']),
       major: _readNullableString(data['major']),
-      semester: _readNullableInt(data['semester']),
+      majorId: _readNullableString(data['majorId']),
+      academicLevel: _readAcademicLevel(data['academicLevel']),
+      photoUrl: _readNullableString(data['photoUrl']),
       createdAt: _readDateTime(data['createdAt']),
       updatedAt: _readDateTime(data['updatedAt']),
     );
@@ -81,7 +116,9 @@ class AppUserModel {
       'onboardingStatus': onboardingStatus,
       if (studentId != null) 'studentId': studentId,
       if (major != null) 'major': major,
-      if (semester != null) 'semester': semester,
+      if (majorId != null) 'majorId': majorId,
+      if (academicLevel != null) 'academicLevel': academicLevel,
+      if (photoUrl != null) 'photoUrl': photoUrl,
       if (createdAt != null) 'createdAt': Timestamp.fromDate(createdAt!),
       if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
@@ -98,7 +135,9 @@ class AppUserModel {
     String? onboardingStatus,
     String? studentId,
     String? major,
-    int? semester,
+    String? majorId,
+    int? academicLevel,
+    String? photoUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -113,22 +152,55 @@ class AppUserModel {
       onboardingStatus: onboardingStatus ?? this.onboardingStatus,
       studentId: studentId ?? this.studentId,
       major: major ?? this.major,
-      semester: semester ?? this.semester,
+      majorId: majorId ?? this.majorId,
+      academicLevel: academicLevel ?? this.academicLevel,
+      photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  static UserRole _roleFromString(dynamic value) {
-    final roleValue = value?.toString().trim().toLowerCase();
+  /// قراءة متسامحة للمستوى الأكاديمي، مطابقة لما في StudentProfile و
+  /// AdminStudentModel: تقبل الرقم الصحيح (الشكل المعتمد) والنصوص القديمة
+  /// بأرقام إنجليزية "4" أو عربية-هندية "المستوى ٤"، ولا ترمي استثناءً.
+  static int? _readAcademicLevel(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
 
-    switch (roleValue) {
+    if (value is String) {
+      final digits = StringBuffer();
+      for (final rune in value.runes) {
+        if (rune >= 0x30 && rune <= 0x39) {
+          digits.writeCharCode(rune);
+        } else if (rune >= 0x0660 && rune <= 0x0669) {
+          digits.writeCharCode(rune - 0x0660 + 0x30);
+        }
+      }
+      return int.tryParse(digits.toString());
+    }
+
+    return null;
+  }
+
+  /// تحليل يفشل مغلقًا.
+  ///
+  /// كل قيمة غير مذكورة صراحةً — غائبة أو فارغة أو مكتوبة بخطأ أو دور
+  /// أُضيف لاحقًا في قاعدة البيانات ولا يعرفه هذا الإصدار — تصبح
+  /// [UserRole.unknown]، ولا تمنح أي صلاحية.
+  static UserRole _roleFromString(dynamic value) {
+    switch (value?.toString().trim().toLowerCase()) {
       case 'admin':
         return UserRole.admin;
 
+      case 'teacher':
+        return UserRole.teacher;
+
       case 'student':
-      default:
         return UserRole.student;
+
+      default:
+        return UserRole.unknown;
     }
   }
 
@@ -170,22 +242,6 @@ class AppUserModel {
     }
 
     return false;
-  }
-
-  static int? _readNullableInt(dynamic value) {
-    if (value is int) {
-      return value;
-    }
-
-    if (value is num) {
-      return value.toInt();
-    }
-
-    if (value is String) {
-      return int.tryParse(value);
-    }
-
-    return null;
   }
 
   static DateTime? _readDateTime(dynamic value) {

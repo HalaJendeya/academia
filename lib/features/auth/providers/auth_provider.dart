@@ -34,6 +34,15 @@ class AuthProvider extends ChangeNotifier {
   /// هل المستخدم الحالي طالب؟
   bool get isStudent => _currentUserProfile?.isStudent ?? false;
 
+  /// هل المستخدم الحالي معلّم؟
+  bool get isTeacher => _currentUserProfile?.isTeacher ?? false;
+
+  /// دور الحساب مفهوم لهذا الإصدار.
+  ///
+  /// يُفحص قبل التوجيه: حساب بدور غير معروف لا يدخل أي واجهة، ولا يُعامل
+  /// كطالب.
+  bool get hasKnownRole => _currentUserProfile?.hasKnownRole ?? false;
+
   /// هل الحساب الحالي نشط؟
   bool get isAccountActive => _currentUserProfile?.isActive ?? false;
 
@@ -108,6 +117,20 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// تحديث رابط الصورة الشخصية في النموذج المحمَّل بعد نجاح كتابته في
+  /// Firestore.
+  ///
+  /// استبدال في الذاكرة لا قراءة جديدة: المستند تغيّر في حقل واحد نعرف
+  /// قيمته، وإعادة تحميله كاملة قراءة زائدة. لا يُستدعى إلا بعد نجاح
+  /// الكتابة، فلا يعرض النموذج رابطًا لم يُحفظ.
+  void applyPhotoUrl(String? photoUrl) {
+    final profile = _currentUserProfile;
+    if (profile == null) return;
+
+    _currentUserProfile = profile.copyWith(photoUrl: photoUrl);
+    notifyListeners();
+  }
+
   /// تسجيل الدخول وتحميل دور المستخدم وبياناته.
   Future<bool> login(String email, String password) async {
     _setLoading(true);
@@ -128,6 +151,19 @@ class AuthProvider extends ChangeNotifier {
         await _authService.signOut();
         _currentUserProfile = null;
         _setError('هذا الحساب غير نشط.');
+        return false;
+      }
+
+      /*
+       * دور غير مدعوم: لا دخول إطلاقًا.
+       *
+       * يُفحص هنا لا في الشاشات، حتى لا يعتمد الأمان على تذكّر كل شاشة
+       * أن تتحقق. الحساب يُخرَج فورًا بدل أن يُعامل كطالب.
+       */
+      if (!hasKnownRole) {
+        await _authService.signOut();
+        _currentUserProfile = null;
+        _setError(AppStrings.unsupportedAccountRole);
         return false;
       }
 
@@ -299,12 +335,24 @@ class AuthProvider extends ChangeNotifier {
     try {
       final loaded = await loadCurrentUserProfile();
 
-      if (!loaded || !isAccountActive) {
+      /*
+       * تُلتقط الحالتان قبل مسح النموذج.
+       *
+       * isAccountActive و hasKnownRole يقرآن _currentUserProfile، وقراءتهما
+       * بعد تصفيره تعطي false دائمًا — فيُنسب كل رفض إلى "حساب غير نشط"
+       * ولو كان السبب دورًا غير مدعوم.
+       */
+      final isActive = isAccountActive;
+      final knownRole = hasKnownRole;
+
+      if (!loaded || !isActive || !knownRole) {
         await _authService.signOut();
         _currentUserProfile = null;
 
-        if (loaded && !isAccountActive) {
+        if (loaded && !isActive) {
           _setError('هذا الحساب غير نشط.');
+        } else if (loaded && !knownRole) {
+          _setError(AppStrings.unsupportedAccountRole);
         }
 
         return false;

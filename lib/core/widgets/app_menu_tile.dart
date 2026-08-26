@@ -90,8 +90,8 @@ class AppMenuTile extends StatelessWidget {
                 trailing ??
                     Icon(
                       Directionality.of(context) == TextDirection.rtl
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
+                          ? Icons.chevron_right_rounded
+                          : Icons.chevron_left_rounded,
                       color: enabled
                           ? AppColors.textSecondary
                           : AppColors.textDisabled,

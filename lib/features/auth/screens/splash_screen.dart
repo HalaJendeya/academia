@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../app/app_routes.dart';
 import '../../../../core/constants/app_assets.dart';
@@ -10,6 +11,7 @@ import '../../../../core/theme/app_sizes.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   final FirebaseAuth? auth;
@@ -36,57 +38,159 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _resolveInitialRoute() async {
     try {
+      final authProvider = context.read<AuthProvider>();
+
+      final initialized = await authProvider.initializeCurrentUser();
+
+      if (!mounted) return;
+
+      if (!initialized || !authProvider.isLoggedIn) {
+        final prefs = await SharedPreferences.getInstance();
+        final hasAccount = prefs.getBool('has_account') ?? false;
+
+        if (!mounted) return;
+
+        if (!hasAccount) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.welcome,
+            (route) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.login,
+            (route) => false,
+          );
+        }
+        return;
+      }
+
+      if (!authProvider.isAccountActive) {
+        await authProvider.logout();
+
+        if (!mounted) return;
+
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
+        return;
+      }
+
+      /*
+       * التوجيه حسب الدور قبل أي بوابة خاصة بالطالب.
+       *
+       * التحقق من البريد والإعداد الأولي وخطة الدراسة كلها مسارات طالب؛
+       * تمرير المشرف أو المعلّم خلالها يوقفهما عند بوابة لا تخصهما.
+       *
+       * الدور غير المعروف لا يصل إلى هنا أصلًا: initializeCurrentUser
+       * يسجّل خروجه ويعيد false، فيُوجَّه إلى تسجيل الدخول أعلاه.
+       */
+      if (authProvider.isAdmin) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.adminShell,
+          (route) => false,
+        );
+        return;
+      }
+
+      if (authProvider.isTeacher) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.teacherShell,
+          (route) => false,
+        );
+        return;
+      }
+
+      // دفاع في العمق: أي شيء ليس طالبًا لا يكمل مسار الطالب.
+      if (!authProvider.isStudent) {
+        await authProvider.logout();
+        if (!mounted) return;
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
+        return;
+      }
+
       final auth = widget.auth ?? FirebaseAuth.instance;
       final user = auth.currentUser;
+
       if (user == null) {
-        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
         return;
       }
 
       try {
         await user.reload();
       } catch (_) {
-        // Fallback silently if offline
+        // Continue with the locally available authentication state if offline.
       }
 
       if (!mounted) return;
 
       final refreshedUser = auth.currentUser;
+
       if (refreshedUser == null) {
-        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.login,
+          (route) => false,
+        );
         return;
       }
 
+      // Email verification applies only to students.
       if (!refreshedUser.emailVerified) {
-        Navigator.pushReplacementNamed(
+        Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.studentVerification,
+          (route) => false,
           arguments: refreshedUser.email,
         );
         return;
       }
 
-      // Initialize OnboardingProvider for the UID
-      final onboardingProvider = Provider.of<OnboardingProvider>(
-        context,
-        listen: false,
-      );
+      final onboardingProvider = context.read<OnboardingProvider>();
+
       onboardingProvider.initializeForUser(refreshedUser.uid);
 
-      final onboardingCompleted = await onboardingProvider
-          .checkOnboardingCompleted();
+      final onboardingCompleted =
+          authProvider.onboardingCompleted ||
+          await onboardingProvider.checkOnboardingCompleted();
 
       if (!mounted) return;
 
       if (onboardingCompleted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.dashboard);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.dashboard,
+          (route) => false,
+        );
       } else {
-        Navigator.pushReplacementNamed(context, AppRoutes.onboardingWelcome);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.onboardingWelcome,
+          (route) => false,
+        );
       }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutes.welcome);
-      }
+    } catch (_) {
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
     }
   }
 

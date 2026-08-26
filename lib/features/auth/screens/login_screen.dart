@@ -85,9 +85,31 @@ class _LoginScreenState extends State<LoginScreen> {
         if (authProvider.isAdmin) {
           Navigator.pushNamedAndRemoveUntil(
             context,
-            AppRoutes.adminDashboard,
+            AppRoutes.adminShell,
             (route) => false,
           );
+          return;
+        }
+
+        // المعلّم له واجهته: لا تحقق بريد ولا إعداد أولي — كلاهما مسار طالب.
+        if (authProvider.isTeacher) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.teacherShell,
+            (route) => false,
+          );
+          return;
+        }
+
+        /*
+         * دور غير معروف: AuthProvider.login يرفضه ويعيد false، فلا نصل
+         * إلى هنا. الفحص مكرَّر دفاعًا في العمق حتى لا يعتمد الأمان على
+         * ترتيب الاستدعاءات وحده.
+         */
+        if (!authProvider.isStudent) {
+          await authProvider.logout();
+          if (!mounted) return;
+          setState(() => _isResolvingDestination = false);
           return;
         }
 

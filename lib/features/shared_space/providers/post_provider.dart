@@ -131,9 +131,22 @@ class PostProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /*
+   * المنشورات التي لها معاملة إعجاب جارية الآن.
+   *
+   * كل استدعاء لـ toggleLike يفتح معاملة Firestore. وبلا هذا الحارس، نقر
+   * سريع متكرر على القلب يفتح عدة معاملات متزامنة على المستند نفسه: تتنازع
+   * فتُعيد Firestore محاولتها، ويتذبذب العدّاد المتفائل بين قيمتين، وتتراكم
+   * قنوات معاملات لا داعي لها. النقرة الثانية تُهمَل حتى تُحسم الأولى.
+   */
+  final Set<String> _likesInFlight = <String>{};
+
+  bool isLikeInFlight(String postId) => _likesInFlight.contains(postId);
+
   Future<void> toggleLike(String postId) async {
     final index = _posts.indexWhere((p) => p.id == postId);
     if (index == -1) return;
+    if (!_likesInFlight.add(postId)) return;
 
     // تحديث متفائل فوري؛ القيمة الحقيقية من المعاملة (Transaction) ستصل
     // عبر الـ Stream نفسه بعد لحظات وتستبدلها تلقائيًا.
@@ -151,13 +164,19 @@ class PostProvider extends ChangeNotifier {
     } catch (e) {
       final currentIndex = _posts.indexWhere((p) => p.id == postId);
       if (currentIndex != -1) _posts[currentIndex] = previous;
+      _errorMessage = e is PostException
+          ? e.message
+          : 'تعذر تسجيل الإعجاب، حاول مرة أخرى.';
       notifyListeners();
+    } finally {
+      // يُرفع الحارس دائمًا، نجحت المعاملة أو فشلت — وإلا بقي المنشور
+      // غير قابل للإعجاب لبقية الجلسة بعد أول فشل.
+      _likesInFlight.remove(postId);
     }
   }
 
   Future<bool> createPost({
     required String courseId,
-    required String authorName,
     String authorRole = '',
     required String content,
     PostAttachment? attachment,
@@ -171,7 +190,6 @@ class PostProvider extends ChangeNotifier {
     try {
       await _service.createPost(
         courseId: courseId,
-        authorName: authorName,
         authorRole: authorRole,
         content: content,
         attachment: attachment,
@@ -282,32 +300,51 @@ class PostProvider extends ChangeNotifier {
     );
   }
 
-  void clearComments() {
+  /// يوقف الاستماع دون إشعار المستمعين.
+  ///
+  /// 🔴 هذه هي النسخة التي تُستدعى من dispose الشاشة.
+  ///
+  /// [clearComments] ينادي notifyListeners، واستدعاؤه أثناء فكّ تركيب
+  /// الشجرة يطلب إعادة بناء وِدجِتات في طريقها إلى الزوال. الإيقاف وحده
+  /// كافٍ عند الخروج: البيانات القديمة لا تُعرض لأن الشاشة اختفت، وأول
+  /// listenToComments لمنشور آخر يستبدلها على أي حال.
+  void stopListeningToComments() {
     _commentsSubscription?.cancel();
     _commentsSubscription = null;
+  }
+
+  void clearComments() {
+    stopListeningToComments();
     _comments = [];
     _commentsError = null;
     notifyListeners();
   }
 
+  /// سبب فشل آخر محاولة تعليق، برسالة صالحة للعرض.
+  ///
+  /// كان يحمل `e.toString()` كتشخيص مؤقت، فيظهر نص الاستثناء الخام للطالب.
+  /// الآن يحمل رسالة [PostException] العربية — وهي التي تميّز مثلًا بين
+  /// غياب المصادقة وغياب مستند المستخدم.
+  String? lastCommentError;
+
   Future<bool> addComment({
     required String postId,
-    required String authorName,
     required String content,
   }) async {
     if (_isSendingComment || content.trim().isEmpty) return false;
 
     _isSendingComment = true;
+    lastCommentError = null;
     notifyListeners();
 
     try {
-      await _service.addComment(
-        postId: postId,
-        authorName: authorName,
-        content: content,
-      );
+      await _service.addComment(postId: postId, content: content);
       return true;
+    } on PostException catch (e) {
+      lastCommentError = e.message;
+      return false;
     } catch (e) {
+      lastCommentError = 'تعذر إرسال الرد، حاول مرة أخرى.';
       return false;
     } finally {
       _isSendingComment = false;

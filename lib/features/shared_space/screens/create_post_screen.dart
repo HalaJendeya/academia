@@ -12,7 +12,6 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../files/services/cloudinary_upload_service.dart';
 import '../../files/services/course_file_picker.dart';
-import '../../profile/providers/profile_provider.dart';
 import '../models/post_attachment.dart';
 import '../models/post_model.dart';
 import '../providers/post_provider.dart';
@@ -131,16 +130,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     // بعد رفع مرفق قد يأخذ ثوانٍ (تجنّب context بعد فجوة غير متزامنة).
     // غير مطلوب فعليًا بوضع التعديل (لا يُعاد إرسال authorName)، لكن
     // التحقق يبقى موحَّدًا في الحالتين — رسالة خطأ واحدة، لا مسارين.
-    final authorName = context.read<ProfileProvider>().profile?.fullName;
-    if (authorName == null || authorName.trim().isEmpty) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('تعذر التعرف على بيانات حسابك، أعيدي تسجيل الدخول'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
+    // لا فحص هوية هنا: الاسم يُقرأ في الخدمة من مستند المستخدم العام،
+    // والمعرّف من مستخدم المصادقة. انظر PostService._requireAuthorName.
 
     // 1) رفع ملف جديد فقط إن اختار المستخدم واحدًا فعليًا. المرفق الأصلي
     // (بوضع التعديل) يبقى كما هو دون أي رفع جديد إن لم يُغيَّر.
@@ -183,7 +174,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final success = existingPost == null
         ? await provider.createPost(
       courseId: widget.courseId,
-      authorName: authorName,
       content: content,
       attachment: attachment,
     )

@@ -12,7 +12,6 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_loading_state.dart';
 import '../../../core/widgets/error_state.dart';
-import '../../profile/providers/profile_provider.dart';
 import '../models/comment_model.dart';
 import '../models/post_model.dart';
 import '../providers/post_provider.dart';
@@ -50,17 +49,41 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
   bool get _isOwnPost =>
       widget.post.authorId == FirebaseAuth.instance.currentUser?.uid;
 
+  /*
+   * مرجع محفوظ للمزوّد.
+   *
+   * 🔴 لا يجوز البحث عن مزوّد من الشجرة داخل dispose: الوِدجِت حينها
+   * مفصولة، فيرمي Flutter «Looking up a deactivated widget's ancestor is
+   * unsafe». وهذا ما كان يحدث فعلًا عند الخروج من تفاصيل المنشور.
+   *
+   * المرجع يُلتقط في didChangeDependencies — حيث الشجرة ما زالت قائمة —
+   * ويُستعمل عند الإغلاق دون أي بحث. نفس نمط _CourseFilesTab في تفاصيل
+   * المساق بالمشروع.
+   */
+  PostProvider? _postProvider;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // الشاشة قد تُغلق قبل أن يعمل رد النداء؛ بلا هذا الفحص نقرأ من
+      // context بعد فكّ التركيب.
+      if (!mounted) return;
       context.read<PostProvider>().listenToComments(widget.post.id);
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _postProvider = context.read<PostProvider>();
+  }
+
+  @override
   void dispose() {
-    context.read<PostProvider>().clearComments();
+    // إيقاف بلا إشعار: الشجرة في طريقها إلى الزوال، وطلب إعادة بناء الآن
+    // خطأ في ذاته.
+    _postProvider?.stopListeningToComments();
     _replyController.dispose();
     super.dispose();
   }
@@ -72,32 +95,29 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
     final provider = context.read<PostProvider>();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    // اسم الكاتب الحقيقي من بروفايل الطالب — يُقرأ قبل أي await حتى لا
-    // يُستخدم context بعد فجوة غير متزامنة (lint use_build_context_synchronously).
-    final authorName = context.read<ProfileProvider>().profile?.fullName;
-    if (authorName == null || authorName.trim().isEmpty) {
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('تعذر التعرف على بيانات حسابك، أعيدي تسجيل الدخول'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
+    /*
+     * لا فحص هوية هنا.
+     *
+     * كانت الشاشة تشترط ProfileProvider — وهو ملف الطالب — ثم تقول لمن
+     * جلسته سليمة «أعيدي تسجيل الدخول». الهوية الآن تُحسم في الخدمة من
+     * مستخدم المصادقة ومستند users/{uid}: المعرّف من المصادقة، والاسم من
+     * المستند العام الذي يملكه الطالب والمعلّم والمشرف على السواء. وإن
+     * غاب المستند فالرسالة عن بيانات الحساب لا عن المصادقة.
+     */
     _replyController.clear();
     FocusScope.of(context).unfocus();
 
     final success = await provider.addComment(
       postId: widget.post.id,
-      authorName: authorName,
       content: content,
     );
     if (!mounted || success) return;
 
     scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Text('تعذر إرسال الرد، حاول مرة أخرى'),
+      SnackBar(
+        content: Text(
+          provider.lastCommentError ?? 'تعذر إرسال الرد، حاول مرة أخرى.',
+        ),
         backgroundColor: AppColors.error,
       ),
     );
@@ -514,6 +534,10 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
+    // فرق أقل من دقيقة (أو سالب — ساعة الجهاز متقدّمة قليلًا عن سيرفر
+    // Firebase) يظهر "الآن"، لا رقمًا مضلِّلًا. القيم الأكبر تبقى تعتمد
+    // على ساعة الجهاز، فقد تختلف قليلًا إن لم تكن مزامَنة تلقائيًا.
+    if (diff.inSeconds < 60) return 'الآن';
     if (diff.inMinutes < 60) return 'منذ ${diff.inMinutes} دقيقة';
     if (diff.inHours < 24) return 'منذ ${diff.inHours} ساعة';
     if (diff.inDays < 30) return 'منذ ${diff.inDays} يوم';

@@ -11,6 +11,7 @@ class PostReportModel {
     required this.postId,
     required this.courseId,
     required this.reporterId,
+    required this.reporterName,
     required this.reason,
     this.notes = '',
     this.status = statusPending,
@@ -24,6 +25,7 @@ class PostReportModel {
   final String postId;
   final String courseId;
   final String reporterId;
+  final String reporterName;
   final String reason;
   final String notes;
   final String status;
@@ -35,6 +37,7 @@ class PostReportModel {
       postId: data['postId'] as String? ?? '',
       courseId: data['courseId'] as String? ?? '',
       reporterId: data['reporterId'] as String? ?? '',
+      reporterName: data['reporterName'] as String? ?? '',
       reason: data['reason'] as String? ?? '',
       notes: data['notes'] as String? ?? '',
       status: data['status'] as String? ?? statusPending,

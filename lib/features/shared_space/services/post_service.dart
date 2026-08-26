@@ -59,6 +59,55 @@ class PostService {
     return uid;
   }
 
+  /// اسم صاحب الحساب المعروض، من المصدر الوحيد المعتمد: `users/{uid}`.
+  ///
+  /// 🔴 لا يُقرأ الاسم من مزوّد خاص بالطالب.
+  ///
+  /// كان الاسم يأتي من ProfileProvider، وهو مزوّد ملف الطالب وحده. فإن لم
+  /// يكن قد حُمِّل بعد — أو كان صاحب الحساب معلّمًا أو مشرفًا لا ملف طالب
+  /// له — يعود null، فتقول الشاشة «أعيدي تسجيل الدخول» لمستخدم جلسته
+  /// سليمة تمامًا. الهوية هنا هي هوية المصادقة، والاسم صفة تُقرأ من مستند
+  /// المستخدم العام الذي تملكه الأدوار الثلاثة جميعًا.
+  ///
+  /// وتُميَّز الحالتان: غياب المصادقة شيء، وغياب مستند المستخدم شيء آخر —
+  /// ولكلٍّ رسالته الصادقة.
+  Future<String> _requireAuthorName() async {
+    final uid = _requireUserId;
+
+    // ذاكرة داخل الجلسة: الاسم لا يتغيّر بين تعليق وآخر، فلا داعي لقراءة
+    // مستند المستخدم مع كل كتابة.
+    final cached = _cachedAuthorName;
+    if (cached != null && _cachedAuthorUid == uid) return cached;
+
+    final Map<String, dynamic>? data;
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      data = doc.data();
+    } catch (e) {
+      throw const PostException('تعذر قراءة بيانات حسابك، حاول مرة أخرى.');
+    }
+
+    if (data == null) {
+      throw const PostException(
+        'لم يتم العثور على بيانات حسابك. تواصل مع إدارة النظام.',
+      );
+    }
+
+    final name = (data['fullName'] as String?)?.trim();
+    if (name == null || name.isEmpty) {
+      throw const PostException(
+        'اسم حسابك غير مسجَّل. تواصل مع إدارة النظام.',
+      );
+    }
+
+    _cachedAuthorUid = uid;
+    _cachedAuthorName = name;
+    return name;
+  }
+
+  String? _cachedAuthorUid;
+  String? _cachedAuthorName;
+
   /// يتحقق أن المستخدم الحالي أدمن، عبر حقل role بمستنده في users — نفس
   /// الشرط المعتمَد بكل شاشات الإدارة الأخرى بالمشروع (لا معيار جديد هنا).
   Future<void> _requireAdmin() async {
@@ -147,12 +196,13 @@ class PostService {
 
   Future<void> createPost({
     required String courseId,
-    required String authorName,
     String authorRole = '',
     required String content,
     PostAttachment? attachment,
   }) async {
     late final String postId;
+    // يُقرأ قبل الكتابة: فشل قراءة الاسم يجب ألا يترك منشورًا بلا صاحب.
+    final authorName = await _requireAuthorName();
     try {
       final model = PostModel(
         id: '',
@@ -263,11 +313,13 @@ class PostService {
     required String reason,
     String notes = '',
   }) async {
+    final reporterName = await _requireAuthorName();
     try {
       await _postReports.add({
         'postId': postId,
         'courseId': courseId,
         'reporterId': _requireUserId,
+        'reporterName': reporterName,
         'reason': reason,
         'notes': notes,
         'status': 'pending',
@@ -302,11 +354,12 @@ class PostService {
   /// منفصلتين قد تنجح إحداهما وتفشل الأخرى.
   Future<void> addComment({
     required String postId,
-    required String authorName,
     required String content,
   }) async {
     try {
       final userId = _requireUserId;
+      // الاسم من users/{uid}، لا من مزوّد الواجهة.
+      final authorName = await _requireAuthorName();
       final postRef = _posts.doc(postId);
       final commentRef = postRef.collection('comments').doc();
 

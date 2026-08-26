@@ -23,6 +23,24 @@ rules_version = '2';
 //  fail-open defaults for missing `role` / `status` are GONE: both fields are
 //  now required and must hold an explicit valid value.
 // =============================================================================
+//
+//  RECONCILIATION NOTE — read before touching this file.
+//
+//  This file was rebuilt from the ruleset ACTUALLY SERVING production
+//  (projects/academia-app-7b8ef/rulesets/cbc8ae95-abcd-4c19-b9bc-a73b3da45a25,
+//  released 2026-08-26T08:45:21Z). The copy previously on this branch was 725
+//  lines and predated Phase 8A/8.1: it had no teacher role, no assignments,
+//  no studySessions, no assignmentProgress, and none of the shared-space
+//  collections. Deploying it would have deleted eight live rule blocks.
+//
+//  Rules are a single global file and every deploy replaces the whole thing.
+//  Before any deploy: re-fetch the live ruleset and diff it against this file
+//  again. Never publish a file that is missing blocks the live one has.
+//
+//  The ONLY intentional behavioural change against that live ruleset is the
+//  posts/{postId} counter carve-out — see the comment on `allow update`
+//  inside match /posts/{postId} below.
+// =============================================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -1178,12 +1196,6 @@ service cloud.firestore {
     }
 
     // ===================================================================
-    //  Explicit default deny for every unmatched path.
-    //  Firestore already denies by default; this documents the intent and
-    //  covers any collection created before its rules are written.
-    //  (This does not revoke grants from the more specific matches above.)
-    // ===================================================================
-    // ===================================================================
     //  المساحة المشتركة — منشورات وتعليقات وإعجابات وبلاغات
     //
     //  🔴 مصدر هذا القسم: النسخة المنشورة فعلًا في Firebase (ruleset
@@ -1201,10 +1213,75 @@ service cloud.firestore {
       allow create: if isActiveUser()
         && request.resource.data.authorId == request.auth.uid;
 
+      /*
+       * ⚠️ استثناء العدّادات — سبب PERMISSION_DENIED الحقيقي على الجهاز.
+       *
+       * likesCount وcommentsCount مخزَّنان على مستند المنشور نفسه
+       * (denormalised)، لكن مَن يكتبهما هو مَن يُعجب أو يعلّق — وهو في
+       * الغالب ليس صاحب المنشور. القاعدة المنشورة كانت تسمح بالتحديث
+       * لصاحب المنشور أو الأدمن فقط، فكانت كل معاملة إعجاب وكل دفعة
+       * تعليق على منشور الآخرين تُرفض على مستند المنشور:
+       *   - الإعجاب: المعاملة ذرّية، فيُرفض معها إنشاء مستند الإعجاب رغم
+       *     أن قاعدته تسمح به — ومن هنا «يظهر الإعجاب ثم يختفي».
+       *   - التعليق: الدفعة (Batch) ذرّية كذلك، فلا يُكتب التعليق أصلًا.
+       *
+       * الاستثناء مقيَّد بأضيق ما تسمح به لغة القواعد:
+       *   1. حقل واحد بعينه يتغيّر ولا شيء غيره (changedKeys().hasOnly) —
+       *      فلا يمرّ تعديل محتوى منشور الآخرين متخفّيًا مع العدّاد.
+       *   2. القيمة الجديدة محسوبة من القيمة المخزَّنة ±1 بالضبط، فلا
+       *      يستطيع أحد ضبط العدّاد على رقم من عنده.
+       *   3. اتجاه تغيير الإعجاب مربوط بوجود مستند الإعجاب قبل العملية:
+       *      من لا إعجاب له يزيد فقط، ومن له إعجاب ينقص فقط. أقصى ما
+       *      يستطيعه أي حساب هو +1 واحدة لكل منشور — وهي بالضبط ما
+       *      يستطيعه بإعجاب مشروع.
+       *
+       * حدٌّ معروف: عدّاد التعليقات لا يمكن ربطه بوجود التعليق نفسه، لأن
+       * القواعد تُقيَّم لكل مستند على حدة ولا ترى الكتابة الشقيقة داخل
+       * الدفعة. أي حساب فعّال يستطيع نظريًا زيادته +1 دون تعليق فعلي.
+       * البديل الوحيد هو إسقاط العدّاد المخزَّن وحسابه بـ count() لكل
+       * منشور بالقائمة، وهو تغيير في نموذج البيانات لا في القواعد.
+       */
+      function likeDocExists() {
+        return exists(/databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid));
+      }
+
+      function currentLikes() {
+        return resource.data.get('likesCount', 0);
+      }
+
+      function currentComments() {
+        return resource.data.get('commentsCount', 0);
+      }
+
+      // إعجاب: لا مستند إعجاب قبل العملية → +1.
+      // إلغاء إعجاب: المستند موجود → -1، أو 0 إن كان العدّاد صفرًا أصلًا
+      // (مطابقةً لتقييد العميل الذي يمنع عدّادًا سالبًا).
+      function likeCountUpdate() {
+        return changedKeys().hasOnly(['likesCount'])
+          && request.resource.data.likesCount is int
+          && (
+               ( !likeDocExists()
+                 && request.resource.data.likesCount == currentLikes() + 1 )
+               ||
+               ( likeDocExists()
+                 && request.resource.data.likesCount ==
+                      (currentLikes() > 0 ? currentLikes() - 1 : 0) )
+             );
+      }
+
+      // التعليق يزيد العدّاد واحدًا فقط، ولا ينقصه: حذف التعليق غير
+      // متاح بالتطبيق، فلا حاجة لفتح اتجاه النقصان.
+      function commentCountUpdate() {
+        return changedKeys().hasOnly(['commentsCount'])
+          && request.resource.data.commentsCount is int
+          && request.resource.data.commentsCount == currentComments() + 1;
+      }
       allow update: if isActiveUser()
         && (
           request.auth.uid == resource.data.authorId
           || isActiveAdmin()
+          || likeCountUpdate()
+          || commentCountUpdate()
         );
 
       allow delete: if (isActiveUser() && request.auth.uid == resource.data.authorId)

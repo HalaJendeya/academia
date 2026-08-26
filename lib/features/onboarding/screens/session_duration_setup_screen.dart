@@ -44,106 +44,21 @@ class _SessionDurationSetupScreenState
   }
 
   void _showCustomDurationSheet() {
-    final textController = TextEditingController();
-    String? errorText;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                ),
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      AppStrings.customDurationTitle,
-                      style: AppTextStyles.headlineSmall.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.secondary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: textController,
-                      keyboardType: TextInputType.number,
-                      autofocus: true,
-                      textAlign: TextAlign.left,
-                      decoration: InputDecoration(
-                        hintText: '5 - 180',
-                        errorText: errorText,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppRadius.input),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              final text = textController.text.trim();
-                              final val = int.tryParse(text);
-                              if (val == null || val < 5 || val > 180) {
-                                setModalState(() {
-                                  errorText = AppStrings.invalidCustomDuration;
-                                });
-                              } else {
-                                Provider.of<OnboardingProvider>(
-                                  context,
-                                  listen: false,
-                                ).setPreferredSessionDuration(val);
-                                Navigator.pop(context);
-                              }
-                            },
-                            child: const Text(AppStrings.confirm),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Text(AppStrings.cancel),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
+        return _OnboardingCustomDurationSheet(
+          onConfirm: (val) {
+            Provider.of<OnboardingProvider>(
+              context,
+              listen: false,
+            ).setPreferredSessionDuration(val);
           },
         );
       },
-    ).then((_) {
-      textController.dispose();
-    });
+    );
   }
 
   @override
@@ -362,6 +277,113 @@ class _SessionDurationSetupScreenState
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingCustomDurationSheet extends StatefulWidget {
+  final ValueChanged<int> onConfirm;
+
+  const _OnboardingCustomDurationSheet({required this.onConfirm});
+
+  @override
+  State<_OnboardingCustomDurationSheet> createState() =>
+      _OnboardingCustomDurationSheetState();
+}
+
+class _OnboardingCustomDurationSheetState
+    extends State<_OnboardingCustomDurationSheet> {
+  final TextEditingController _textController = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AppStrings.customDurationTitle,
+              style: AppTextStyles.headlineSmall.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.secondary,
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _textController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              textAlign: TextAlign.left,
+              decoration: InputDecoration(
+                hintText: '5 - 180',
+                errorText: _errorText,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.input),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final text = _textController.text.trim();
+                      final val = int.tryParse(text);
+                      if (val == null || val < 5 || val > 180) {
+                        setState(() {
+                          _errorText = AppStrings.invalidCustomDuration;
+                        });
+                      } else {
+                        widget.onConfirm(val);
+                        Navigator.pop(context);
+                      }
+                    },
+                    child: const Text(AppStrings.confirm),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text(AppStrings.cancel),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

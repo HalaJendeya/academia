@@ -3145,6 +3145,189 @@ t('33x. reopening a session back to active denied', {
   existing: SESSION_DONE,
 });
 
+// --- 34. studySessions optional text fields -----------------------------------
+//
+// sessionName and goal are set once at creation and frozen; reflection is the
+// only field writable after the fact, and only on a completed session.
+const SESSION_NAMED = {
+  ...SESSION_DOC,
+  sessionName: 'مراجعة نهائية',
+  goal: 'إنهاء الفصل الرابع وحل التمارين',
+};
+const SESSION_FINISHED = {
+  ...SESSION_DOC,
+  status: 'completed',
+  actualMinutes: 45,
+  endedAt: TIME,
+};
+
+t('34a. creating a session with a name and goal allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/n1',
+  method: 'create',
+  data: SESSION_NAMED,
+});
+t('34b. creating a session with neither is still allowed', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/n2',
+  method: 'create',
+  data: SESSION_DOC,
+});
+t('34c. an over-long session name denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/n3',
+  method: 'create',
+  data: { ...SESSION_DOC, sessionName: 'x'.repeat(101) },
+});
+t('34d. an over-long goal denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/n4',
+  method: 'create',
+  data: { ...SESSION_DOC, goal: 'x'.repeat(301) },
+});
+t('34e. a non-string session name denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/n5',
+  method: 'create',
+  data: { ...SESSION_DOC, sessionName: 42 },
+});
+t('34f. a reflection present at creation denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/n6',
+  method: 'create',
+  data: { ...SESSION_DOC, reflection: 'أنجزت الفصل' },
+});
+
+// ---- reflection after completion ----
+t('34g. owner adds a reflection to a completed session', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: 'راجعت الفصل الرابع كاملًا' },
+  existing: SESSION_FINISHED,
+});
+t('34h. another student adding a reflection denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: 'نص' },
+  existing: SESSION_FINISHED,
+});
+t('34i. a reflection on a cancelled session denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: {
+    ...SESSION_DOC,
+    status: 'cancelled',
+    endedAt: TIME,
+    reflection: 'نص',
+  },
+  existing: { ...SESSION_DOC, status: 'cancelled', endedAt: TIME },
+});
+t('34j. a reflection on a still-active session denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_DOC, reflection: 'نص' },
+  existing: SESSION_DOC,
+});
+t('34k. an over-long reflection denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: 'x'.repeat(1001) },
+  existing: SESSION_FINISHED,
+});
+t('34l. an empty reflection denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: '' },
+  existing: SESSION_FINISHED,
+});
+t('34m. changing minutes while writing a reflection denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, actualMinutes: 45, reflection: 'نص' },
+  existing: { ...SESSION_FINISHED, actualMinutes: 20 },
+});
+t('34n. reviving a completed session to active denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, status: 'active', reflection: 'نص' },
+  existing: SESSION_FINISHED,
+});
+
+// ---- name/goal immutability ----
+t('34o. renaming a session after it started denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_NAMED, status: 'completed', actualMinutes: 45,
+          endedAt: TIME, sessionName: 'اسم آخر' },
+  existing: SESSION_NAMED,
+});
+t('34p. changing the goal after it started denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_NAMED, status: 'completed', actualMinutes: 45,
+          endedAt: TIME, goal: 'هدف آخر' },
+  existing: SESSION_NAMED,
+});
+t('34q. adding a name to a session that never had one denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, sessionName: 'اسم متأخر' },
+  existing: SESSION_DOC,
+});
+t('34r. closing a named session normally still works', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_NAMED, status: 'completed', actualMinutes: 45,
+          endedAt: TIME },
+  existing: SESSION_NAMED,
+});
+t('34s. teacher writing a reflection denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: 'نص' },
+  existing: SESSION_FINISHED,
+});
+t('34t. admin writing a reflection denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'studySessions/s1',
+  method: 'update',
+  data: { ...SESSION_FINISHED, reflection: 'نص' },
+  existing: SESSION_FINISHED,
+});
+
 // ------------------------------------------------------------------- runner
 
 const source = {

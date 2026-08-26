@@ -61,6 +61,8 @@ class StudySessionService {
     required int plannedMinutes,
     String? offeringId,
     String? courseId,
+    String? sessionName,
+    String? goal,
   }) async {
     final owner = userId.trim();
     if (owner.isEmpty) {
@@ -77,11 +79,18 @@ class StudySessionService {
       throw const StudySessionException(AppStrings.studySessionInvalidCourse);
     }
 
+    // نصوص اختيارية: تُكتب فقط إن كتبها الطالب، فلا يحمل المستند حقولًا
+    // فارغة، وتبقى الجلسات القديمة بلا هذه الحقول صالحة كما هي.
+    final name = _trimToNull(sessionName, StudySessionModel.maxSessionNameLength);
+    final sessionGoal = _trimToNull(goal, StudySessionModel.maxGoalLength);
+
     try {
       final doc = await _sessions.add({
         'userId': owner,
         if (hasCourse) 'offeringId': offering,
         if (hasCourse) 'courseId': course,
+        'sessionName': ?name,
+        'goal': ?sessionGoal,
         'plannedMinutes': plannedMinutes,
         'actualMinutes': 0,
         'status': StudySessionModel.statusToString(StudySessionStatus.active),
@@ -122,5 +131,45 @@ class StudySessionService {
     } catch (e) {
       throw const StudySessionException(AppStrings.studySessionCloseError);
     }
+  }
+
+  /// يحفظ ما كتبه الطالب في «ماذا أنجزت؟» بعد انتهاء الجلسة.
+  ///
+  /// كتابة ثالثة اختيارية، ولا تحدث إلا إذا كتب الطالب شيئًا فعلًا: تخطّي
+  /// الحقل لا يكلّف قراءةً ولا كتابة. ولا تمسّ هذه الكتابة الحالة ولا
+  /// المدة — القواعد تقصرها على `reflection` وحدها.
+  Future<void> saveReflection({
+    required String sessionId,
+    required String reflection,
+  }) async {
+    final id = sessionId.trim();
+    if (id.isEmpty) {
+      throw const StudySessionException(AppStrings.studySessionNotFound);
+    }
+
+    final text = _trimToNull(
+      reflection,
+      StudySessionModel.maxReflectionLength,
+    );
+    if (text == null) return;
+
+    try {
+      await _sessions.doc(id).update({
+        'reflection': text,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw const StudySessionException(AppStrings.studySessionCloseError);
+    }
+  }
+
+  /// يقصّ الفراغات ويحدّ الطول، ويعيد null للنص الفارغ.
+  ///
+  /// القصّ هنا وليس في الشاشة: الحدّ نفسه مفروض في القواعد، فمن الأفضل ألا
+  /// تصل كتابة مرفوضة إلى الخادم أصلًا.
+  static String? _trimToNull(String? value, int maxLength) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty) return null;
+    return text.length <= maxLength ? text : text.substring(0, maxLength);
   }
 }

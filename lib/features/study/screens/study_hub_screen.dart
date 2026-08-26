@@ -11,97 +11,43 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_bottom_navigation.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_loading_state.dart';
-import '../../../core/widgets/app_section.dart';
+import '../../../core/widgets/app_menu_tile.dart';
 import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
-import '../../../core/widgets/primary_button.dart';
-import '../../../core/widgets/secondary_button.dart';
-import '../../courses/models/student_course_view.dart';
+import '../../analytics/models/study_duration_format.dart';
 import '../../courses/providers/student_courses_provider.dart';
-import '../../profile/providers/study_preferences_provider.dart';
-import '../models/study_session_model.dart';
+import '../models/study_history_summary.dart';
+import '../models/weekly_study_summary.dart';
 import '../providers/study_session_provider.dart';
 import '../widgets/study_session_card.dart';
 
-/// مركز المذاكرة — تبويب «المذاكرة» في شريط التنقّل السفلي.
+/// مركز المذاكرة — إطار Figma‏ 11:416، تبويب «المذاكرة» في الشريط السفلي.
 ///
-/// النسخة الأولى تقدّم ما يمكن بناؤه على بيانات حقيقية فقط: تفضيلات
-/// الطالب المخزَّنة، وبدء جلسة تركيز، وسجل الجلسات السابقة. لا خطة ذكية
-/// ولا رسوم بيانية ولا مؤشرات التزام — تلك تحتاج بيانات لا يملكها النظام
-/// بعد، وعرضها بأرقام مختلقة يجعل الشاشة تكذب على الطالب.
-class StudyHubScreen extends StatefulWidget {
+/// البطاقتان العلويتان والدعوة البرتقالية وقسم القائمة تتبع التصميم، لكن
+/// أرقامها محسوبة من جلسات الطالب المخزَّنة لا من عيّنات.
+///
+/// انحراف مقصود: يعرض التصميم «الجدول القادم» بجلسات مجدولة مسبقًا بموعد
+/// ومكان. لا يعرف النظام جلسة قبل بدئها — الجلسة تُنشأ وتنطلق فورًا — فلا
+/// بيانات تملأ ذلك القسم. وُضع مكانه «آخر الجلسات» من بيانات حقيقية، وفُصِل
+/// الجدولة كعمل مستقبلي بدل اختلاق مواعيد.
+class StudyHubScreen extends StatelessWidget {
   const StudyHubScreen({super.key});
 
   @override
-  State<StudyHubScreen> createState() => _StudyHubScreenState();
-}
-
-class _StudyHubScreenState extends State<StudyHubScreen> {
-  /// المدة المختارة لهذه الجلسة. null يعني «اتبع التفضيلات المخزَّنة».
-  int? _selectedMinutes;
-
-  /// الطرح المختار. null يعني مذاكرة عامة.
-  String? _selectedOfferingId;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<StudyPreferencesProvider>().loadPreferences();
-    });
-  }
-
-  int _durationFor(StudyPreferencesProvider prefs) {
-    final selected = _selectedMinutes;
-    if (selected != null) return selected;
-    return prefs.preferences?.preferredSessionDuration ??
-        StudySessionModel.minMinutes * 9; // 45 — نفس افتراضي التفضيلات
-  }
-
-  Future<void> _start(
-    BuildContext context,
-    List<StudentCourseView> courses,
-    int minutes,
-  ) async {
-    final provider = context.read<StudySessionProvider>();
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
-    StudentCourseView? course;
-    for (final c in courses) {
-      if (c.offeringId == _selectedOfferingId) course = c;
-    }
-
-    final started = await provider.startSession(
-      plannedMinutes: minutes,
-      offeringId: course?.offeringId,
-      courseId: course?.courseId,
-    );
-
-    if (!mounted) return;
-
-    if (!started) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            provider.errorMessage ?? AppStrings.studySessionStartError,
-          ),
-        ),
-      );
-      return;
-    }
-
-    navigator.pushNamed(AppRoutes.activeStudySession);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final prefs = context.watch<StudyPreferencesProvider>();
     final sessions = context.watch<StudySessionProvider>();
-    final coursesProvider = context.watch<StudentCoursesProvider>();
+    final courses = context.watch<StudentCoursesProvider>();
+
+    // إحصاءات العمر للبطاقة الأولى، وإحصاءات الأسبوع للثانية — كما في
+    // التصميم، وكلٌّ مُسمّى بما يقيسه بالضبط.
+    final lifetime = StudyHistorySummary.from(sessions: sessions.sessions);
+    final weekly = WeeklyStudySummary.from(
+      sessions: sessions.sessions,
+      tasks: const [],
+      assignmentCompletionTimes: const {},
+    );
 
     return AuthenticatedPageScaffold(
       currentIndex: AcademiaBottomNavigation.studyIndex,
@@ -110,11 +56,8 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
         index,
         currentIndex: AcademiaBottomNavigation.studyIndex,
       ),
-      // بلا إجراءات في الشريط: لا بحث ولا إشعارات ولا ملف شخصي هنا، تمامًا
-      // كشاشة المهام. زر بلا وجهة يَعِد بفعل لا يحدث، ويزاحم العنوان على
-      // عرض 360.
       appBar: const AcademiaMainAppBar(
-        title: AppStrings.studyHubTitle,
+        title: AppStrings.studySessionsTitle,
         showSearch: false,
         showNotifications: false,
         showProfile: false,
@@ -127,298 +70,300 @@ class _StudyHubScreenState extends State<StudyHubScreen> {
           AppSpacing.huge,
         ),
         children: [
-          Text(AppStrings.studyHubIntro, style: AppTextStyles.bodySmall),
-          const SizedBox(height: AppSpacing.sectionSpacing),
-
-          _buildSessionSection(context, prefs, sessions, coursesProvider),
-          const SizedBox(height: AppSpacing.sectionSpacing),
-
-          _buildPreferencesSection(context, prefs),
-          const SizedBox(height: AppSpacing.sectionSpacing),
-
-          _buildHistorySection(sessions),
-        ],
-      ),
-    );
-  }
-
-  // -------------------------------------------------------- جلسة المذاكرة
-  Widget _buildSessionSection(
-    BuildContext context,
-    StudyPreferencesProvider prefs,
-    StudySessionProvider sessions,
-    StudentCoursesProvider coursesProvider,
-  ) {
-    final minutes = _durationFor(prefs);
-    final courses = coursesProvider.currentCourses;
-
-    return AppSection(
-      title: AppStrings.studySessionSectionTitle,
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (sessions.hasActiveSession) ...[
-              _ActiveSessionBanner(
-                onOpen: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.activeStudySession),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.check_circle_outline_rounded,
+                  label: AppStrings.completedSessionsLabel,
+                  value:
+                      '${lifetime.completedSessions} '
+                      '${AppStrings.sessionsCountUnit}',
+                ),
               ),
-              const SizedBox(height: AppSpacing.medium),
+              const SizedBox(width: AppSpacing.itemSpacing),
+              Expanded(
+                child: _StatCard(
+                  icon: Icons.timer_outlined,
+                  label: AppStrings.weeklyStudyMinutesLabel,
+                  value: StudyDurationFormat.format(weekly.studiedMinutes),
+                ),
+              ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.large),
 
-            Text(
-              AppStrings.studySessionDurationLabel,
-              style: AppTextStyles.labelMedium,
+          _StartSessionHero(
+            hasActiveSession: sessions.hasActiveSession,
+            onTap: () => Navigator.of(context).pushNamed(
+              sessions.hasActiveSession
+                  ? AppRoutes.activeStudySession
+                  : AppRoutes.createStudySession,
             ),
-            const SizedBox(height: AppSpacing.small),
-            _DurationChips(
-              selected: minutes,
-              onSelected: (value) => setState(() => _selectedMinutes = value),
-            ),
+          ),
+          const SizedBox(height: AppSpacing.large),
 
-            const SizedBox(height: AppSpacing.medium),
-            Text(AppStrings.studySessionCourseLabel, style: AppTextStyles.labelMedium),
-            const SizedBox(height: AppSpacing.small),
-            _CoursePicker(
-              courses: courses,
-              selectedOfferingId: _selectedOfferingId,
-              onChanged: (value) =>
-                  setState(() => _selectedOfferingId = value),
-            ),
+          _ToolsSection(),
+          const SizedBox(height: AppSpacing.large),
 
-            const SizedBox(height: AppSpacing.medium),
-            AppPrimaryButton(
-              label: AppStrings.startStudySession,
-              icon: Icons.play_arrow_rounded,
-              isLoading: sessions.isStarting,
-              // جلسة واحدة في كل مرة: الزر معطَّل ما دامت هناك جلسة جارية،
-              // والبانر أعلاه هو طريق العودة إليها.
-              onPressed: sessions.hasActiveSession
-                  ? null
-                  : () => _start(context, courses, minutes),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------- التفضيلات
-  Widget _buildPreferencesSection(
-    BuildContext context,
-    StudyPreferencesProvider prefs,
-  ) {
-    Widget content;
-
-    if (prefs.isLoading && prefs.preferences == null) {
-      content = const AppLoadingState();
-    } else if (prefs.preferences == null) {
-      content = AppErrorState(
-        message: prefs.errorMessage ?? AppStrings.studyPreferencesLoadError,
-        onRetry: () => prefs.loadPreferences(forceRefresh: true),
-      );
-    } else {
-      final p = prefs.preferences!;
-      content = Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _PreferenceRow(
-            label: AppStrings.defaultSessionDurationLabel,
-            value: '${p.preferredSessionDuration} '
-                '${AppStrings.studySessionMinutesUnit}',
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  AppStrings.recentSessionsHeading,
+                  style: AppTextStyles.sectionTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.sessionHistory),
+                child: const Text(AppStrings.viewAllAction),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.small),
-          _PreferenceRow(
-            label: AppStrings.preferredStudyDaysLabel,
-            value: p.studyDays.join('، '),
-          ),
-          const SizedBox(height: AppSpacing.medium),
-          AppSecondaryButton(
-            label: AppStrings.editStudyPreferencesAction,
-            icon: Icons.tune_rounded,
-            // لا نموذج تفضيلات ثانٍ هنا: التعديل يفتح الشاشة القائمة.
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.studyPreferences),
-          ),
+          _RecentSessions(sessions: sessions, courses: courses),
         ],
-      );
-    }
-
-    return AppSection(
-      title: AppStrings.studyPreferencesSectionTitle,
-      child: AppCard(child: content),
-    );
-  }
-
-  // ---------------------------------------------------------------- السجل
-  Widget _buildHistorySection(StudySessionProvider sessions) {
-    Widget content;
-
-    if (sessions.isLoading && sessions.sessions.isEmpty) {
-      content = const AppLoadingState();
-    } else if (sessions.errorMessage != null && sessions.sessions.isEmpty) {
-      content = AppErrorState(message: sessions.errorMessage!);
-    } else {
-      final recent = sessions.recentSessions();
-      if (recent.isEmpty) {
-        content = const AppEmptyState(
-          title: AppStrings.noStudySessionsTitle,
-          description: AppStrings.noStudySessionsDesc,
-          icon: Icons.history_rounded,
-        );
-      } else {
-        content = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final session in recent) ...[
-              StudySessionCard(session: session),
-              if (session != recent.last)
-                const SizedBox(height: AppSpacing.itemSpacing),
-            ],
-          ],
-        );
-      }
-    }
-
-    return AppSection(title: AppStrings.recentSessionsTitle, child: content);
-  }
-}
-
-// ---------------------------------------------------------------- عناصر فرعية
-
-class _ActiveSessionBanner extends StatelessWidget {
-  const _ActiveSessionBanner({required this.onOpen});
-
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onOpen,
-      borderRadius: BorderRadius.circular(AppRadius.button),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.itemSpacing),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppRadius.button),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.timer_outlined, color: AppColors.primary),
-            const SizedBox(width: AppSpacing.small),
-            Expanded(
-              child: Text(
-                AppStrings.activeSessionTitle,
-                style: AppTextStyles.labelMedium,
-              ),
-            ),
-            const Icon(Icons.chevron_left_rounded, color: AppColors.primary),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _DurationChips extends StatelessWidget {
-  const _DurationChips({required this.selected, required this.onSelected});
-
-  final int selected;
-  final ValueChanged<int> onSelected;
-
-  /// خيارات ثابتة قصيرة. المدة المخصَّصة تُضبط من شاشة التفضيلات، فلا
-  /// حاجة لحقل إدخال حر هنا.
-  static const List<int> _options = [15, 25, 30, 45, 60, 90];
-
-  @override
-  Widget build(BuildContext context) {
-    // Wrap لا Row: ستة خيارات لا تتسع في صف واحد على عرض 360.
-    return Wrap(
-      spacing: AppSpacing.small,
-      runSpacing: AppSpacing.small,
-      children: [
-        for (final option in _options)
-          ChoiceChip(
-            label: Text('$option'),
-            selected: option == selected,
-            onSelected: (_) => onSelected(option),
-          ),
-        // المدة المخزَّنة قد تخرج عن الخيارات الثابتة؛ تُعرض كخيار إضافي
-        // بدل أن تختفي بصمت ويظهر الطالب كأنه لم يختر شيئًا.
-        if (!_options.contains(selected))
-          ChoiceChip(
-            label: Text('$selected'),
-            selected: true,
-            onSelected: (_) => onSelected(selected),
-          ),
-      ],
-    );
-  }
-}
-
-class _CoursePicker extends StatelessWidget {
-  const _CoursePicker({
-    required this.courses,
-    required this.selectedOfferingId,
-    required this.onChanged,
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
   });
 
-  final List<StudentCourseView> courses;
-  final String? selectedOfferingId;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    /*
-     * المساقات المسجَّلة حاليًا وحدها.
-     *
-     * المصدر StudentCoursesProvider نفسه الذي تعرضه شاشة المساقات، فلا
-     * منطق تحميل ثانٍ. والقاعدة تتحقق من التسجيل عند الكتابة أيضًا، فحتى
-     * لو تلاعب أحد بالقائمة لن يُقبل طرح لا يملك فيه تسجيلًا.
-     */
-    return DropdownButtonFormField<String?>(
-      initialValue: selectedOfferingId,
-      isExpanded: true,
-      decoration: const InputDecoration(border: OutlineInputBorder()),
-      items: [
-        const DropdownMenuItem<String?>(
-          value: null,
-          child: Text(AppStrings.studySessionNoCourse),
-        ),
-        for (final course in courses)
-          DropdownMenuItem<String?>(
-            value: course.offeringId,
-            child: Text(
-              course.title.isEmpty ? course.courseCode : course.title,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-      ],
-      onChanged: onChanged,
-    );
-  }
-}
-
-class _PreferenceRow extends StatelessWidget {
-  const _PreferenceRow({required this.label, required this.value});
-
+  final IconData icon;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: Text(label, style: AppTextStyles.bodySmall)),
-        const SizedBox(width: AppSpacing.small),
-        Expanded(
-          child: Text(
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.small),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+                child: Icon(icon, color: AppColors.primary, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.itemSpacing),
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.right,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
             value,
-            style: AppTextStyles.labelMedium,
-            textAlign: TextAlign.end,
+            style: AppTextStyles.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// الدعوة البرتقالية «ابدأ جلسة دراسة».
+///
+/// تتحوّل إلى «عودة إلى الجلسة» متى كانت هناك جلسة جارية: بدء ثانية مرفوض
+/// أصلًا، ووعد الزر يجب أن يطابق ما سيحدث.
+class _StartSessionHero extends StatelessWidget {
+  const _StartSessionHero({
+    required this.hasActiveSession,
+    required this.onTap,
+  });
+
+  final bool hasActiveSession;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.large),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary, Color(0xFFFF9800)],
           ),
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              hasActiveSession
+                  ? AppStrings.activeSessionTitle
+                  : AppStrings.startSessionHeroTitle,
+              style: AppTextStyles.headlineSmall.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              AppStrings.startSessionHeroSubtitle,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Colors.white.withValues(alpha: 0.9),
+              ),
+              textAlign: TextAlign.right,
+            ),
+            const SizedBox(height: AppSpacing.medium),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.medium,
+                  vertical: AppSpacing.small + 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.play_arrow_rounded,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      hasActiveSession
+                          ? AppStrings.resumeSessionAction
+                          : AppStrings.startStudySession,
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// روابط أدوات المذاكرة — كل واحد يفتح شاشة حقيقية.
+class _ToolsSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          AppStrings.studyToolsTitle,
+          style: AppTextStyles.sectionTitle,
+          textAlign: TextAlign.right,
+        ),
+        const SizedBox(height: AppSpacing.itemSpacing),
+        AppMenuTile(
+          icon: Icons.insights_outlined,
+          title: AppStrings.weeklyReportTile,
+          onTap: () =>
+              Navigator.of(context).pushNamed(AppRoutes.weeklySummary),
+        ),
+        AppMenuTile(
+          icon: Icons.history_rounded,
+          title: AppStrings.sessionHistoryTile,
+          onTap: () =>
+              Navigator.of(context).pushNamed(AppRoutes.sessionHistory),
+        ),
+        AppMenuTile(
+          icon: Icons.event_note_outlined,
+          title: AppStrings.studyPlanTile,
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.studyPlan),
+        ),
+        AppMenuTile(
+          icon: Icons.tune_rounded,
+          title: AppStrings.studyPreferencesTile,
+          // لا نموذج تفضيلات ثانٍ: يُفتح النموذج القائم نفسه.
+          onTap: () =>
+              Navigator.of(context).pushNamed(AppRoutes.studyPreferences),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecentSessions extends StatelessWidget {
+  const _RecentSessions({required this.sessions, required this.courses});
+
+  final StudySessionProvider sessions;
+  final StudentCoursesProvider courses;
+
+  String? _titleFor(String? courseId) {
+    if (courseId == null) return null;
+    for (final course in courses.currentCourses) {
+      if (course.courseId == courseId) {
+        return course.title.isEmpty ? course.courseCode : course.title;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (sessions.isLoading && sessions.sessions.isEmpty) {
+      return const AppLoadingState();
+    }
+    if (sessions.errorMessage != null && sessions.sessions.isEmpty) {
+      return AppErrorState(message: sessions.errorMessage!);
+    }
+
+    final recent = sessions.recentSessions(limit: 3);
+    if (recent.isEmpty) {
+      return const AppEmptyState(
+        title: AppStrings.noStudySessionsTitle,
+        description: AppStrings.noStudySessionsDesc,
+        icon: Icons.history_rounded,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final session in recent) ...[
+          StudySessionCard(
+            session: session,
+            courseTitle: _titleFor(session.courseId),
+          ),
+          if (session != recent.last)
+            const SizedBox(height: AppSpacing.itemSpacing),
+        ],
       ],
     );
   }

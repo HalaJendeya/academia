@@ -1816,4 +1816,105 @@ abstract final class AppStrings {
   static const String studySessionInvalidCourse =
       'المساق المختار غير متاح، اختر مساقًا من مساقاتك المسجَّلة';
   static const String studySessionAlreadyRunning = 'لديك جلسة جارية بالفعل';
+
+  // ===== المذاكرة: الشاشات المكتملة وفق تصميم Figma =====
+
+  // --- مركز المذاكرة (Study Sessions) ---
+  static const String studySessionsTitle = 'جلسات الدراسة';
+  static const String completedSessionsLabel = 'الجلسات المكتملة';
+  static const String sessionsCountUnit = 'جلسة';
+  static const String weeklyStudyMinutesLabel = 'دقائق الدراسة هذا الأسبوع';
+  static const String startSessionHeroTitle = 'ابدأ جلسة دراسة';
+  static const String startSessionHeroSubtitle =
+      'ركّز الآن وحقّق أهدافك الأكاديمية';
+  static const String viewAllAction = 'عرض الكل';
+  static const String studyToolsTitle = 'أدوات المذاكرة';
+  static const String weeklyReportTile = 'الملخص الأسبوعي';
+  static const String sessionHistoryTile = 'سجل الجلسات';
+  static const String studyPlanTile = 'خطة المذاكرة';
+  static const String studyPreferencesTile = 'تفضيلات الدراسة';
+
+  // --- إنشاء جلسة (Create Study Session) ---
+  static const String createSessionTitle = 'إنشاء جلسة دراسة';
+  static const String createSessionHeroTitle = 'وقت التركيز';
+  static const String createSessionHeroSubtitle =
+      'صمّم جلستك الدراسية المثالية وانطلق نحو النجاح';
+  static const String selectCourseLabel = 'اختيار المساق';
+  static const String sessionNameLabel = 'اسم الجلسة';
+  static const String sessionNameHint = 'مثلًا: مراجعة نهائية';
+  static const String sessionDurationSectionLabel = 'مدة الجلسة';
+  static const String sessionGoalLabel = 'هدف الجلسة';
+  static const String sessionGoalHint = 'مثلًا: مراجعة الفصل الثالث وحل التمارين';
+  static const String startNowAction = 'ابدأ الآن';
+  static const String noEnrolledCoursesForSession =
+      'لا توجد مساقات مسجَّلة، يمكنك بدء جلسة مذاكرة عامة';
+
+  // --- المؤقّت (Focus timer) ---
+  static const String focusSessionActive = 'جلسة تركيز نشطة';
+  static const String minutesRemainingLabel = 'دقيقة متبقية';
+  static const String goalPrefix = 'الهدف:';
+  static const String endSessionAction = 'إنهاء الجلسة';
+
+  // --- اكتمال الجلسة (Session Complete) ---
+  static const String sessionCompleteHeadline = 'أحسنت، أنهيت جلستك!';
+  static const String sessionDurationRowLabel = 'المدة الزمنية';
+  static const String sessionCourseRowLabel = 'المقرر الدراسي';
+  static const String sessionAchievedRowLabel = 'التقدم المحقق';
+  static const String reflectionQuestion = 'ماذا أنجزت؟';
+  static const String reflectionHint = 'اكتب ملخصًا سريعًا لما قمت بإنجازه...';
+  static const String saveSessionAction = 'حفظ الجلسة';
+  static const String startNewSessionAction = 'ابدأ جلسة جديدة';
+  static const String reflectionSaved = 'حُفظ ملخّص جلستك';
+  static const String sessionCancelledHeadline = 'أُلغيت الجلسة';
+
+  // --- سجل الجلسات (Session History) ---
+  static const String sessionHistoryTitle = 'سجل الجلسات';
+  static const String totalStudyTimeLabel = 'مجموع وقت المذاكرة';
+  static const String sessionsCountLabel = 'عدد الجلسات';
+  static const String bestDayLabel = 'أفضل يوم';
+  static const String averageSessionLabel = 'متوسط الجلسة';
+  static const String recentSessionsHeading = 'الجلسات الأخيرة';
+  static const String filterWeek = 'الأسبوع';
+  static const String filterMonth = 'الشهر';
+  static const String filterByCourse = 'المساق';
+  static const String historyEmptyForFilter =
+      'لا توجد جلسات ضمن هذه التصفية';
+
+  // --- الملخص الأسبوعي (Weekly Report) ---
+  static const String weeklySummaryTitle = 'الملخص الأسبوعي';
+  static const String weeklyRangePrefix = 'تقرير إنجازك من';
+  static const String weeklyStudyHoursLabel = 'وقت المذاكرة';
+  static const String weeklyBestDayLabel = 'أفضل يوم دراسة';
+  static const String weeklyTasksOverview = 'نظرة عامة على المهام';
+  static const String weeklyCompletedThisWeek = 'أُنجزت هذا الأسبوع';
+  static const String tasksOverdueLabel = 'متأخرة';
+  static const String tasksPendingLabel = 'قيد التنفيذ';
+  static const String tasksCompletedLabel = 'مكتملة';
+  static const String weeklyVsLastWeek = 'عن الأسبوع الماضي';
+  static const String weeklyEmptyTitle = 'لا توجد بيانات لهذا الأسبوع';
+  static const String weeklyEmptyDesc =
+      'ابدأ جلسة مذاكرة أو أنجز مهمة، وسيظهر ملخّص أسبوعك هنا.';
+  static const String weeklyCurrentSnapshotNote =
+      'حالة المهام لحظية، لا تخصّ الأسبوع وحده';
+
+  // --- خطة المذاكرة (Study Plan) ---
+  static const String studyPlanTitle = 'خطة المذاكرة';
+  static const String planPeriodLabel = 'الفترة';
+  static const String planPeriodWeek = 'أسبوع';
+  static const String planPeriodTwoWeeks = 'أسبوعان';
+  static const String planPeriodMonth = 'شهر';
+  static const String planCoursesLabel = 'المساقات';
+  static const String planDailyHoursLabel = 'ساعات المذاكرة يوميًا';
+  static const String planGenerateAction = 'توليد الخطة';
+  static const String planUnavailableTitle = 'توليد الخطة غير متاح بعد';
+  static const String planUnavailableBody =
+      'هذه الميزة قيد التطوير ولم تُفعَّل في هذا الإصدار. يمكنك حاليًا '
+      'ضبط تفضيلات مذاكرتك وبدء جلسات تركيز يدويًا.';
+  static const String planHoursUnit = 'ساعات';
+
+  // --- مشترك ---
+  static const String studyGeneralSession = 'مذاكرة عامة';
+  static const String sessionStatusCompletedShort = 'مكتملة';
+  static const String sessionStatusCancelledShort = 'ملغاة';
+  static const String ofSeparator = 'من';
 }

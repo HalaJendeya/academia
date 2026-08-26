@@ -948,7 +948,22 @@ service cloud.firestore {
           && d().actualMinutes is int
           && d().actualMinutes >= 0
           && d().status in ['active', 'completed', 'cancelled']
-          && validCourseLink();
+          && validCourseLink()
+          && validOptionalText('sessionName', 100)
+          && validOptionalText('goal', 300);
+      }
+
+      /*
+       * An optional free-text field: absent, or a non-empty string within a
+       * bound. Absent and empty are not the same thing — the client omits
+       * the key entirely rather than writing "", so a stored field always
+       * carries content.
+       */
+      function validOptionalText(field, maxLength) {
+        return isAbsent(d(), field)
+          || ( d()[field] is string
+               && d()[field].size() > 0
+               && d()[field].size() <= maxLength );
       }
 
       /*
@@ -975,6 +990,9 @@ service cloud.firestore {
         && validSession()
         && d().status == 'active'
         && d().actualMinutes == 0
+        // A reflection describes a session that already happened; it can
+        // never be present at creation time.
+        && isAbsent(d(), 'reflection')
         && d().keys().hasAll(
              ['userId', 'plannedMinutes', 'actualMinutes', 'status',
               'startedAt', 'createdAt', 'updatedAt']);
@@ -987,18 +1005,53 @@ service cloud.firestore {
        * session to be re-pointed at another course, or its plan inflated
        * after the fact.
        */
+      /*
+       * What can never change, whichever update this is: who owns the
+       * session, how long it was planned for, which course it belongs to,
+       * and what the student named it or set out to do. Renaming or
+       * re-goaling a session after the fact would rewrite history.
+       */
+      function immutableCore() {
+        return d().userId == resource.data.userId
+          && d().plannedMinutes == resource.data.plannedMinutes
+          && d().get('offeringId', '') == resource.data.get('offeringId', '')
+          && d().get('courseId', '') == resource.data.get('courseId', '')
+          && d().get('sessionName', '') == resource.data.get('sessionName', '')
+          && d().get('goal', '') == resource.data.get('goal', '');
+      }
+
+      // Closing a running session: the only write that may set the outcome.
+      function closingUpdate() {
+        return d().status in ['completed', 'cancelled']
+          && d().actualMinutes is int
+          && d().actualMinutes >= 0
+          && d().actualMinutes <= resource.data.plannedMinutes
+          && changedKeys().hasOnly(
+               ['status', 'actualMinutes', 'endedAt', 'updatedAt']);
+      }
+
+      /*
+       * Writing «ماذا أنجزت؟» after the session is over.
+       *
+       * Allowed only on an already-completed session, and only for the
+       * reflection itself: it can neither revive a session nor change the
+       * minutes credited. A cancelled session gets no reflection — there
+       * is nothing accomplished to describe.
+       */
+      function reflectionUpdate() {
+        return resource.data.status == 'completed'
+          && d().status == resource.data.status
+          && d().actualMinutes == resource.data.actualMinutes
+          && d().reflection is string
+          && d().reflection.size() > 0
+          && d().reflection.size() <= 1000
+          && changedKeys().hasOnly(['reflection', 'updatedAt']);
+      }
+
       allow update: if isActiveStudent()
         && isOwner(resource.data.userId)
-        && d().userId == resource.data.userId
-        && d().plannedMinutes == resource.data.plannedMinutes
-        && d().get('offeringId', '') == resource.data.get('offeringId', '')
-        && d().get('courseId', '') == resource.data.get('courseId', '')
-        && d().status in ['completed', 'cancelled']
-        && d().actualMinutes is int
-        && d().actualMinutes >= 0
-        && d().actualMinutes <= resource.data.plannedMinutes
-        && changedKeys().hasOnly(
-             ['status', 'actualMinutes', 'endedAt', 'updatedAt']);
+        && immutableCore()
+        && ( closingUpdate() || reflectionUpdate() );
 
       // The owner may remove their own record; nobody else can.
       allow delete: if isActiveStudent() && isOwner(resource.data.userId);

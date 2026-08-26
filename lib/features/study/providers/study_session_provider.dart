@@ -47,8 +47,17 @@ class StudySessionProvider extends ChangeNotifier {
   String? _activeSessionId;
   String? _activeOfferingId;
   String? _activeCourseId;
+  String? _activeSessionName;
+  String? _activeGoal;
   int _plannedMinutes = 0;
   DateTime? _startedAt;
+
+  /// معرّف آخر جلسة أُغلقت في هذه الجلسة التطبيقية.
+  ///
+  /// تحتاجه شاشة «أحسنت، أنهيت جلستك»: الجلسة تُغلق أولًا ثم تُعرض النتيجة،
+  /// فلا بد من مرجع إليها بعد أن يُمسح المؤقّت. يُحفظ محليًا فقط.
+  String? _lastFinishedSessionId;
+  bool _isSavingReflection = false;
 
   /// لحظة الانتهاء المتوقَّعة. null أثناء الإيقاف المؤقت.
   DateTime? _endsAt;
@@ -76,7 +85,60 @@ class StudySessionProvider extends ChangeNotifier {
   bool get isClosing => _isClosing;
   String? get activeSessionId => _activeSessionId;
   String? get activeOfferingId => _activeOfferingId;
+  String? get activeCourseId => _activeCourseId;
+  String? get activeSessionName => _activeSessionName;
+  String? get activeGoal => _activeGoal;
   int get plannedMinutes => _plannedMinutes;
+
+  String? get lastFinishedSessionId => _lastFinishedSessionId;
+  bool get isSavingReflection => _isSavingReflection;
+
+  /// لقطة الجلسة لحظة إغلاقها، بالقيم التي كُتبت فعلًا.
+  ///
+  /// ليست بديلًا عن المخزَّن بل جسرًا إليه: المستمع يحتاج دورة حتى يعكس
+  /// الكتابة، وشاشة النتيجة تُفتح فورًا. بدون هذه اللقطة كانت الشاشة ستعرض
+  /// فراغًا للحظة ثم تقفز إلى الأرقام. والقيم هنا هي عين ما أُرسل إلى
+  /// Firestore، لا تقدير محلي.
+  StudySessionModel? _lastFinishedSnapshot;
+
+  /// آخر جلسة أُغلقت.
+  ///
+  /// يُفضَّل المستند المخزَّن متى وصل — فهو ما كتبه الخادم — وإلا فاللقطة.
+  StudySessionModel? get lastFinishedSession {
+    final id = _lastFinishedSessionId;
+    if (id == null) return null;
+    for (final session in _sessions) {
+      if (session.id == id) return session;
+    }
+    return _lastFinishedSnapshot;
+  }
+
+  /// يحفظ انعكاس الطالب على آخر جلسة انتهت.
+  ///
+  /// نص فارغ لا يُكتب إطلاقًا: تخطّي السؤال ليس بيانات.
+  Future<bool> saveReflection(String text) async {
+    final id = _lastFinishedSessionId;
+    if (id == null || _isSavingReflection) return false;
+    if (text.trim().isEmpty) return true;
+
+    _isSavingReflection = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _service.saveReflection(sessionId: id, reflection: text);
+      return true;
+    } on StudySessionException catch (e) {
+      _errorMessage = e.message;
+      return false;
+    } catch (e) {
+      _errorMessage = AppStrings.studySessionCloseError;
+      return false;
+    } finally {
+      _isSavingReflection = false;
+      notifyListeners();
+    }
+  }
 
   /// الوقت المتبقي، محسوبًا من الساعة لا من عدّاد داخلي.
   Duration get remaining {
@@ -121,6 +183,8 @@ class StudySessionProvider extends ChangeNotifier {
     _sessions = const [];
     _errorMessage = null;
     _isLoading = false;
+    _lastFinishedSessionId = null;
+    _lastFinishedSnapshot = null;
     _discardTimer();
 
     if (next != null) {
@@ -165,6 +229,8 @@ class StudySessionProvider extends ChangeNotifier {
     required int plannedMinutes,
     String? offeringId,
     String? courseId,
+    String? sessionName,
+    String? goal,
   }) async {
     if (_isStarting || hasActiveSession) return false;
 
@@ -191,11 +257,15 @@ class StudySessionProvider extends ChangeNotifier {
         plannedMinutes: plannedMinutes,
         offeringId: offeringId,
         courseId: courseId,
+        sessionName: sessionName,
+        goal: goal,
       );
 
       _activeSessionId = id;
       _activeOfferingId = offeringId;
       _activeCourseId = courseId;
+      _activeSessionName = sessionName?.trim();
+      _activeGoal = goal?.trim();
       _plannedMinutes = plannedMinutes;
       _startedAt = _clock();
       _endsAt = _startedAt!.add(Duration(minutes: plannedMinutes));
@@ -263,6 +333,21 @@ class StudySessionProvider extends ChangeNotifier {
         status: status,
         actualMinutes: minutes,
       );
+      // يُحفظ قبل مسح المؤقّت: شاشة النتيجة تحتاج المرجع بعد الإغلاق.
+      _lastFinishedSessionId = id;
+      _lastFinishedSnapshot = StudySessionModel(
+        id: id,
+        userId: _studentId ?? '',
+        offeringId: _activeOfferingId,
+        courseId: _activeCourseId,
+        sessionName: _activeSessionName,
+        goal: _activeGoal,
+        plannedMinutes: _plannedMinutes,
+        actualMinutes: minutes,
+        status: status,
+        startedAt: _startedAt ?? _clock(),
+        endedAt: _clock(),
+      );
       _discardTimer();
       return true;
     } on StudySessionException catch (e) {
@@ -309,6 +394,8 @@ class StudySessionProvider extends ChangeNotifier {
     _activeSessionId = null;
     _activeOfferingId = null;
     _activeCourseId = null;
+    _activeSessionName = null;
+    _activeGoal = null;
     _plannedMinutes = 0;
     _startedAt = null;
     _endsAt = null;

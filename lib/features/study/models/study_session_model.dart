@@ -24,6 +24,24 @@ class StudySessionModel {
   /// مشتق من الطرح، للعرض دون قراءة إضافية. يرافق [offeringId] دائمًا.
   final String? courseId;
 
+  /// اسم الجلسة كما كتبه الطالب، مثل «مراجعة نهائية».
+  ///
+  /// اختياري: الجلسة بلا اسم صالحة تمامًا، وتُعرض باسم مساقها. يُثبَّت عند
+  /// الإنشاء ولا يتغيّر بعده — تسمية جلسة انتهت بأثر رجعي تُفسد السجل.
+  final String? sessionName;
+
+  /// هدف الجلسة كما كتبه الطالب، ويُعرض له أثناء المؤقّت.
+  ///
+  /// اختياري ومثبَّت عند الإنشاء، للسبب نفسه.
+  final String? goal;
+
+  /// ما أنجزه الطالب فعلًا، يكتبه بعد انتهاء الجلسة.
+  ///
+  /// 🔴 الحقل الوحيد القابل للكتابة بعد الإغلاق: شاشة «أحسنت، أنهيت جلستك»
+  /// تسأل «ماذا أنجزت؟» بعد أن تكون الجلسة قد أُغلقت فعلًا. لذلك تسمح به
+  /// القواعد بعد الاكتمال وحده، ولا تسمح بتعديل المدة أو الحالة معه.
+  final String? reflection;
+
   /// المدة المخطَّطة بالدقائق كما اختارها الطالب عند البدء.
   final int plannedMinutes;
 
@@ -44,6 +62,9 @@ class StudySessionModel {
     required this.userId,
     this.offeringId,
     this.courseId,
+    this.sessionName,
+    this.goal,
+    this.reflection,
     required this.plannedMinutes,
     this.actualMinutes = 0,
     this.status = StudySessionStatus.active,
@@ -64,6 +85,26 @@ class StudySessionModel {
 
   static const int minMinutes = 5;
   static const int maxMinutes = 180;
+
+  /// حدود الطول، مطابقة لما تفرضه القواعد على الخادم.
+  static const int maxSessionNameLength = 100;
+  static const int maxGoalLength = 300;
+  static const int maxReflectionLength = 1000;
+
+  bool get hasSessionName => (sessionName?.trim().isNotEmpty ?? false);
+  bool get hasGoal => (goal?.trim().isNotEmpty ?? false);
+  bool get hasReflection => (reflection?.trim().isNotEmpty ?? false);
+
+  /// ما يُعرض عنوانًا للجلسة: اسمها إن وُجد، وإلا يُترك للشاشة أن تعرض
+  /// اسم المساق. لا نص بديل مخترع هنا.
+  String? get displayName => hasSessionName ? sessionName!.trim() : null;
+
+  /// نسبة ما أُنجز من المخطَّط، بين 0 و1. تُستعمل في شريط تقدّم السجل.
+  double get completionRatio {
+    if (plannedMinutes <= 0) return 0;
+    final ratio = actualMinutes / plannedMinutes;
+    return ratio.clamp(0.0, 1.0);
+  }
 
   /// المدة المقبولة، بالحدود نفسها التي يفرضها [StudyPreferences].
   static bool isValidDuration(int minutes) =>
@@ -112,6 +153,11 @@ class StudySessionModel {
       userId: data['userId'] as String? ?? '',
       offeringId: parseNullableString(data['offeringId']),
       courseId: parseNullableString(data['courseId']),
+      // غياب الحقول الثلاثة طبيعي: المستندات المنشأة قبل هذه الإضافة لا
+      // تحملها، وتُقرأ null دون أي معالجة خاصة.
+      sessionName: parseNullableString(data['sessionName']),
+      goal: parseNullableString(data['goal']),
+      reflection: parseNullableString(data['reflection']),
       plannedMinutes: parseInt(data['plannedMinutes']),
       actualMinutes: parseInt(data['actualMinutes']),
       status: statusFromString(data['status']),
@@ -127,6 +173,9 @@ class StudySessionModel {
     String? userId,
     String? offeringId,
     String? courseId,
+    String? sessionName,
+    String? goal,
+    String? reflection,
     int? plannedMinutes,
     int? actualMinutes,
     StudySessionStatus? status,
@@ -140,6 +189,9 @@ class StudySessionModel {
       userId: userId ?? this.userId,
       offeringId: offeringId ?? this.offeringId,
       courseId: courseId ?? this.courseId,
+      sessionName: sessionName ?? this.sessionName,
+      goal: goal ?? this.goal,
+      reflection: reflection ?? this.reflection,
       plannedMinutes: plannedMinutes ?? this.plannedMinutes,
       actualMinutes: actualMinutes ?? this.actualMinutes,
       status: status ?? this.status,

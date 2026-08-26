@@ -7,8 +7,6 @@ import 'package:provider/provider.dart';
 
 import 'package:academia/app/app_routes.dart';
 import 'package:academia/core/constants/app_strings.dart';
-import 'package:academia/core/widgets/primary_button.dart';
-import 'package:academia/core/widgets/secondary_button.dart';
 import 'package:academia/features/courses/models/course_model.dart';
 import 'package:academia/features/courses/models/course_offering_model.dart';
 import 'package:academia/features/courses/models/student_course_view.dart';
@@ -53,6 +51,8 @@ class FakeStudySessionService implements StudySessionService {
     required int plannedMinutes,
     String? offeringId,
     String? courseId,
+    String? sessionName,
+    String? goal,
   }) async {
     startCalls.add({
       'userId': userId,
@@ -80,6 +80,16 @@ class FakeStudySessionService implements StudySessionService {
     if (failClose) {
       throw const StudySessionException(AppStrings.studySessionCloseError);
     }
+  }
+
+  final reflectionCalls = <Map<String, String>>[];
+
+  @override
+  Future<void> saveReflection({
+    required String sessionId,
+    required String reflection,
+  }) async {
+    reflectionCalls.add({'sessionId': sessionId, 'reflection': reflection});
   }
 
   Future<void> closeAll() async {
@@ -217,6 +227,13 @@ Widget _wrapHub({
             const Scaffold(body: Text('active-session-route')),
         AppRoutes.studyPreferences: (_) =>
             const Scaffold(body: Text('study-preferences-route')),
+        AppRoutes.createStudySession: (_) =>
+            const Scaffold(body: Text('create-session-route')),
+        AppRoutes.sessionHistory: (_) =>
+            const Scaffold(body: Text('history-route')),
+        AppRoutes.weeklySummary: (_) =>
+            const Scaffold(body: Text('weekly-route')),
+        AppRoutes.studyPlan: (_) => const Scaffold(body: Text('plan-route')),
       },
       home: const Directionality(
         textDirection: TextDirection.rtl,
@@ -416,29 +433,6 @@ void main() {
       expect(service.startCalls.single['courseId'], 'c1');
     });
 
-    testWidgets('only enrolled offerings are offered in the picker',
-        (tester) async {
-      _useTallViewport(tester);
-      final service = FakeStudySessionService();
-      final provider = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
-      addTearDown(provider.dispose);
-
-      await tester.pumpWidget(
-        _wrapHub(sessions: provider, courses: [_course()]),
-      );
-      service.controller.add(const []);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(DropdownButtonFormField<String?>));
-      await tester.pumpAndSettle();
-
-      // The student's one enrolment, plus the general option — nothing else.
-      expect(find.text('تحليل وتصميم النظم'), findsWidgets);
-      expect(find.text(AppStrings.studySessionNoCourse), findsWidgets);
-      expect(find.text('مساق لست مسجلًا فيه'), findsNothing);
-    });
   });
 
   // =================================================== provider lifecycle
@@ -529,7 +523,7 @@ void main() {
 
   // ============================================================= study hub
   group('StudyHubScreen', () {
-    testWidgets('renders the stored study preferences', (tester) async {
+    testWidgets('renders real session counters', (tester) async {
       _useTallViewport(tester);
       final service = FakeStudySessionService();
       final provider = StudySessionProvider(service)
@@ -541,10 +535,10 @@ void main() {
       service.controller.add(const []);
       await tester.pumpAndSettle();
 
-      expect(find.text(AppStrings.studyHubTitle), findsWidgets);
-      // The real stored values, not placeholders.
-      expect(find.textContaining('45'), findsWidgets);
-      expect(find.textContaining('الأحد'), findsOneWidget);
+      expect(find.text(AppStrings.studySessionsTitle), findsWidgets);
+      // Counters come from the session stream, not from constants.
+      expect(find.text(AppStrings.completedSessionsLabel), findsOneWidget);
+      expect(find.text(AppStrings.weeklyStudyMinutesLabel), findsOneWidget);
     });
 
     testWidgets('shows an honest empty state before any session',
@@ -607,7 +601,8 @@ void main() {
       expect(find.text(AppStrings.noStudySessionsTitle), findsOneWidget);
     });
 
-    testWidgets('the start button starts a session', (tester) async {
+    testWidgets('the start CTA opens the create-session screen',
+        (tester) async {
       _useTallViewport(tester);
       final service = FakeStudySessionService();
       final provider = StudySessionProvider(service)
@@ -619,28 +614,17 @@ void main() {
       service.controller.add(const []);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(
-        AppPrimaryButton,
-        AppStrings.startStudySession,
-      ));
-      await tester.pump();
-      await tester.pump();
+      await tester.tap(find.text(AppStrings.startStudySession));
+      await tester.pumpAndSettle();
 
-      expect(service.startCalls, hasLength(1));
-      // The default comes from the student's stored preference.
-      expect(service.startCalls.single['plannedMinutes'], 45);
-      expect(provider.hasActiveSession, isTrue);
-      // The hub hands off to the session screen rather than counting down
-      // in place.
-      expect(find.text('active-session-route'), findsOneWidget);
-
-      // Stop the ticker inside the test body: the binding asserts no timer
-      // is pending before tearDown callbacks run.
-      await provider.cancel();
-      await tester.pump();
+      // The hub no longer starts a session itself — it opens the form.
+      // Nothing may be written before the student confirms.
+      expect(service.startCalls, isEmpty);
+      expect(provider.hasActiveSession, isFalse);
+      expect(find.text('create-session-route'), findsOneWidget);
     });
 
-    testWidgets('the preferences card links to the existing settings screen',
+    testWidgets('the tools menu links to the existing preferences screen',
         (tester) async {
       _useTallViewport(tester);
       final service = FakeStudySessionService();
@@ -654,13 +638,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // No duplicated preference form on this screen — just a way out to it.
-      expect(
-        find.widgetWithText(
-          AppSecondaryButton,
-          AppStrings.editStudyPreferencesAction,
-        ),
-        findsOneWidget,
-      );
+      await tester.tap(find.text(AppStrings.studyPreferencesTile));
+      await tester.pumpAndSettle();
+      expect(find.text('study-preferences-route'), findsOneWidget);
     });
 
     testWidgets('no overflow at a 360px viewport', (tester) async {

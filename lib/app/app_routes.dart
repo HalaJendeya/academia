@@ -59,6 +59,21 @@ abstract final class AppRoutes {
   /// الجلسة الجارية — شاشة فرعية فوق المذاكرة، بشريط رجوع لا تبويب سفلي.
   static const String activeStudySession = '/study/session';
 
+  /// إنشاء جلسة مذاكرة (Figma 96:515).
+  static const String createStudySession = '/study/session/create';
+
+  /// نتيجة الجلسة بعد إغلاقها (Figma 96:379).
+  static const String sessionComplete = '/study/session/complete';
+
+  /// سجل الجلسات مع التصفية (Figma 96:608).
+  static const String sessionHistory = '/study/history';
+
+  /// الملخص الأسبوعي (Figma 143:23).
+  static const String weeklySummary = '/study/weekly';
+
+  /// نموذج خطة المذاكرة (Figma 96:763). التوليد نفسه غير مفعَّل بعد.
+  static const String studyPlan = '/study/plan';
+
   static const String adminCourses = '/admin/courses';
   static const String adminAddCourse = '/admin/courses/add';
   static const String adminEditCourse = '/admin/courses/edit';

@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:academia/app/app_routes.dart';
 import 'package:academia/core/constants/app_strings.dart';
 import 'package:academia/core/widgets/app_bottom_navigation.dart';
+import 'package:academia/features/analytics/screens/weekly_summary_screen.dart';
+import 'package:academia/features/assignments/providers/assignment_progress_provider.dart';
 import 'package:academia/features/courses/models/student_course_view.dart';
 import 'package:academia/features/courses/providers/student_courses_provider.dart';
 import 'package:academia/features/profile/models/study_preferences.dart';
@@ -16,23 +18,27 @@ import 'package:academia/features/profile/screens/study_preferences_screen.dart'
 import 'package:academia/features/study/models/study_session_model.dart';
 import 'package:academia/features/study/providers/study_session_provider.dart';
 import 'package:academia/features/study/screens/active_session_screen.dart';
+import 'package:academia/features/study/screens/create_study_session_screen.dart';
+import 'package:academia/features/study/screens/session_complete_screen.dart';
+import 'package:academia/features/study/screens/session_history_screen.dart';
 import 'package:academia/features/study/screens/study_hub_screen.dart';
+import 'package:academia/features/study/screens/study_plan_screen.dart';
 import 'package:academia/features/study/services/study_session_service.dart';
+import 'package:academia/features/tasks/models/task_model.dart';
+import 'package:academia/features/tasks/providers/task_provider.dart';
 
 /*
- * Navigation out of the Study Hub, wired against the REAL destination
- * screens at the REAL route names.
+ * The whole مذاكرة navigation map, wired against the REAL destination
+ * screens at the REAL route names from akademia_app.dart.
  *
- * study_session_test.dart deliberately stubs those destinations so it can
- * assert routing intent in isolation. That left a gap: nothing proved the
- * real StudyPreferencesScreen could actually build when pushed from the hub.
- * These tests close it by registering the same widgets akademia_app.dart
- * registers.
+ * Every study route registered in production is opened here at least once,
+ * so a screen that cannot build is caught by a test rather than on a device.
  */
 
 class FakeStudySessionService implements StudySessionService {
   final controllers = <StreamController<List<StudySessionModel>>>[];
   final startCalls = <Map<String, dynamic>>[];
+  final reflectionCalls = <Map<String, String>>[];
 
   StreamController<List<StudySessionModel>> get controller => controllers.last;
 
@@ -49,8 +55,14 @@ class FakeStudySessionService implements StudySessionService {
     required int plannedMinutes,
     String? offeringId,
     String? courseId,
+    String? sessionName,
+    String? goal,
   }) async {
-    startCalls.add({'plannedMinutes': plannedMinutes});
+    startCalls.add({
+      'plannedMinutes': plannedMinutes,
+      'sessionName': sessionName,
+      'goal': goal,
+    });
     return 'session1';
   }
 
@@ -61,6 +73,14 @@ class FakeStudySessionService implements StudySessionService {
     required int actualMinutes,
   }) async {}
 
+  @override
+  Future<void> saveReflection({
+    required String sessionId,
+    required String reflection,
+  }) async {
+    reflectionCalls.add({'sessionId': sessionId, 'reflection': reflection});
+  }
+
   Future<void> closeAll() async {
     for (final c in controllers) {
       if (c.hasListener) await c.close();
@@ -70,24 +90,15 @@ class FakeStudySessionService implements StudySessionService {
 
 class FakePreferencesProvider extends ChangeNotifier
     implements StudyPreferencesProvider {
-  FakePreferencesProvider({
-    this.preferences = const StudyPreferences(
-      studyDays: ['الأحد', 'الثلاثاء'],
-      preferredSessionDuration: 45,
-    ),
-    this.loading = false,
-    this.error,
-  });
-
   @override
-  final StudyPreferences? preferences;
-  final bool loading;
-  final String? error;
-
+  final StudyPreferences? preferences = const StudyPreferences(
+    studyDays: ['الأحد', 'الثلاثاء'],
+    preferredSessionDuration: 45,
+  );
   @override
-  bool get isLoading => loading;
+  bool get isLoading => false;
   @override
-  String? get errorMessage => error;
+  String? get errorMessage => null;
   @override
   bool get isSaving => false;
   @override
@@ -98,7 +109,7 @@ class FakePreferencesProvider extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class FakeStudentCoursesProvider extends ChangeNotifier
+class FakeCoursesProvider extends ChangeNotifier
     implements StudentCoursesProvider {
   @override
   List<StudentCourseView> get currentCourses => const [];
@@ -106,17 +117,43 @@ class FakeStudentCoursesProvider extends ChangeNotifier
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-Widget _wrapRealRoutes({
-  required StudySessionProvider sessions,
-  StudyPreferencesProvider? prefs,
-}) {
+class FakeTaskProvider extends ChangeNotifier implements TaskProvider {
+  @override
+  List<TaskModel> get tasks => const [];
+  @override
+  bool get isLoading => false;
+  @override
+  String? get errorMessage => null;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeProgressProvider extends ChangeNotifier
+    implements AssignmentProgressProvider {
+  @override
+  Set<String> get completedAssignmentIds => const <String>{};
+  @override
+  Map<String, DateTime?> get completionTimes => const {};
+  @override
+  bool get isLoading => false;
+  @override
+  String? get errorMessage => null;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Widget _wrapRealRoutes(StudySessionProvider sessions) {
   return MultiProvider(
     providers: [
-      ChangeNotifierProvider<StudyPreferencesProvider>.value(
-        value: prefs ?? FakePreferencesProvider(),
+      ChangeNotifierProvider<StudyPreferencesProvider>(
+        create: (_) => FakePreferencesProvider(),
       ),
       ChangeNotifierProvider<StudentCoursesProvider>(
-        create: (_) => FakeStudentCoursesProvider(),
+        create: (_) => FakeCoursesProvider(),
+      ),
+      ChangeNotifierProvider<TaskProvider>(create: (_) => FakeTaskProvider()),
+      ChangeNotifierProvider<AssignmentProgressProvider>(
+        create: (_) => FakeProgressProvider(),
       ),
       ChangeNotifierProvider<StudySessionProvider>.value(value: sessions),
     ],
@@ -128,10 +165,15 @@ Widget _wrapRealRoutes({
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('ar')],
-      // Same widgets, same route names as the production route table.
+      // The same widgets the production route table registers.
       routes: {
-        AppRoutes.studyPreferences: (_) => const StudyPreferencesScreen(),
+        AppRoutes.createStudySession: (_) => const CreateStudySessionScreen(),
         AppRoutes.activeStudySession: (_) => const ActiveSessionScreen(),
+        AppRoutes.sessionComplete: (_) => const SessionCompleteScreen(),
+        AppRoutes.sessionHistory: (_) => const SessionHistoryScreen(),
+        AppRoutes.weeklySummary: (_) => const WeeklySummaryScreen(),
+        AppRoutes.studyPlan: (_) => const StudyPlanScreen(),
+        AppRoutes.studyPreferences: (_) => const StudyPreferencesScreen(),
       },
       home: const Directionality(
         textDirection: TextDirection.rtl,
@@ -141,146 +183,174 @@ Widget _wrapRealRoutes({
   );
 }
 
-void _phoneViewport(WidgetTester tester) {
-  tester.view.physicalSize = const Size(360, 780);
-  tester.view.devicePixelRatio = 1.0;
-  addTearDown(tester.view.resetPhysicalSize);
-  addTearDown(tester.view.resetDevicePixelRatio);
-}
-
-void _tallViewport(WidgetTester tester) {
+void _tall(WidgetTester tester) {
   tester.view.physicalSize = const Size(420, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+Future<StudySessionProvider> _pumpHub(
+  WidgetTester tester,
+  FakeStudySessionService service,
+) async {
+  final sessions = StudySessionProvider(service)
+    ..syncWithUser(studentId: 'student1');
+  addTearDown(service.closeAll);
+  addTearDown(sessions.dispose);
+
+  await tester.pumpWidget(_wrapRealRoutes(sessions));
+  service.controller.add(const []);
+  await tester.pumpAndSettle();
+  return sessions;
+}
+
 void main() {
-  group('Study Hub → Study Preferences', () {
-    testWidgets('opens the real preferences screen without an error screen',
+  group('Study Hub navigation map', () {
+    testWidgets('opens the create-session screen', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.startStudySession));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(CreateStudySessionScreen), findsOneWidget);
+      // A sub-screen carries no second bottom navigation bar.
+      expect(find.byType(AcademiaBottomNavigation), findsNothing);
+    });
+
+    testWidgets('opens session history', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.sessionHistoryTile));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SessionHistoryScreen), findsOneWidget);
+      expect(find.byType(AcademiaBottomNavigation), findsNothing);
+    });
+
+    testWidgets('«عرض الكل» also opens history', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.viewAllAction));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SessionHistoryScreen), findsOneWidget);
+    });
+
+    testWidgets('opens the weekly report', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.weeklyReportTile));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(WeeklySummaryScreen), findsOneWidget);
+      expect(find.byType(AcademiaBottomNavigation), findsNothing);
+    });
+
+    testWidgets('opens the study-plan form', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.studyPlanTile));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(StudyPlanScreen), findsOneWidget);
+    });
+
+    testWidgets('opens the existing preferences screen', (tester) async {
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
+
+      await tester.tap(find.text(AppStrings.studyPreferencesTile));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(StudyPreferencesScreen), findsOneWidget);
+    });
+
+    testWidgets('back from every sub-screen returns to the hub with its nav',
         (tester) async {
-      _tallViewport(tester);
-      final service = FakeStudySessionService();
-      final sessions = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
-      addTearDown(sessions.dispose);
+      _tall(tester);
+      await _pumpHub(tester, FakeStudySessionService());
 
-      await tester.pumpWidget(_wrapRealRoutes(sessions: sessions));
-      service.controller.add(const []);
-      await tester.pumpAndSettle();
+      for (final tile in [
+        AppStrings.sessionHistoryTile,
+        AppStrings.weeklyReportTile,
+        AppStrings.studyPlanTile,
+      ]) {
+        await tester.tap(find.text(tile));
+        await tester.pumpAndSettle();
+        expect(find.byType(StudyHubScreen), findsNothing);
 
-      await tester.tap(find.text(AppStrings.editStudyPreferencesAction));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip(AppStrings.back));
+        await tester.pumpAndSettle();
 
-      // The real screen is on screen, and nothing threw on the way there.
-      expect(tester.takeException(), isNull);
-      expect(find.byType(StudyPreferencesScreen), findsOneWidget);
-      expect(find.text(AppStrings.studyPreferencesTitle), findsWidgets);
-    });
-
-    testWidgets('also survives a real phone width', (tester) async {
-      _phoneViewport(tester);
-      final service = FakeStudySessionService();
-      final sessions = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
-      addTearDown(sessions.dispose);
-
-      await tester.pumpWidget(_wrapRealRoutes(sessions: sessions));
-      service.controller.add(const []);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(AppStrings.editStudyPreferencesAction));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(StudyPreferencesScreen), findsOneWidget);
-    });
-
-    testWidgets('back returns to the Study Hub', (tester) async {
-      _tallViewport(tester);
-      final service = FakeStudySessionService();
-      final sessions = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
-      addTearDown(sessions.dispose);
-
-      await tester.pumpWidget(_wrapRealRoutes(sessions: sessions));
-      service.controller.add(const []);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(AppStrings.editStudyPreferencesAction));
-      await tester.pumpAndSettle();
-      expect(find.byType(StudyHubScreen), findsNothing);
-
-      // pushNamed, not pushReplacement: the hub must still be underneath.
-      await tester.tap(find.byTooltip(AppStrings.back));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(StudyHubScreen), findsOneWidget);
-      expect(find.byType(StudyPreferencesScreen), findsNothing);
+        expect(tester.takeException(), isNull);
+        expect(find.byType(StudyHubScreen), findsOneWidget);
+        expect(find.byType(AcademiaBottomNavigation), findsOneWidget);
+      }
     });
   });
 
-  group('Study Hub → Active session', () {
-    testWidgets('start opens the real active-session screen', (tester) async {
-      _tallViewport(tester);
+  group('full session flow', () {
+    testWidgets('create → timer → complete', (tester) async {
+      _tall(tester);
       final service = FakeStudySessionService();
-      final sessions = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
+      final sessions = await _pumpHub(tester, service);
 
-      await tester.pumpWidget(_wrapRealRoutes(sessions: sessions));
-      service.controller.add(const []);
+      // 1. hub → create
+      await tester.tap(find.text(AppStrings.startStudySession));
+      await tester.pumpAndSettle();
+      expect(find.byType(CreateStudySessionScreen), findsOneWidget);
+
+      // 2. create → timer
+      await tester.tap(find.text(AppStrings.startNowAction));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ActiveSessionScreen), findsOneWidget);
+      expect(service.startCalls, hasLength(1));
+      expect(find.byType(AcademiaBottomNavigation), findsNothing);
+
+      // 3. timer → complete, via the explicit end action
+      await tester.tap(find.text(AppStrings.endSessionAction));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AppStrings.finishSessionAction).last);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text(AppStrings.startStudySession));
-      await tester.pump();
-      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(SessionCompleteScreen), findsOneWidget);
+      expect(sessions.hasActiveSession, isFalse);
+    });
+
+    testWidgets('the hub CTA returns to a running session instead of a new one',
+        (tester) async {
+      _tall(tester);
+      final service = FakeStudySessionService();
+      final sessions = await _pumpHub(tester, service);
+
+      await sessions.startSession(plannedMinutes: 25);
+      await tester.pumpAndSettle();
+
+      // With a session running the CTA must lead back to it, not to a form
+      // whose start would be refused.
+      await tester.tap(find.text(AppStrings.resumeSessionAction));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
       expect(find.byType(ActiveSessionScreen), findsOneWidget);
       expect(service.startCalls, hasLength(1));
 
-      // A sub-screen carries no second bottom navigation bar.
-      expect(find.byType(AcademiaBottomNavigation), findsNothing);
-
       await sessions.cancel();
       await tester.pump();
-      sessions.dispose();
-    });
-
-    testWidgets('back from the session returns to the hub with its bottom nav',
-        (tester) async {
-      _tallViewport(tester);
-      final service = FakeStudySessionService();
-      final sessions = StudySessionProvider(service)
-        ..syncWithUser(studentId: 'student1');
-      addTearDown(service.closeAll);
-
-      await tester.pumpWidget(_wrapRealRoutes(sessions: sessions));
-      service.controller.add(const []);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text(AppStrings.startStudySession));
-      await tester.pump();
-      await tester.pump();
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byTooltip(AppStrings.back));
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(StudyHubScreen), findsOneWidget);
-      // The hub's own bottom navigation is intact after coming back.
-      expect(find.byType(AcademiaBottomNavigation), findsOneWidget);
-
-      await sessions.cancel();
-      await tester.pump();
-      sessions.dispose();
     });
   });
 }

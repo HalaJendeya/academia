@@ -34,6 +34,11 @@ import '../features/tasks/screens/create_edit_task_screen.dart';
 import '../features/assignments/screens/student_assignment_details_screen.dart';
 import '../features/study/screens/study_hub_screen.dart';
 import '../features/study/screens/active_session_screen.dart';
+import '../features/study/screens/create_study_session_screen.dart';
+import '../features/study/screens/session_complete_screen.dart';
+import '../features/study/screens/session_history_screen.dart';
+import '../features/study/screens/study_plan_screen.dart';
+import '../features/analytics/screens/weekly_summary_screen.dart';
 import '../features/admin/screens/admin_course_list_screen.dart';
 import '../features/admin/screens/admin_course_form_screen.dart';
 import '../features/admin/screens/admin_student_list_screen.dart';
@@ -148,6 +153,12 @@ class AkademiaApp extends StatelessWidget {
         //Study Routes
         AppRoutes.study: (context) => const StudyHubScreen(),
         AppRoutes.activeStudySession: (context) => const ActiveSessionScreen(),
+        AppRoutes.createStudySession: (context) =>
+            const CreateStudySessionScreen(),
+        AppRoutes.sessionComplete: (context) => const SessionCompleteScreen(),
+        AppRoutes.sessionHistory: (context) => const SessionHistoryScreen(),
+        AppRoutes.weeklySummary: (context) => const WeeklySummaryScreen(),
+        AppRoutes.studyPlan: (context) => const StudyPlanScreen(),
 
         //admin Routes
         AppRoutes.adminCourses: (context) => const AdminCourseListScreen(),

@@ -258,7 +258,7 @@ academia/
 
 ----
 
-##Running The Application
+## Running The Application
 - Clone the project
 - Open with VS Code or Android Studio
 - flutter pub get

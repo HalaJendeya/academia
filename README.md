@@ -255,7 +255,7 @@ academia/
 ├── firestore.indexes.json
 ├── pubspec.yaml
 └── README.md
-
+```
 ----
 
 ## Running The Application

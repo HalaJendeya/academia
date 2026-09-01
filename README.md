@@ -14,7 +14,7 @@ The project was developed as a graduation project for the Department of Manageme
 
 ## Project Overview
 
-Academia is a mobile application that supports academic organization for university students. It aims to reduce the fragmentation caused by using multiple separate tools such as Moodle, calendar apps, notes apps, messaging groups, and task managers.
+Academia is a mobile application that supports academic organization for university students. It aims to reduce the fragmentation caused by using multiple separate tools such as Moodle, calendar applications, notes applications, messaging groups, and task managers.
 
 The current version of Academia has evolved into a multi-role academic platform serving three authenticated user roles:
 
@@ -61,7 +61,7 @@ Admins can manage academic structures, courses, offerings, enrollments, teacher 
 The student is the main user of the application. The student can:
 
 - Create an account and log in.
-- Complete initial study preferences setup.
+- Complete the initial study preferences setup.
 - View a personalized dashboard.
 - Browse registered courses.
 - View course details and files.
@@ -256,20 +256,139 @@ academia/
 ├── pubspec.yaml
 └── README.md
 ```
-----
 
-## Running The Application
-- Clone the project
-- Open with VS Code or Android Studio
-- flutter pub get
-- flutter run
+---
 
-## Users
-- admin: admin@test.com
-- admin password: password123
+## Requirements
 
-- teacher: teacher@example.edu
-- teacher password: 123456789
+Before running the project, make sure the following are installed:
 
-- student: student@test.com
-- student password: 123456789
+- Flutter SDK
+- Dart SDK
+- Android Studio
+- Android Emulator or physical Android device
+- Git
+
+Firebase configuration files are already included in the project:
+
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+
+---
+
+## How to Run the Project
+
+Clone the repository:
+
+```bash
+git clone https://github.com/HalaJendeya/academia.git
+```
+
+Enter the project folder:
+
+```bash
+cd academia
+```
+
+Install the required dependencies:
+
+```bash
+flutter pub get
+```
+
+Run the application:
+
+```bash
+flutter run
+```
+
+---
+
+## Demo Accounts
+
+The following demo accounts can be used to test the application roles:
+
+| Role | Email | Password |
+|---|---|---|
+| Student | student@test.com | 123456789 |
+| Teacher | teacher@example.edu | password123 |
+| Admin | admin@test.com | 123456789 |
+
+> These accounts are for testing and academic evaluation purposes only.
+
+---
+
+## APK Status
+
+An APK file is not available yet.  
+The team is still finalizing notification-related adjustments before preparing the final APK release.
+
+---
+
+## Figma Design
+
+The UI/UX design was prepared using Figma.
+
+Figma link:
+
+```text
+https://www.figma.com/design/yIejzasmbVz4p8KNK9RQOW/%D8%A3%D9%83%D8%A7%D8%AF%D9%8A%D9%85%D9%8A%D8%A7?node-id=0-1&t=qYGCFVTaGZbgHoRs-1
+```
+
+---
+
+## Current Project Status
+
+The current version is a working Flutter mobile application connected to Firebase. It supports multiple user roles and includes implemented student, teacher, and admin modules.
+
+Some advanced features are still under development or planned for future releases, including Moodle integration, AI academic assistance, academic calendar, study schedule, global search, full offline-first support, and APK release.
+
+---
+
+## Future Work
+
+Future improvements may include:
+
+- Integrating with Moodle APIs.
+- Implementing the academic calendar.
+- Implementing the study schedule.
+- Completing the AI academic assistant.
+- Adding smart study plan generation.
+- Enhancing offline-first functionality.
+- Implementing global search.
+- Preparing the final APK release.
+- Improving testing coverage and documentation.
+
+---
+
+## Team Members
+
+- Hala Al-Hanawi
+- Hala Jendeya
+- Noor Mahdi
+
+---
+
+## Supervisor
+
+**Dr. Osama Enshasi**
+
+---
+
+## Academic Institution
+
+**Al-Aqsa University - Gaza**  
+Faculty of Administration and Finance  
+Department of Management Information Systems
+
+---
+
+## Academic Year
+
+**2025 / 2026**
+
+---
+
+## License
+
+This project was developed for academic purposes as a graduation project.

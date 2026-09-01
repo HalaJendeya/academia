@@ -255,3 +255,11 @@ academia/
 ├── firestore.indexes.json
 ├── pubspec.yaml
 └── README.md
+
+----
+
+##Running The Application
+- Clone the project
+- Open with VS Code or Android Studio
+- flutter pub get
+- flutter run

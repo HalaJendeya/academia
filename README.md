@@ -263,3 +263,13 @@ academia/
 - Open with VS Code or Android Studio
 - flutter pub get
 - flutter run
+
+## Users
+- admin: admin@test.com
+- admin password: password123
+
+- teacher: teacher@example.edu
+- teacher password: 123456789
+
+- student: student@test.com
+- student password: 123456789

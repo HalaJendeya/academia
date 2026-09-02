@@ -200,6 +200,25 @@ Firestore Security Rules are used to enforce access permissions at the database 
 
 ---
 
+## Graduation Committee Database Access
+
+A dedicated account has been provided for the graduation committee to access and review the Academia Firebase project during the academic evaluation.
+
+### Firebase Access Credentials
+
+* **Account Email:** `t6797894@gmail.com`
+* **Password:** `t123456789$`
+* **Access Level:** Read-only
+* **Purpose:** Academic evaluation and review of the project's database.
+
+### How to Access
+
+1. Sign in using the dedicated graduation committee account.
+2. Open the Firebase Console link.
+3. Select the **Academia** project.
+4. Navigate to **Build → Firestore Database → Data**.
+5. Review the available collections and documents.
+
 ## Moodle Integration Status
 
 Moodle integration is part of the planned future development.
@@ -310,7 +329,7 @@ The following demo accounts can be used to test the application roles:
 
 | Role | Email | Password |
 |---|---|---|
-| Student | student@test.com | 123456789 |
+| Student | t6797894@gmail.com | 123456789 |
 | Teacher | teacher@example.edu | password123 |
 | Admin | admin@test.com | 123456789 |
 
@@ -363,7 +382,7 @@ Future improvements may include:
 
 ## Team Members
 
-- Hala Al-Hanawi
+- Hala Al-Hennawi
 - Hala Jendeya
 - Noor Mahdi
 

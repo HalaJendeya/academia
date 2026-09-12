@@ -126,4 +126,97 @@ class ProfileService {
       );
     }
   }
+
+  // ---------------------------------------------------------------------
+  //  البريد الاحتياطي والبريد الأساسي على مستند المستخدم
+  //
+  //  كل كتابة هنا مقصوصة على المفاتيح التي تسمح بها قاعدة users بالضبط:
+  //  القاعدة تستعمل changedKeys().hasOnly، فأي مفتاح زائد يُبطل الكتابة
+  //  كاملة لا جزءًا منها.
+  // ---------------------------------------------------------------------
+
+  /// يحفظ عنوانًا احتياطيًا **غير موثَّق**.
+  ///
+  /// 🔴 secondaryEmailVerified تُكتب false دائمًا هنا، ولا سبيل لجعلها true
+  /// من هذا المسار — لا في العميل ولا في القاعدة. إدخال المستخدم للعنوان
+  /// ليس إثباتًا لملكيته.
+  Future<void> saveSecondaryEmail(String email) async {
+    final uid = _requireUid();
+    try {
+      await _firestore.collection('users').doc(uid).set({
+        'secondaryEmail': email.trim(),
+        'secondaryEmailVerified': false,
+        'secondaryEmailUpdatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw const ProfileException(AppStrings.secondaryEmailSaveError);
+    }
+  }
+
+  /// يزيل العنوان الاحتياطي وكل ما يتعلق به.
+  Future<void> removeSecondaryEmail() async {
+    final uid = _requireUid();
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'secondaryEmail': FieldValue.delete(),
+        'secondaryEmailVerified': FieldValue.delete(),
+        'secondaryEmailUpdatedAt': FieldValue.delete(),
+        'pendingPrimaryEmail': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw const ProfileException(AppStrings.secondaryEmailSaveError);
+    }
+  }
+
+  /// يسجّل أن طلب تغيير البريد الأساسي أُرسل وينتظر نقر الرابط.
+  ///
+  /// حالة صادقة لا تجميلية: Firebase لم تغيّر شيئًا بعد، والواجهة تقول ذلك.
+  Future<void> markPrimaryEmailChangePending(String pendingEmail) async {
+    final uid = _requireUid();
+    try {
+      await _firestore.collection('users').doc(uid).set({
+        'pendingPrimaryEmail': pendingEmail.trim(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      throw const ProfileException(AppStrings.secondaryEmailSaveError);
+    }
+  }
+
+  /// يزامن Firestore **بعد** أن غيّرت Firebase البريد الأساسي فعلًا.
+  ///
+  /// 🔴 لا تُستدعى إلا وقد أكّد FirebaseAuth.currentUser.email العنوان
+  /// الجديد. الترتيب مقصود: Auth أولًا ثم Firestore، فلا يقع أن يدّعي
+  /// المستند بريدًا أساسيًا بينما الدخول ما زال بالقديم.
+  ///
+  /// [previousPrimary] ينزل احتياطيًا موثَّقًا — وهذا مبرَّر منطقيًا: كان
+  /// بريد دخول حقيقيًا لهذا الحساب، لا عنوانًا ادّعاه المستخدم.
+  Future<void> syncPrimaryEmailAfterChange({
+    required String newPrimary,
+    required String previousPrimary,
+  }) async {
+    final uid = _requireUid();
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'email': newPrimary.trim(),
+        'secondaryEmail': previousPrimary.trim(),
+        'secondaryEmailVerified': true,
+        'secondaryEmailUpdatedAt': FieldValue.serverTimestamp(),
+        'pendingPrimaryEmail': FieldValue.delete(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      throw const ProfileException(AppStrings.primaryEmailSyncError);
+    }
+  }
+
+  String _requireUid() {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) {
+      throw const ProfileException(AppStrings.authenticationRequired);
+    }
+    return uid;
+  }
 }

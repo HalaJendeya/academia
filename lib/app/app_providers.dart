@@ -9,6 +9,7 @@ import '../features/profile/providers/study_preferences_provider.dart';
 import '../features/profile/services/study_preferences_service.dart';
 import '../features/profile/providers/support_provider.dart';
 import '../features/profile/services/support_service.dart';
+import '../features/profile/providers/email_settings_provider.dart';
 import '../features/notifications/providers/notification_settings_provider.dart';
 import '../features/notifications/services/notification_settings_service.dart';
 import '../features/assignments/providers/assignment_progress_provider.dart';
@@ -47,14 +48,42 @@ import '../features/shared_space/providers/post_provider.dart';
 import '../features/shared_space/services/post_service.dart';
 import '../features/admin/providers/admin_post_reports_provider.dart';
 import '../features/notifications/providers/notification_provider.dart';
+import '../features/notifications/providers/notification_events_provider.dart';
+import '../features/notifications/services/firebase_notification_event_feeds.dart';
+import '../features/notifications/services/notification_event_ports.dart';
+import '../core/services/auth_service.dart';
 import '../features/notifications/services/notification_service.dart';
 
 
 bool _isActiveAdmin(AuthProvider auth) =>
     auth.isLoggedIn && auth.isAdmin && auth.isAccountActive;
 
+/*
+ * نسخة واحدة من NotificationService يتشاركها AuthService وNotificationProvider.
+ *
+ * 🔴 ليست تحسينًا للأداء — بل شرط لصحة تنظيف رمز الدفع.
+ *
+ * NotificationProvider هو من يفتح جلسة الرمز عند الدخول، فيحتفظ باشتراك
+ * onTokenRefresh وبمعرّف صاحب الجلسة داخل نسخته من الخدمة. وAuthService هو
+ * من يغلق الجلسة عند الخروج. لو أخذ كلٌّ منهما نسخة خاصة، لأغلق AuthService
+ * جلسةً فارغة لا اشتراك فيها، وبقي اشتراك المزوّد حيًّا بعد الخروج.
+ *
+ * متغيّر عام مُهيَّأ كسولًا (Dart lazy): لا يُبنى — ولا يلمس Firebase — إلا
+ * عند أول قراءة لـ appProviders، وهي بعد Firebase.initializeApp في main.
+ */
+final NotificationService _sharedNotificationService = NotificationService();
+
+/// نسخة AuthService واحدة: AuthProvider يملك الدخول/الخروج، وشاشة إدارة
+/// البريد تحتاج العمليات نفسها على مستخدم Firebase ذاته.
+final AuthService _sharedAuthService =
+    AuthService(notificationService: _sharedNotificationService);
+
 final List<SingleChildWidget> appProviders = [
-  ChangeNotifierProvider(create: (_) => AuthProvider()),
+  ChangeNotifierProvider(
+    create: (_) => AuthProvider(
+      authService: _sharedAuthService,
+    ),
+  ),
   ChangeNotifierProvider(create: (_) => OnboardingProvider()),
 
   ChangeNotifierProvider(
@@ -64,6 +93,10 @@ final List<SingleChildWidget> appProviders = [
     create: (_) => StudyPreferencesProvider(StudyPreferencesService()),
   ),
   ChangeNotifierProvider(create: (_) => SupportProvider(SupportService())),
+
+  ChangeNotifierProvider(
+    create: (_) => EmailSettingsProvider(_sharedAuthService, ProfileService()),
+  ),
 
   ChangeNotifierProxyProvider<AuthProvider, AdminSupportProvider>(
     create: (_) => AdminSupportProvider(SupportService()),
@@ -243,7 +276,66 @@ final List<SingleChildWidget> appProviders = [
     create: (_) => AdminPostReportsProvider(PostService()),
   ),
 
-  ChangeNotifierProvider(
-    create: (_) => NotificationProvider(NotificationService()),
+  notificationProviderEntry(_sharedNotificationService),
+  notificationEventsProviderEntry(
+    FirebaseNotificationEventFeeds(),
+    const SharedPreferencesCheckpointStore(),
   ),
 ];
+
+/*
+ * كشف الأحداث الأكاديمية — مثل مزوّد الإشعارات، lazy: false إجباريًا.
+ *
+ * 🔴 لا تقرأ أي شاشة هذا المزوّد إطلاقًا: عمله كلّه في الخلفية. ومزوّدات
+ * provider كسولة افتراضيًا، فبدون lazy: false لن يُبنى أبدًا ولن يُكشف
+ * حدث واحد — وهو العطل نفسه الذي أصاب مزوّد الإشعارات سابقًا.
+ *
+ * البوّابة نفسها المستعملة هناك: مستخدم مسجَّل وحسابه فعّال.
+ */
+ChangeNotifierProxyProvider<AuthProvider, NotificationEventsProvider>
+    notificationEventsProviderEntry(
+  NotificationEventFeeds feeds,
+  NotificationCheckpointStore checkpoints,
+) {
+  return ChangeNotifierProxyProvider<AuthProvider, NotificationEventsProvider>(
+    lazy: false,
+    create: (_) => NotificationEventsProvider(feeds, checkpoints),
+    update: (_, auth, provider) {
+      provider!.syncWithAuth(
+        uid: auth.isLoggedIn && auth.isAccountActive ? auth.currentUser?.uid : null,
+      );
+      return provider;
+    },
+  );
+}
+
+/*
+ * تسجيل NotificationProvider — معرَّف هنا بدالة واحدة يستعملها التطبيق
+ * والاختبار معًا، حتى لا يوجد تعريفان قد ينحرف أحدهما عن الآخر.
+ *
+ * 🔴 lazy: false ليست تحسينًا — بدونها لا يعمل الدفع إطلاقًا.
+ *
+ * مزوّدات provider كسولة افتراضيًا: لا تُبنى حتى يقرأها أحد. وهذا المزوّد
+ * لا يقرأه شيء في التطبيق كلّه سوى شاشة الإشعارات. فكان لا يُبنى أصلًا بعد
+ * تسجيل الدخول، ولا تعمل update، ولا تصل الهوية إلى syncWithAuth، ولا
+ * تبدأ جلسة رمز الدفع — فلا يُكتب fcmToken ولا تظهر ولو رسالة تشخيص
+ * واحدة، لأن الشيفرة لم تُنفَّذ من الأساس. (ظهر الرمز فقط لمن فتح شاشة
+ * الإشعارات، وهي اللحظة التي يُبنى فيها المزوّد.)
+ *
+ * الدرس: تسجيل الدفع أثر جانبي على مستوى التطبيق، وقد كان معلَّقًا بمزوّد
+ * واجهة يُبنى عند الطلب. المزوّدات الأخرى المرتبطة بالمصادقة تبقى كسولة
+ * عن حق — كلٌّ منها يخدم شاشة تقرأه.
+ */
+ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>
+    notificationProviderEntry(NotificationService service) {
+  return ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+    lazy: false,
+    create: (_) => NotificationProvider(service),
+    update: (_, auth, provider) {
+      provider!.syncWithAuth(
+        uid: auth.isLoggedIn && auth.isAccountActive ? auth.currentUser?.uid : null,
+      );
+      return provider;
+    },
+  );
+}

@@ -743,7 +743,7 @@ void main() {
       expect(recorder.pushedRoutes.last, AppRoutes.profile);
     });
 
-    testWidgets('the notification bell remains without a destination', (
+    testWidgets('the notification bell opens the notifications centre', (
       tester,
     ) async {
       final recorder = RouteRecorder();
@@ -757,14 +757,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final pushesBefore = recorder.pushedRoutes.length;
-
       await tester.tap(find.byTooltip(AppStrings.notifications));
       await tester.pumpAndSettle();
 
-      // Deferred on purpose: there is no notifications screen to open, and
-      // this test pins that so a future phase notices it must change here.
-      expect(recorder.pushedRoutes.length, pushesBefore);
+      // This test used to pin the opposite, and asked the phase that gave
+      // the bell a destination to come back here. This is that phase: the
+      // screen had existed all along, unrouted and unreachable, while the
+      // bell rendered with onPressed: null.
+      expect(recorder.pushedRoutes.last, AppRoutes.notifications);
     });
 
     testWidgets('no overflow at 360px on the changed student screens', (

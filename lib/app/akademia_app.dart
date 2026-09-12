@@ -19,9 +19,11 @@ import '../features/onboarding/screens/setup_complete_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/profile/screens/edit_profile_screen.dart';
 import '../features/notifications/screens/notification_settings_screen.dart';
+import '../features/notifications/screens/notifications_screen.dart';
 import '../features/profile/screens/study_preferences_screen.dart';
 import '../features/analytics/screens/analytics_screen.dart';
 import '../features/profile/screens/help_faq_screen.dart';
+import '../features/profile/screens/email_settings_screen.dart';
 import '../features/courses/screens/student_courses_screen.dart';
 import '../features/courses/screens/student_course_detail_screen.dart';
 import '../features/courses/screens/student_courses_archive_screen.dart';
@@ -132,6 +134,8 @@ class AkademiaApp extends StatelessWidget {
         AppRoutes.studyPreferences: (context) => const StudyPreferencesScreen(),
         AppRoutes.profileAnalytics: (context) => const AnalyticsScreen(),
         AppRoutes.helpSupport: (context) => const HelpFaqScreen(),
+        AppRoutes.emailSettings: (context) => const EmailSettingsScreen(),
+        AppRoutes.notifications: (context) => const NotificationsScreen(),
 
         //Courses Routes
         AppRoutes.courses: (context) => const StudentCoursesScreen(),

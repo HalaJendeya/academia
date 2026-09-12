@@ -1,0 +1,230 @@
+%% ===========================================================================
+%%  النموذج المنطقي لبيانات Academia على Cloud Firestore
+%%
+%%  🔴 هذا مخطط منطقي فقط. Firestore قاعدة بيانات NoSQL موجَّهة بالمستندات،
+%%     والعلاقات أدناه روابط مرجعية عبر حقول معرّفات يديرها التطبيق
+%%     وتحرسها قواعد الأمان — وليست قيود مفاتيح أجنبية (FOREIGN KEY)
+%%     تفرضها قاعدة بيانات علائقية.
+%%
+%%  رمز الكاردينالية: ||--o{  تعني «واحد إلى متعدّد».
+%% ===========================================================================
+erDiagram
+    users ||--o{ enrollments      : "userId"
+    users ||--o{ courseOfferings  : "teacherId"
+    users ||--o{ assignments      : "createdBy"
+    users ||--o{ courseFiles      : "uploadedBy"
+    users ||--o{ courses          : "createdBy"
+    users ||--o{ tasks            : "userId"
+    users ||--o{ studySessions    : "userId"
+    users ||--o{ assignmentProgress : "studentId"
+    users ||--o{ posts            : "authorId"
+    users ||--o{ post_comments    : "authorId"
+    users ||--o{ post_likes       : "documentId"
+    users ||--o{ postReports      : "reporterId"
+    users ||--o{ notifications    : "recipientId"
+    users ||--o{ supportRequests  : "uid"
+    majors ||--o{ users           : "majorId"
+
+    departments ||--o{ majors             : "departmentId"
+    departments ||--o{ courses            : "departmentId"
+    majors      ||--o{ curriculumCourses  : "majorId"
+    courses     ||--o{ curriculumCourses  : "courseId"
+    courses     ||--o{ courseOfferings    : "courseId"
+    semesters   ||--o{ courseOfferings    : "semesterId"
+
+    courseOfferings ||--o{ enrollments : "offeringId"
+    courseOfferings ||--o{ assignments : "offeringId"
+    courseOfferings ||--o{ courseFiles : "offeringId"
+
+    assignments ||--o{ assignmentProgress : "assignmentId"
+
+    posts ||--o{ post_comments : "subcollection"
+    posts ||--o{ post_likes    : "subcollection"
+    posts ||--o{ postReports   : "postId"
+    courses ||--o{ posts       : "courseId"
+
+    users {
+        string documentId "= Firebase Auth UID"
+        string fullName
+        string email
+        string role "student | teacher | admin"
+        string status "active | disabled"
+        bool   emailVerified
+        string studentId
+        string majorId "→ majors"
+        int    academicLevel
+        bool   onboardingCompleted
+        map    notificationPreferences
+        array  studyDays
+        int    preferredSessionDuration
+        string secondaryEmail
+        bool   secondaryEmailVerified
+        string pendingPrimaryEmail
+        string fcmToken
+    }
+    departments {
+        string documentId "auto"
+        string code
+        string name
+        string status
+        string source
+    }
+    majors {
+        string documentId "auto"
+        string code
+        string name
+        int    totalLevels
+        string departmentId "→ departments"
+        string status
+    }
+    courses {
+        string documentId "auto"
+        string courseCode
+        string title
+        int    creditHours
+        string departmentId "→ departments"
+        string createdBy "→ users"
+        string status
+    }
+    semesters {
+        string documentId "= semester_{academicYear}_{n}"
+        string academicYear
+        int    semesterNumber
+        string semesterName
+        date   startDate
+        date   endDate
+        string status
+    }
+    curriculumCourses {
+        string documentId "= {majorId}_{courseId} | {majorId}_slot_{level}_{seq}"
+        int    academicLevel
+        string entryType "course | slot"
+        string requirementType
+        int    sequence
+        string slotLabel
+        array  prerequisiteCourseIds
+        string majorId "→ majors"
+        string courseId "→ courses"
+    }
+    courseOfferings {
+        string documentId "= {courseId}_{semesterId}_{section}"
+        string section
+        string instructorName
+        string courseId "→ courses"
+        string semesterId "→ semesters"
+        string teacherId "→ users"
+        string status
+    }
+    enrollments {
+        string documentId "= {userId}_{offeringId}"
+        string userId "→ users"
+        string offeringId "→ courseOfferings"
+        int    attemptNumber
+        string status
+        string completionStatus
+        string grade
+        string assignedBy "→ users"
+    }
+    assignments {
+        string documentId "auto"
+        string title
+        string description
+        date   dueAt
+        string priority
+        string status "active | archived"
+        string offeringId "→ courseOfferings"
+        string createdBy "→ users"
+    }
+    courseFiles {
+        string documentId "auto"
+        string title
+        string category
+        string fileName
+        int    fileSize
+        string cloudinaryUrl
+        string cloudinaryPublicId
+        string offeringId "→ courseOfferings"
+        string uploadedBy "→ users"
+        string status
+    }
+    assignmentProgress {
+        string documentId "= {studentId}_{assignmentId}"
+        string studentId "→ users"
+        string assignmentId "→ assignments"
+        bool   isCompleted
+        date   completedAt
+    }
+    tasks {
+        string documentId "auto"
+        string userId "→ users"
+        string title
+        string type
+        string priority
+        string status
+        date   dueAt
+        string courseId "optional"
+        string offeringId "optional"
+        string enrollmentId "optional"
+    }
+    studySessions {
+        string documentId "auto"
+        string userId "→ users"
+        string sessionName
+        string goal
+        int    plannedMinutes
+        int    actualMinutes
+        date   startedAt
+        date   endedAt
+        string status
+    }
+    posts {
+        string documentId "auto"
+        string content
+        map    attachment
+        string authorId "→ users"
+        string authorName "denormalised"
+        string authorRole "denormalised"
+        string courseId "→ courses"
+        int    likesCount "denormalised counter"
+        int    commentsCount "denormalised counter"
+        string status
+    }
+    post_comments {
+        string path "posts/{postId}/comments/{commentId}"
+        string content
+        string authorId "→ users"
+        string authorName "denormalised"
+    }
+    post_likes {
+        string path "posts/{postId}/likes/{uid}"
+        date   createdAt
+    }
+    postReports {
+        string documentId "auto"
+        string postId "→ posts"
+        string reporterId "→ users"
+        string reporterName "denormalised"
+        string courseId "→ courses"
+        string reason
+        string status
+    }
+    notifications {
+        string documentId "= post_{postId}_{uid} | assignment_{assignmentId}_{uid}"
+        string recipientId "→ users"
+        string type
+        string title
+        string body
+        bool   isRead
+        string courseId "context"
+        string postId "context"
+        string assignmentId "context"
+    }
+    supportRequests {
+        string documentId "auto"
+        string uid "→ users"
+        string fullName "denormalised"
+        string email "denormalised"
+        string subject
+        string message
+        string status
+    }

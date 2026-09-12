@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1162 1052" width="1162" height="1052" font-family="'Segoe UI',Tahoma,Arial,sans-serif">
+<defs>
+   <marker id="crow" viewBox="0 0 16 16" refX="2" refY="8" markerWidth="14" markerHeight="14" orient="auto">
+     <path d="M15,1 L2,8 L15,15" fill="none" stroke="#6B7385" stroke-width="2"/></marker>
+   <marker id="one" viewBox="0 0 12 16" refX="10" refY="8" markerWidth="10" markerHeight="14" orient="auto">
+     <path d="M5,2 L5,14" fill="none" stroke="#6B7385" stroke-width="2.2"/></marker>
+  </defs>
+<rect width="1162" height="1052" fill="#FFFFFF"/>
+<path d="M 446 96 L 316 96" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 716 96 L 846 96" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 581 152 L 181 256" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 581 152 L 981 256" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 581 152 L 581 256" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 581 152 Q 277 312 181 472" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<path d="M 581 368 L 581 472" fill="none" stroke="#6B7385" stroke-width="1.9" stroke-dasharray="8 5" opacity="0.9"/>
+<circle cx="581" cy="368" r="6" fill="#6B7385"/>
+<path d="M 581 368 L 981 472" fill="none" stroke="#6B7385" stroke-width="1.9" stroke-dasharray="8 5" opacity="0.9"/>
+<circle cx="581" cy="368" r="6" fill="#6B7385"/>
+<path d="M 581 368 Q 685 528 581 688" fill="none" stroke="#6B7385" stroke-width="1.9" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.9"/>
+<rect x="46" y="40" width="270" height="112" rx="11" fill="#FBEDE3" stroke="#B4460B" stroke-width="2.4"/>
+<path d="M 46 51 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#B4460B"/>
+<text x="181" y="76" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">tasks</text>
+<text x="181" y="110" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">معرّف تلقائي</text>
+<rect x="446" y="40" width="270" height="112" rx="11" fill="#EFF0F4" stroke="#3B3F51" stroke-width="2.4"/>
+<path d="M 446 51 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#3B3F51"/>
+<text x="581" y="76" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">users</text>
+<text x="581" y="110" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">Firebase Auth UID</text>
+<rect x="846" y="40" width="270" height="112" rx="11" fill="#FBEDE3" stroke="#B4460B" stroke-width="2.4"/>
+<path d="M 846 51 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#B4460B"/>
+<text x="981" y="76" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">notifications</text>
+<text x="981" y="110" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">{type}_{sourceId}_{uid}</text>
+<rect x="46" y="256" width="270" height="112" rx="11" fill="#FBEDE3" stroke="#B4460B" stroke-width="2.4"/>
+<path d="M 46 267 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#B4460B"/>
+<text x="181" y="292" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">studySessions</text>
+<text x="181" y="326" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">معرّف تلقائي</text>
+<rect x="446" y="256" width="270" height="112" rx="11" fill="#F3E9F6" stroke="#7A2E8E" stroke-width="2.4"/>
+<path d="M 446 267 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#7A2E8E"/>
+<text x="581" y="292" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">posts</text>
+<text x="581" y="326" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">معرّف تلقائي</text>
+<rect x="846" y="256" width="270" height="112" rx="11" fill="#EFF0F4" stroke="#3B3F51" stroke-width="2.4"/>
+<path d="M 846 267 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#3B3F51"/>
+<text x="981" y="292" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">supportRequests</text>
+<text x="981" y="326" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">معرّف تلقائي</text>
+<rect x="46" y="472" width="270" height="112" rx="11" fill="#FBEDE3" stroke="#B4460B" stroke-width="2.4"/>
+<path d="M 46 483 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#B4460B"/>
+<text x="181" y="508" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">assignmentProgress</text>
+<text x="181" y="542" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">{studentId}_</text>
+<text x="181" y="564" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">{assignmentId}</text>
+<rect x="446" y="472" width="270" height="112" rx="11" fill="#F3E9F6" stroke="#7A2E8E" stroke-width="2.4"/>
+<path d="M 446 483 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#7A2E8E"/>
+<text x="581" y="508" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">comments</text>
+<text x="581" y="542" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">posts/{postId}/comments</text>
+<rect x="846" y="472" width="270" height="112" rx="11" fill="#F3E9F6" stroke="#7A2E8E" stroke-width="2.4"/>
+<path d="M 846 483 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#7A2E8E"/>
+<text x="981" y="508" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">likes</text>
+<text x="981" y="542" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">posts/{postId}/likes</text>
+<text x="981" y="564" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">docId = uid</text>
+<rect x="446" y="688" width="270" height="112" rx="11" fill="#F3E9F6" stroke="#7A2E8E" stroke-width="2.4"/>
+<path d="M 446 699 a 11 11 0 0 1 11 -11 h 248 a 11 11 0 0 1 11 11 v 41 h -270 z" fill="#7A2E8E"/>
+<text x="581" y="724" text-anchor="middle" font-size="24" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">postReports</text>
+<text x="581" y="758" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">معرّف تلقائي</text>
+<rect x="342.8" y="74" width="76.4" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="381" y="95" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">userId</text>
+<rect x="716.8" y="74" width="128.4" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="781" y="95" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">recipientId</text>
+<rect x="342.8" y="182" width="76.4" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="381" y="203" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">userId</text>
+<rect x="758.4" y="182" width="45.2" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="781" y="203" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">uid</text>
+<rect x="532.4" y="182" width="97.2" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="581" y="203" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">authorId</text>
+<rect x="225.27999999999997" y="291" width="107.60000000000001" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="279.08" y="312" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">studentId</text>
+<rect x="516.4" y="398" width="129.2" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="581" y="419" text-anchor="middle" font-size="17" fill="#4A5164" direction="rtl">مجموعة فرعية</text>
+<rect x="716.4" y="398" width="129.2" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="781" y="419" text-anchor="middle" font-size="17" fill="#4A5164" direction="rtl">مجموعة فرعية</text>
+<rect x="644.7199999999999" y="507" width="76.4" height="26" rx="5" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="0.9"/>
+<text x="682.92" y="528" text-anchor="middle" font-size="17" fill="#4A5164" font-family="Consolas,'Courier New',monospace">postId</text>
+<rect x="46" y="846" width="1070" height="152" rx="11" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.5"/>
+<rect x="1082" y="863" width="19" height="14" rx="3" fill="#B4460B"/>
+<text x="1072" y="876" text-anchor="start" font-size="19" fill="#1A1B22" direction="rtl">بيانات يملكها الطالب وحده — لا يقرأها زميل ولا عضو هيئة تدريس</text>
+<rect x="1082" y="890" width="19" height="14" rx="3" fill="#7A2E8E"/>
+<text x="1072" y="903" text-anchor="start" font-size="19" fill="#1A1B22" direction="rtl">المساحة التشاركية والبلاغات</text>
+<rect x="1082" y="917" width="19" height="14" rx="3" fill="#3B3F51"/>
+<text x="1072" y="930" text-anchor="start" font-size="19" fill="#1A1B22" direction="rtl">الهوية وقنوات التواصل مع الإدارة</text>
+<text x="1100" y="957" text-anchor="start" font-size="19" fill="#1A1B22" direction="rtl">الخط المتقطّع يعني مجموعة فرعية داخل مستند الأب، لا علاقة مرجعية.</text>
+<text x="581" y="1032" text-anchor="middle" font-size="16" fill="#4A5164" direction="rtl">العلاقات المعروضة روابط منطقية بين مستندات Firestore عبر حقول المعرّفات، وليست قيود مفاتيح أجنبية (Foreign Key) في قاعدة بيانات علائقية.</text>
+</svg>

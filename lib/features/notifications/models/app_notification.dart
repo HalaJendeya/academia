@@ -15,6 +15,7 @@ class AppNotification {
     required this.body,
     this.courseId,
     this.postId,
+    this.assignmentId,
     required this.createdAt,
     this.isRead = false,
   });
@@ -23,6 +24,9 @@ class AppNotification {
   /// (newSharedSpacePost)، والحقل موجود عمدًا لإضافة أنواع لاحقًا (واجب
   /// جديد، رد على تعليقي...) دون تغيير شكل النموذج أو الشاشة.
   static const String typeNewSharedSpacePost = 'newSharedSpacePost';
+
+  /// واجب أكاديمي جديد على شُعبة الطالب.
+  static const String typeNewAssignment = 'newAssignment';
 
   final String id;
   final String recipientId;
@@ -34,6 +38,10 @@ class AppNotification {
   /// (فتح المنشور نفسه)، لا للعرض.
   final String? courseId;
   final String? postId;
+
+  /// معرّف الواجب لإشعارات typeNewAssignment — اختياري، فالإشعارات
+  /// القديمة لا تحمله ويجب أن تبقى مقروءة كما هي.
+  final String? assignmentId;
 
   final DateTime createdAt;
   final bool isRead;
@@ -47,6 +55,7 @@ class AppNotification {
       body: data['body'] as String? ?? '',
       courseId: data['courseId'] as String?,
       postId: data['postId'] as String?,
+      assignmentId: data['assignmentId'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isRead: data['isRead'] as bool? ?? false,
     );
@@ -60,6 +69,7 @@ class AppNotification {
       'body': body,
       'courseId': courseId,
       'postId': postId,
+      'assignmentId': assignmentId,
       'createdAt': FieldValue.serverTimestamp(),
       'isRead': false,
     };

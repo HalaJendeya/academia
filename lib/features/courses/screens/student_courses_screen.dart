@@ -99,13 +99,15 @@ class _StudentCoursesScreenState extends State<StudentCoursesScreen> {
     return AuthenticatedPageScaffold(
       currentIndex: AcademiaBottomNavigation.coursesIndex,
       onNavigationTap: _handleNavigation,
-      // كما في لوحة الطالب: الصورة تفتح الملف الشخصي، والجرس يبقى بلا
-      // وجهة حتى تُنفَّذ شاشة التنبيهات.
+      // كما في لوحة الطالب: الصورة تفتح الملف الشخصي، والجرس يفتح مركز
+      // الإشعارات.
       appBar: AcademiaMainAppBar(
         title: AppStrings.appName,
         showProfile: true,
         showSearch: false,
         showNotifications: true,
+        onNotificationsPressed: () =>
+            Navigator.pushNamed(context, AppRoutes.notifications),
         onProfilePressed: () =>
             Navigator.pushNamed(context, AppRoutes.profile),
       ),

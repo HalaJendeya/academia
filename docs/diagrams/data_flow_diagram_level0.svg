@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1820 1596" width="1820" height="1596" font-family="'Segoe UI',Tahoma,Arial,sans-serif">
+<defs>
+ <marker id="a" viewBox="0 0 12 12" refX="10.5" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+   <path d="M1,1.5 L10.5,6 L1,10.5 Z" fill="#4A5265"/></marker>
+ <marker id="b" viewBox="0 0 12 12" refX="1.5" refY="6" markerWidth="8" markerHeight="8" orient="auto">
+   <path d="M11,1.5 L1.5,6 L11,10.5 Z" fill="#4A5265"/></marker>
+</defs>
+<rect width="1820" height="1596" fill="#FFFFFF"/>
+<rect x="26" y="45" width="300" height="120" fill="#F1F3F8" stroke="#39405A" stroke-width="3"/>
+<text x="176" y="99.85" text-anchor="middle" font-size="31" fill="#14181F" font-weight="700" direction="rtl">Firebase</text>
+<text x="176" y="139.75" text-anchor="middle" font-size="25" fill="#7E869B" font-weight="400" direction="rtl">Authentication</text>
+<rect x="26" y="230" width="300" height="120" fill="#F1F3F8" stroke="#39405A" stroke-width="3"/>
+<text x="176" y="300.85" text-anchor="middle" font-size="31" fill="#14181F" font-weight="700" direction="rtl">عضو هيئة التدريس</text>
+<rect x="26" y="770" width="300" height="120" fill="#F1F3F8" stroke="#39405A" stroke-width="3"/>
+<text x="176" y="840.85" text-anchor="middle" font-size="31" fill="#14181F" font-weight="700" direction="rtl">Cloudinary</text>
+<rect x="26" y="950" width="300" height="120" fill="#F1F3F8" stroke="#39405A" stroke-width="3"/>
+<text x="176" y="1020.85" text-anchor="middle" font-size="31" fill="#14181F" font-weight="700" direction="rtl">الطالب</text>
+<rect x="26" y="1330" width="300" height="120" fill="#F1F3F8" stroke="#39405A" stroke-width="3"/>
+<text x="176" y="1400.85" text-anchor="middle" font-size="31" fill="#14181F" font-weight="700" direction="rtl">المشرف</text>
+<rect x="706" y="70" width="440" height="350" rx="46" fill="#E7EDF9" stroke="#002B80" stroke-width="3"/>
+<line x1="722" y1="124" x2="1130" y2="124" stroke="#002B80" stroke-width="1.6" opacity="0.4"/>
+<text x="926" y="111" text-anchor="middle" font-size="33" font-weight="700" fill="#002B80">1.0</text>
+<text x="926" y="262.76" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">المصادقة</text>
+<text x="926" y="304.34000000000003" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">وإدارة الحسابات</text>
+<rect x="706" y="500" width="440" height="370" rx="46" fill="#E7EDF9" stroke="#002B80" stroke-width="3"/>
+<line x1="722" y1="554" x2="1130" y2="554" stroke="#002B80" stroke-width="1.6" opacity="0.4"/>
+<text x="926" y="541" text-anchor="middle" font-size="33" font-weight="700" fill="#002B80">2.0</text>
+<text x="926" y="702.76" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">إدارة البنية الأكاديمية</text>
+<text x="926" y="744.34" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">والمحتوى</text>
+<rect x="706" y="940" width="440" height="160" rx="46" fill="#E7EDF9" stroke="#002B80" stroke-width="3"/>
+<line x1="722" y1="994" x2="1130" y2="994" stroke="#002B80" stroke-width="1.6" opacity="0.4"/>
+<text x="926" y="981" text-anchor="middle" font-size="33" font-weight="700" fill="#002B80">3.0</text>
+<text x="926" y="1037.76" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">التنظيم الشخصي</text>
+<text x="926" y="1079.34" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">ومتابعة الواجبات</text>
+<rect x="706" y="1180" width="440" height="260" rx="46" fill="#E7EDF9" stroke="#002B80" stroke-width="3"/>
+<line x1="722" y1="1234" x2="1130" y2="1234" stroke="#002B80" stroke-width="1.6" opacity="0.4"/>
+<text x="926" y="1221" text-anchor="middle" font-size="33" font-weight="700" fill="#002B80">4.0</text>
+<text x="926" y="1327.76" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">المساحة التشاركية</text>
+<text x="926" y="1369.34" text-anchor="middle" font-size="33" fill="#14181F" font-weight="700" direction="rtl">والإشعارات</text>
+<path d="M 1500 185 H 1800 V 305 H 1500" fill="#E4F0EE" stroke="#0B5E58" stroke-width="3"/>
+<line x1="1572" y1="185" x2="1572" y2="305" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1536" y="257" text-anchor="middle" font-size="32" font-weight="700" fill="#0B5E58">D1</text>
+<text x="1686" y="254.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">المستخدمون</text>
+<path d="M 1500 470 H 1800 V 610 H 1500" fill="#E4F0EE" stroke="#0B5E58" stroke-width="3"/>
+<line x1="1572" y1="470" x2="1572" y2="610" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1536" y="552" text-anchor="middle" font-size="32" font-weight="700" fill="#0B5E58">D2</text>
+<text x="1686" y="533.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">البنية الأكاديمية</text>
+<text x="1686" y="565.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">والطروحات والتسجيلات</text>
+<path d="M 1500 940 H 1800 V 1060 H 1500" fill="#E4F0EE" stroke="#0B5E58" stroke-width="3"/>
+<line x1="1572" y1="940" x2="1572" y2="1060" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1536" y="1012" text-anchor="middle" font-size="32" font-weight="700" fill="#0B5E58">D3</text>
+<text x="1686" y="993.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">المهام والجلسات</text>
+<text x="1686" y="1025.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">وعلامات الإنجاز</text>
+<path d="M 1500 1090 H 1800 V 1250 H 1500" fill="#E4F0EE" stroke="#0B5E58" stroke-width="3"/>
+<line x1="1572" y1="1090" x2="1572" y2="1250" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1536" y="1182" text-anchor="middle" font-size="32" font-weight="700" fill="#0B5E58">D4</text>
+<text x="1686" y="1163.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">الواجبات وملفات</text>
+<text x="1686" y="1195.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">المساقات</text>
+<path d="M 1500 1270 H 1800 V 1390 H 1500" fill="#E4F0EE" stroke="#0B5E58" stroke-width="3"/>
+<line x1="1572" y1="1270" x2="1572" y2="1390" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1536" y="1342" text-anchor="middle" font-size="32" font-weight="700" fill="#0B5E58">D5</text>
+<text x="1686" y="1323.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">المنشورات والبلاغات</text>
+<text x="1686" y="1355.1" text-anchor="middle" font-size="26" fill="#14181F" font-weight="600" direction="rtl">والإشعارات</text>
+<path d="M 326 105 L 706 105" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="319.5" y="82" width="393" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="516" y="116.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">طلب المصادقة وهوية الحساب</text>
+<path d="M 326 1350 L 350 1350 L 350 200 L 706 200" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="376.5" y="177" width="303" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="528" y="211.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">تفعيل أو تعطيل حساب</text>
+<path d="M 326 965 L 438 965 L 438 300 L 706 300" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="465.5" y="257" width="213" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="572" y="291.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">بيانات الدخول</text>
+<text x="572" y="331.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وحالة الجلسة</text>
+<path d="M 326 270 L 460 270 L 460 380 L 706 380" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="476.5" y="357" width="213" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="583" y="391.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">بيانات الدخول</text>
+<path d="M 326 1385 L 372 1385 L 372 530 L 706 530" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="402.5" y="487" width="273" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="539" y="521.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">البنية الأكاديمية</text>
+<text x="539" y="561.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">والتسجيلات</text>
+<path d="M 706 640 L 394 640 L 394 1035 L 326 1035" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="421" y="597" width="258" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="550" y="631.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">مساقاته وواجباته</text>
+<text x="550" y="671.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وملفاته</text>
+<path d="M 326 320 L 482 320 L 482 745 L 706 745" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="495" y="702" width="198" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="594" y="736.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">محتوى طروحه</text>
+<text x="594" y="776.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وقوائم طلبته</text>
+<path d="M 326 830 L 706 830" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="417" y="807" width="198" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="516" y="841.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">الملف ورابطه</text>
+<path d="M 326 1000 L 706 1000" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="409.5" y="957" width="213" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="516" y="991.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">مهامه وجلساته</text>
+<text x="516" y="1031.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">ونتائجها</text>
+<path d="M 326 1060 L 504 1060 L 504 1240 L 706 1240" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="528.5" y="1197" width="153" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="605" y="1231.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">مشاركاته</text>
+<text x="605" y="1271.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وإشعاراته</text>
+<path d="M 326 1420 L 416 1420 L 416 1380 L 706 1380" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="467" y="1337" width="228" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="581" y="1371.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">البلاغات</text>
+<text x="581" y="1411.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وقرار المراجعة</text>
+<path d="M 1146 245 L 1500 245" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="1186.5" y="202" width="273" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1323" y="236.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">بيانات الحساب</text>
+<text x="1323" y="276.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">والدور والتفضيلات</text>
+<path d="M 1146 530 L 1500 530" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="1224" y="487" width="198" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1323" y="521.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">سجلات البنية</text>
+<text x="1323" y="561.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">والتسجيلات</text>
+<path d="M 1146 1000 L 1500 1000" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="1201.5" y="957" width="243" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1323" y="991.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">المهام والجلسات</text>
+<text x="1323" y="1031.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">وعلامات الإنجاز</text>
+<path d="M 1146 1330 L 1500 1330" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="1171.5" y="1287" width="303" height="86" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1323" y="1321.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">المنشورات والبلاغات</text>
+<text x="1323" y="1361.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">والإشعارات</text>
+<path d="M 1146 800 L 1420 800 L 1420 1110 L 1500 1110" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)" marker-start="url(#b)"/>
+<rect x="1094" y="777" width="378" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1283" y="811.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">الواجبات وبيانات الملفات</text>
+<path d="M 1500 1170 L 1190 1170 L 1190 1040 L 1146 1040" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="1201" y="1147" width="288" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1345" y="1181.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">الواجبات المستحقّة</text>
+<path d="M 1500 1230 L 1210 1230 L 1210 1400 L 1146 1400" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="1226" y="1207" width="258" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1355" y="1241.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">الواجبات الجديدة</text>
+<path d="M 1500 600 L 1250 600 L 1250 1290 L 1146 1290" fill="none" stroke="#4A5265" stroke-width="2.6" stroke-linejoin="round" marker-end="url(#a)"/>
+<rect x="1261" y="577" width="228" height="46" rx="6" fill="#FFFFFF" opacity="0.96"/>
+<text x="1375" y="611.9" text-anchor="middle" font-size="34" fill="#14181F" font-weight="400" direction="rtl">تسجيلات الطالب</text>
+<rect x="26" y="1470" width="1768" height="100" rx="10" fill="#FAFBFD" stroke="#7E869B" stroke-width="1.6"/>
+<rect x="1720" y="1489" width="50" height="30" fill="#F1F3F8" stroke="#39405A" stroke-width="2.4"/>
+<text x="1706" y="1514" text-anchor="start" font-size="27" fill="#14181F" direction="rtl">كيان خارجي</text>
+<rect x="1396" y="1489" width="54" height="30" rx="15" fill="#E7EDF9" stroke="#002B80" stroke-width="2.4"/>
+<text x="1386" y="1514" text-anchor="start" font-size="27" fill="#14181F" direction="rtl">عملية</text>
+<path d="M 1096 1489 H 1150 V 1519 H 1096" fill="#E4F0EE" stroke="#0B5E58" stroke-width="2.4"/>
+<text x="1086" y="1514" text-anchor="start" font-size="27" fill="#14181F" direction="rtl">مخزن بيانات</text>
+<path d="M 736 1504 H 790" stroke="#4A5265" stroke-width="2.6" marker-end="url(#a)"/>
+<text x="726" y="1514" text-anchor="start" font-size="27" fill="#14181F" direction="rtl">تدفّق بيانات</text>
+<path d="M 386 1504 H 440" stroke="#4A5265" stroke-width="2.6" marker-end="url(#a)" marker-start="url(#b)"/>
+<text x="376" y="1514" text-anchor="start" font-size="27" fill="#14181F" direction="rtl">تدفّق في الاتجاهين</text>
+<text x="1770" y="1552" text-anchor="start" font-size="25" fill="#7E869B" direction="rtl">تتحقّق كل عملية من دور المستخدم وحالة حسابه في D1 عبر قواعد أمان Firestore قبل تنفيذ أي قراءة أو كتابة.</text>
+</svg>

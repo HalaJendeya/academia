@@ -23,6 +23,13 @@ abstract final class AppRoutes {
   static const String studyPreferences = '/profile/study-preferences';
   static const String profileAnalytics = '/profile/analytics';
   static const String helpSupport = '/profile/help-support';
+  static const String emailSettings = '/profile/email';
+
+  /// مركز الإشعارات — يُفتح من جرس الإشعارات في شريط الشاشات الرئيسية.
+  ///
+  /// ليس تبويبًا في الشريط السفلي عن قصد: الشاشة فرعية فوق الشاشة التي
+  /// فُتحت منها، فيعيدها زر الرجوع إلى مكانها لا إلى اللوحة.
+  static const String notifications = '/notifications';
 
   // Student courses (Phase 7S2).
   // أسماء المسارات مطابقة لما اعتمده فرع واجهة المساقات حتى لا تتغيّر

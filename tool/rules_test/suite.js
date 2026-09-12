@@ -2681,6 +2681,7 @@ t('31m3. reporter resolving their own report denied', {
 const NOTIFICATION_DOC = {
   recipientId: 'student2',
   type: 'new_post',
+  title: 'منشور جديد',
   isRead: false,
 };
 
@@ -2698,8 +2699,17 @@ t('31p. reading another user notification denied', {
   method: 'get',
   existing: NOTIFICATION_DOC,
 });
-t('31q. active user notifies a classmate', {
-  expect: 'ALLOW',
+/*
+ * كان هذا مسموحًا، ولم يعد.
+ *
+ * النموذج انقلب: لم يعد الناشر يكتب إشعارات زملائه (كان ذلك مستحيلًا
+ * أصلًا لأنه لا يستطيع معرفتهم)، بل كل طالب يكتب إشعار نفسه حين يرصد
+ * تطبيقه حدثًا في بيانات هو مخوَّل بقراءتها. فلم تعد لهذه الصلاحية حاجة،
+ * وبقاؤها كان يعني أن أي حساب فعّال يستطيع إغراق أي حساب آخر بإشعارات
+ * ينتحل فيها العنوان والنص.
+ */
+t('31q. 🔴 creating a notification for somebody else denied', {
+  expect: 'DENY',
   uid: 'student1',
   path: 'notifications/n2',
   method: 'create',
@@ -3326,6 +3336,934 @@ t('34t. admin writing a reflection denied', {
   method: 'update',
   data: { ...SESSION_FINISHED, reflection: 'نص' },
   existing: SESSION_FINISHED,
+});
+
+// --- 35. Shared space: the counter writes section 31 does not reach ------
+//
+// Section 31 pins the shared-space rules with minimal payloads, and every
+// one of its cases passes against the ruleset that was live while the app
+// was failing on a real device. That is the point of this section.
+//
+// PostService.toggleLike and PostService.addComment each issue TWO writes,
+// not one. The like/comment document is only half of it; the other half is
+// an update to likesCount / commentsCount on the PARENT post document,
+// because those counters are denormalised onto it. Rules evaluate each
+// write independently, so a payload that only writes the subcollection
+// document — as section 31's do — never exercises the write that Firestore
+// was actually rejecting:
+//
+//   PERMISSION_DENIED  Write failed at: posts/JxueptvVai1zVHiM5WQp
+//
+// The post is authored by student2 throughout, so student1 is a non-author:
+// the real case of liking and commenting on somebody else's post. Payloads
+// below are copied field for field from PostModel.toFirestore and
+// CommentModel.toFirestore — not simplified.
+
+const SS_POST = 'p1';
+const SS_LIKE = `posts/${SS_POST}/likes/student1`;
+
+const SS_POST_DOC = {
+  courseId: COURSE,
+  authorId: 'student2',
+  authorName: 'زميلة',
+  authorRole: '',
+  content: 'سؤال عن محاضرة اليوم',
+  attachment: {
+    fileName: 'IMG-20260821-WA0002.jpg',
+    fileUrl: 'https://res.cloudinary.com/xmrgiypo/image/upload/v1/a.jpg',
+    sizeLabel: '38 KB',
+    fileExtension: 'jpg',
+  },
+  createdAt: TIME,
+  commentsCount: 0,
+  likesCount: 0,
+  status: 'active',
+};
+
+const ssPost = (over) => ({ ...SS_POST_DOC, ...over });
+
+// The like document decides which direction the counter may move, so every
+// counter case must state whether it exists. Leaving it unmocked would let
+// a DENY pass for the wrong reason — a lookup error rather than the rule.
+const SS_NO_LIKE = { missing: [SS_LIKE] };
+const SS_HAS_LIKE = { world: { ...WORLD, [SS_LIKE]: { createdAt: TIME } } };
+
+// ---- the two writes that were failing on the device ----
+
+t('35a. non-author increments likesCount 0 -> 1 (the Redmi failure)', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ likesCount: 1 }),
+  ...SS_NO_LIKE,
+});
+t('35b. non-author increments commentsCount 0 -> 1 (the Redmi failure)', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ commentsCount: 1 }),
+});
+t('35c. non-author decrements likesCount when their like exists', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: ssPost({ likesCount: 1 }),
+  data: ssPost({ likesCount: 0 }),
+  ...SS_HAS_LIKE,
+});
+t('35d. unlike clamps at zero rather than going negative', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: ssPost({ likesCount: 0 }),
+  data: ssPost({ likesCount: 0 }),
+  ...SS_HAS_LIKE,
+});
+
+// ---- what the carve-out must NOT open up ----
+
+t('35e. setting likesCount to an arbitrary number denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ likesCount: 999 }),
+  ...SS_NO_LIKE,
+});
+t('35f. inflating commentsCount by more than one denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ commentsCount: 5 }),
+});
+// Direction is pinned to the like document, so any one account can move a
+// post's counter by at most +1 — exactly one legitimate like.
+t('35g. incrementing twice when a like already exists denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: ssPost({ likesCount: 1 }),
+  data: ssPost({ likesCount: 2 }),
+  ...SS_HAS_LIKE,
+});
+t('35h. decrementing without an existing like denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: ssPost({ likesCount: 5 }),
+  data: ssPost({ likesCount: 4 }),
+  ...SS_NO_LIKE,
+});
+t('35i. decrementing commentsCount denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: ssPost({ commentsCount: 3 }),
+  data: ssPost({ commentsCount: 2 }),
+});
+// The counter carve-out must not become a way to edit someone else's words.
+t('35j. smuggling a content edit alongside a like denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ content: 'نص دخيل', likesCount: 1 }),
+  ...SS_NO_LIKE,
+});
+t('35k. non-author archiving someone else\'s post denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ status: 'archived' }),
+});
+t('35l. disabled student incrementing likesCount denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ likesCount: 1 }),
+  missing: [`posts/${SS_POST}/likes/disabled1`],
+});
+t('35m. author still edits their own post body', {
+  expect: 'ALLOW',
+  uid: 'student2',
+  path: `posts/${SS_POST}`,
+  method: 'update',
+  existing: SS_POST_DOC,
+  data: ssPost({ content: 'نص محرَّر' }),
+});
+
+// ---- the production comment payload, and role-agnostic identity ----
+//
+// The app resolves the author name from users/{uid}.fullName, which every
+// role has, so commenting is not student-only. These pin that.
+
+const SS_COMMENT = {
+  authorId: 'student1',
+  authorName: 'حلا جندية',
+  content: 'شكرًا على التوضيح',
+  createdAt: TIME,
+};
+const SS_COMMENT_PATH = `posts/${SS_POST}/comments/cm1`;
+
+t('35n. student comments on another student\'s post', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: SS_COMMENT,
+});
+t('35o. comment with a forged authorId denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: { ...SS_COMMENT, authorId: 'student2' },
+});
+t('35p. active teacher comments on a student post', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: { ...SS_COMMENT, authorId: 'teacher1', authorName: 'د. مشرف' },
+});
+t('35q. admin comments on a student post', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: { ...SS_COMMENT, authorId: 'admin1', authorName: 'مشرف النظام' },
+});
+t('35r. disabled student commenting denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: { ...SS_COMMENT, authorId: 'disabled1' },
+});
+t('35s. unauthenticated comment denied', {
+  expect: 'DENY',
+  uid: null,
+  path: SS_COMMENT_PATH,
+  method: 'create',
+  data: SS_COMMENT,
+});
+t('35t. student creates a post with the full production payload', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'posts/new1',
+  method: 'create',
+  data: ssPost({ authorId: 'student1', authorName: 'حلا جندية' }),
+});
+
+// --- 36. FCM token fields on users/{uid} (Phase 1) -----------------------
+//
+// NotificationService writes the device push token onto the user's own
+// document. Two writes exist and both are pinned here, because they are
+// shaped differently:
+//
+//   register / refresh  update {fcmToken: '<token>',
+//                               fcmTokenUpdatedAt: serverTimestamp}
+//   logout              update {fcmToken: FieldValue.delete(),
+//                               fcmTokenUpdatedAt: FieldValue.delete()}
+//
+// The delete case matters: a field deletion still shows up in
+// changedKeys(), so clearing the token on logout only passes because BOTH
+// names are in studentSelfEditable(). Listing just fcmToken would let a
+// token be written and never revoked.
+//
+// The grant rides on the existing self-update branch — owner + active +
+// changedKeys().hasOnly(studentSelfEditable()). Nothing about the branch
+// is relaxed here, so the protected-field cases below must keep failing
+// exactly as they did before the two names were added.
+
+const FCM_TOKEN = 'fake-token-not-a-real-credential';
+
+// The production user shape (STUDENT_DOC) once a token has been stored.
+const STUDENT_WITH_TOKEN = {
+  ...STUDENT_DOC,
+  fcmToken: FCM_TOKEN,
+  fcmTokenUpdatedAt: TIME,
+};
+
+const TEACHER_DOC = {
+  fullName: 'د. مشرف',
+  email: 'teacher1@test.com',
+  role: 'teacher',
+  status: 'active',
+  emailVerified: true,
+};
+const ADMIN_DOC = {
+  fullName: 'مشرف النظام',
+  email: 'admin1@test.com',
+  role: 'admin',
+  status: 'active',
+  emailVerified: true,
+};
+const DISABLED_DOC = {
+  fullName: 'حساب موقوف',
+  email: 'disabled1@test.com',
+  role: 'student',
+  status: 'disabled',
+  emailVerified: true,
+};
+
+// ---- the writes the client actually makes ----
+
+t('36a. active student updates own fcmToken', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+t('36b. active student updates own fcmTokenUpdatedAt', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmTokenUpdatedAt: TIME },
+  existing: STUDENT_DOC,
+});
+// This is the real registerToken() / onTokenRefresh write: never one field.
+t('36c. active student updates both FCM fields together', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: STUDENT_WITH_TOKEN,
+  existing: STUDENT_DOC,
+});
+// The logout write: both fields removed via FieldValue.delete().
+t('36d. student clears both FCM fields on logout', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: STUDENT_DOC,
+  existing: STUDENT_WITH_TOKEN,
+});
+t('36e. student rotating their own stored token', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_WITH_TOKEN, fcmToken: 'rotated-token' },
+  existing: STUDENT_WITH_TOKEN,
+});
+
+// ---- who may not write them ----
+
+t('36f. student writing another student\'s fcmToken denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student2',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+t('36g. unauthenticated fcmToken write denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+t('36h. disabled student updating own fcmToken denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'users/disabled1',
+  method: 'update',
+  data: { ...DISABLED_DOC, fcmToken: FCM_TOKEN },
+  existing: DISABLED_DOC,
+});
+t('36i. disabled student clearing own fcmToken denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'users/disabled1',
+  method: 'update',
+  data: DISABLED_DOC,
+  existing: { ...DISABLED_DOC, fcmToken: FCM_TOKEN, fcmTokenUpdatedAt: TIME },
+});
+
+// ---- the FCM write must not become a carrier for a protected field ----
+//
+// Each of these changes one forbidden field ALONGSIDE a legitimate token
+// write. hasOnly() fails on the whole set, so the entire update is
+// rejected — the token half does not get through on its own.
+
+t('36j. fcmToken write carrying a role escalation denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, role: 'admin' },
+  existing: STUDENT_DOC,
+});
+t('36k. fcmToken write carrying a status change denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, status: 'disabled' },
+  existing: STUDENT_DOC,
+});
+t('36l. fcmToken write carrying a majorId assignment denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, majorId: 'maj1' },
+  existing: STUDENT_DOC,
+});
+t('36m. fcmToken write carrying an email change denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, email: 'other@test.com' },
+  existing: STUDENT_DOC,
+});
+t('36n. fcmToken write carrying a studentId change denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, studentId: '9999999' },
+  existing: STUDENT_DOC,
+});
+// emailVerified is in studentSelfEditable, so hasOnly() passes here and the
+// separate token check is what rejects it — a different guard, same answer.
+t('36o. fcmToken write forging emailVerified denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN, emailVerified: false },
+  existing: STUDENT_DOC,
+});
+
+// ---- other roles follow the same self-update policy ----
+//
+// The self-update branch is scoped by OWNERSHIP, not by role: any active
+// account may write its own profile fields. A teacher and an admin each
+// own a device, so each stores its own token by exactly the same rule.
+
+t('36p. active teacher updates own fcmToken', {
+  expect: 'ALLOW',
+  uid: 'teacher1',
+  path: 'users/teacher1',
+  method: 'update',
+  data: { ...TEACHER_DOC, fcmToken: FCM_TOKEN, fcmTokenUpdatedAt: TIME },
+  existing: TEACHER_DOC,
+});
+t('36q. active admin updates own fcmToken', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/admin1',
+  method: 'update',
+  data: { ...ADMIN_DOC, fcmToken: FCM_TOKEN, fcmTokenUpdatedAt: TIME },
+  existing: ADMIN_DOC,
+});
+t('36r. teacher writing another user\'s fcmToken denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+t('36s. teacher escalating own role while writing a token denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/teacher1',
+  method: 'update',
+  data: { ...TEACHER_DOC, fcmToken: FCM_TOKEN, role: 'admin' },
+  existing: TEACHER_DOC,
+});
+/*
+ * An FCM token is a DELIVERY ADDRESS, not a profile field.
+ *
+ * Whoever writes users/{uid}.fcmToken decides which device receives that
+ * account's push notifications. Redirecting somebody else's notifications
+ * is not an account-administration task and no screen in the app performs
+ * it, so the two FCM names are excluded from adminEditable().
+ *
+ * The deployed ruleset DID allow it: adminEditable() was
+ * studentSelfEditable().concat([...]), so adding the FCM names to the
+ * student list silently handed the same power to admins. 36t and 36u pin
+ * the correction; 36v–36y prove every legitimate admin power survived it.
+ */
+t('36t. admin writing a student\'s fcmToken denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+t('36u. admin clearing a student\'s fcmToken denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: STUDENT_DOC,
+  existing: STUDENT_WITH_TOKEN,
+});
+// An admin cannot smuggle a token rewrite in behind a legitimate change.
+t('36v. admin changing status AND fcmToken together denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, status: 'disabled', fcmToken: FCM_TOKEN },
+  existing: STUDENT_DOC,
+});
+
+// ---- every existing admin capability must survive the restriction ----
+
+t('36w. admin still disables a student account', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, status: 'disabled' },
+  existing: STUDENT_DOC,
+});
+t('36x. admin still assigns majorId', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, majorId: 'maj1' },
+  existing: STUDENT_DOC,
+});
+t('36y. admin still edits a student profile field', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_DOC, fullName: 'اسم مصحَّح', studentId: '1234567' },
+  existing: STUDENT_DOC,
+});
+// A student who already has a token stored must stay administrable: the
+// admin leaves the FCM fields untouched, so changedKeys() never names them.
+t('36z. admin administers a student who has a stored token', {
+  expect: 'ALLOW',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  data: { ...STUDENT_WITH_TOKEN, status: 'disabled' },
+  existing: STUDENT_WITH_TOKEN,
+});
+
+// --- 37. secondary email + primary-email swap ----------------------------
+//
+// The security question this section exists to answer: can a client mark an
+// arbitrary address as a VERIFIED recovery address? It must not be able to.
+//
+// The one trustworthy signal available to rules is request.auth.token.email
+// — a claim Firebase Authentication mints only after the account holder
+// opened the verification link sent to that address. The client cannot forge
+// it. So `secondaryEmailVerified: true` is accepted in exactly one shape: a
+// completed swap, where the token proves the new primary and the old primary
+// is what moves down to secondary. Everything else is denied.
+
+const PRIMARY = 'student1@test.com';   // matches the token minted by t()
+const RECOVERY = 'recovery@test.com';
+
+const withEmail = (over) => ({ ...STUDENT_DOC, email: PRIMARY, ...over });
+
+// ---- adding / editing a recovery address (never "verified") ----
+
+t('37a. student saves an unverified secondary email', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+});
+t('37b. student clears their secondary email', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+  data: withEmail({}),
+});
+t('37c. student records a pending primary-email change', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+  data: withEmail({
+    secondaryEmail: RECOVERY,
+    secondaryEmailVerified: false,
+    pendingPrimaryEmail: RECOVERY,
+  }),
+});
+
+// ---- forging verification: every route must be denied ----
+
+t('37d. 🔴 student marking an arbitrary address verified denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: true }),
+});
+t('37e. 🔴 flipping an existing secondary to verified denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: true }),
+});
+// The swap shape must not be forgeable while Auth still reports the old email.
+t('37f. 🔴 claiming a swap the token does not support denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+  data: withEmail({
+    email: RECOVERY,               // token still says student1@test.com
+    secondaryEmail: PRIMARY,
+    secondaryEmailVerified: true,
+  }),
+});
+t('37g. 🔴 rewriting the primary email directly denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ email: RECOVERY }),
+});
+
+// ---- the completed swap ----
+//
+// Auth has already changed: the token now carries the recovery address,
+// which only happens after the link in that inbox was opened.
+
+t('37h. completed swap is accepted once the token proves it', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  token: { email: RECOVERY, email_verified: true },
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+  data: withEmail({
+    email: RECOVERY,
+    secondaryEmail: PRIMARY,
+    secondaryEmailVerified: true,
+    pendingPrimaryEmail: RECOVERY,
+  }),
+});
+// Even with a genuine new token, the demoted address must be the real
+// previous primary — not some third address the client picked.
+t('37i. 🔴 swap that demotes a different address denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  token: { email: RECOVERY, email_verified: true },
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({
+    email: RECOVERY,
+    secondaryEmail: 'attacker@test.com',
+    secondaryEmailVerified: true,
+  }),
+});
+
+// ---- ownership: nobody manages anybody else's addresses ----
+
+t('37j. student writing another student\'s secondary email denied', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+});
+t('37k. admin writing a student\'s secondary email denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+});
+t('37l. teacher writing a student\'s secondary email denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+});
+t('37m. unauthenticated secondary-email write denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ secondaryEmail: RECOVERY, secondaryEmailVerified: false }),
+});
+t('37n. disabled student managing their secondary email denied', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'users/disabled1',
+  method: 'update',
+  existing: { ...DISABLED_DOC, email: 'disabled1@test.com' },
+  data: {
+    ...DISABLED_DOC,
+    email: 'disabled1@test.com',
+    secondaryEmail: RECOVERY,
+    secondaryEmailVerified: false,
+  },
+});
+
+// ---- the new branch must not become a hole in the old ones ----
+
+t('37o. 🔴 role escalation riding along a secondary-email write denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({
+    secondaryEmail: RECOVERY,
+    secondaryEmailVerified: false,
+    role: 'admin',
+  }),
+});
+t('37p. 🔴 status change riding along a secondary-email write denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({
+    secondaryEmail: RECOVERY,
+    secondaryEmailVerified: false,
+    status: 'disabled',
+  }),
+});
+t('37q. 🔴 fcmToken riding along a swap denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  token: { email: RECOVERY, email_verified: true },
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({ secondaryEmail: RECOVERY }),
+  data: withEmail({
+    email: RECOVERY,
+    secondaryEmail: PRIMARY,
+    secondaryEmailVerified: true,
+    fcmToken: 'attacker-device',
+  }),
+});
+// And the pre-existing profile path keeps working untouched.
+t('37r. ordinary profile edit still works alongside the new branch', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'users/student1',
+  method: 'update',
+  existing: withEmail({}),
+  data: withEmail({ fullName: 'اسم محدَّث' }),
+});
+
+// --- 38. self-authored in-app notifications (Spark model) ----------------
+//
+// كل إشعار يكتبه صاحبه لنفسه. مصدر الثقة request.auth.uid، ولا شيء غيره.
+
+const SELF_NOTIFICATION = {
+  recipientId: 'student1',
+  type: 'newSharedSpacePost',
+  title: 'منشور جديد في المساحة المشتركة',
+  body: 'تم نشر منشور جديد في المساحة المشتركة',
+  courseId: COURSE,
+  postId: 'p1',
+  isRead: false,
+};
+
+t('38a. student creates a correctly shaped notification for themselves', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'create',
+  data: SELF_NOTIFICATION,
+});
+t('38b. assignment notification for self', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'notifications/assignment_a1_student1',
+  method: 'create',
+  data: {
+    recipientId: 'student1',
+    type: 'newAssignment',
+    title: 'واجب جديد',
+    body: 'واجب الوحدة الأولى',
+    courseId: COURSE,
+    assignmentId: 'a1',
+    isRead: false,
+  },
+});
+
+// ---- spoofing the recipient ----
+
+t('38c. 🔴 spoofing recipientId to another student denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/post_p1_student2',
+  method: 'create',
+  data: { ...SELF_NOTIFICATION, recipientId: 'student2' },
+});
+t('38d. 🔴 admin creating a notification for a student denied', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'notifications/x',
+  method: 'create',
+  data: SELF_NOTIFICATION,
+});
+t('38e. 🔴 teacher creating a notification for a student denied', {
+  expect: 'DENY',
+  uid: 'teacher1',
+  path: 'notifications/x',
+  method: 'create',
+  data: SELF_NOTIFICATION,
+});
+t('38f. unauthenticated notification create denied', {
+  expect: 'DENY',
+  uid: null,
+  path: 'notifications/x',
+  method: 'create',
+  data: SELF_NOTIFICATION,
+});
+t('38g. disabled student cannot create a notification', {
+  expect: 'DENY',
+  uid: 'disabled1',
+  path: 'notifications/x',
+  method: 'create',
+  data: { ...SELF_NOTIFICATION, recipientId: 'disabled1' },
+});
+
+// ---- shape ----
+
+t('38h. notification created already read denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/x',
+  method: 'create',
+  data: { ...SELF_NOTIFICATION, isRead: true },
+});
+t('38i. notification without a title denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/x',
+  method: 'create',
+  data: { ...SELF_NOTIFICATION, title: '' },
+});
+t('38j. notification without a type denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/x',
+  method: 'create',
+  data: { ...SELF_NOTIFICATION, type: '' },
+});
+
+// ---- deterministic ids must not become an overwrite channel ----
+//
+// المعرّف الحتمي يعني أن إعادة المحاولة تصيب مستندًا قائمًا، فتصير
+// تحديثًا. وقاعدة التحديث لا تسمح إلا بـ isRead — فلا يُعاد ضبط إشعار
+// مقروء ولا تُعاد كتابة محتواه.
+
+t('38k. 🔴 rewriting an existing notification denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'update',
+  existing: SELF_NOTIFICATION,
+  data: { ...SELF_NOTIFICATION, title: 'عنوان مزوَّر' },
+});
+t('38l. 🔴 resetting a read notification back to unread denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'update',
+  existing: { ...SELF_NOTIFICATION, isRead: true },
+  data: { ...SELF_NOTIFICATION, isRead: true, body: 'نص جديد' },
+});
+t('38m. 🔴 mutating routing fields after creation denied', {
+  expect: 'DENY',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'update',
+  existing: SELF_NOTIFICATION,
+  data: { ...SELF_NOTIFICATION, isRead: true, postId: 'p2' },
+});
+t('38n. owner marks only isRead', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'update',
+  existing: SELF_NOTIFICATION,
+  data: { ...SELF_NOTIFICATION, isRead: true },
+});
+
+// ---- reading ----
+
+t('38o. owner reads their own notification', {
+  expect: 'ALLOW',
+  uid: 'student1',
+  path: 'notifications/post_p1_student1',
+  method: 'get',
+  existing: SELF_NOTIFICATION,
+});
+t('38p. 🔴 another student cannot read it', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'notifications/post_p1_student1',
+  method: 'get',
+  existing: SELF_NOTIFICATION,
+});
+t('38q. 🔴 admin cannot read a student notification', {
+  expect: 'DENY',
+  uid: 'admin1',
+  path: 'notifications/post_p1_student1',
+  method: 'get',
+  existing: SELF_NOTIFICATION,
+});
+t('38r. 🔴 another student cannot mark it read', {
+  expect: 'DENY',
+  uid: 'student2',
+  path: 'notifications/post_p1_student1',
+  method: 'update',
+  existing: SELF_NOTIFICATION,
+  data: { ...SELF_NOTIFICATION, isRead: true },
 });
 
 // ------------------------------------------------------------------- runner

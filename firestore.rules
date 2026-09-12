@@ -149,11 +149,12 @@ service cloud.firestore {
     // ===================================================================
     match /users/{userId} {
 
-      // Fields a student may change about themselves.
+      // Profile fields the account holder may change about themselves, and
+      // the same set an admin may administer on someone else's behalf.
       // NOTE: role, status, email, studentId, majorId and createdAt are absent
       // by design — majorId assigns an academic programme and is an
       // administrative decision, not a self-service one.
-      function studentSelfEditable() {
+      function selfEditableProfile() {
         return [
           'fullName', 'major', 'academicLevel', 'photoUrl',
           'onboardingCompleted', 'onboardingStatus',
@@ -163,12 +164,34 @@ service cloud.firestore {
         ];
       }
 
+      /*
+       * حقول رمز الدفع (FCM) — يملكها صاحب الجهاز وحده.
+       *
+       * fcmToken هو عنوان تسليم: من يكتبه يقرّر إلى أي جهاز تذهب إشعارات
+       * صاحب الحساب. لذلك هو الحقل الوحيد بمستند المستخدم الذي لا يدخل
+       * صلاحيات الأدمن — لا لأن الأدمن غير موثوق، بل لأن إعادة توجيه
+       * إشعارات شخص آخر ليست عملية إدارة حساب، ولا يحتاجها أي مسار في
+       * التطبيق. الأدمن يكتب رمز جهازه هو عبر فرع «المالك» أدناه كأي
+       * مستخدم.
+       *
+       * ملاحظة: Cloud Functions مستقبلًا تستعمل Admin SDK وتتجاوز هذه
+       * القواعد أصلًا، فالتقييد هنا لا يعيق أي عمل خادمي لاحق.
+       */
+      function fcmFields() {
+        return ['fcmToken', 'fcmTokenUpdatedAt'];
+      }
+
+      function studentSelfEditable() {
+        return selfEditableProfile().concat(fcmFields());
+      }
+
       // Admins may additionally administer the account and assign the
       // academic programme the study plan is built from.
       // POLICY: 'role' is deliberately absent — NO client may change a role,
       // including an admin. Role changes are out-of-band (Console/Admin SDK).
+      // POLICY: fcmFields() is deliberately absent — see above.
       function adminEditable() {
-        return studentSelfEditable().concat(['status', 'studentId', 'majorId']);
+        return selfEditableProfile().concat(['status', 'studentId', 'majorId']);
       }
 
       // The Firestore mirror of emailVerified may only be written to the value
@@ -177,6 +200,57 @@ service cloud.firestore {
       function emailVerifiedMatchesToken() {
         return !('emailVerified' in changedKeys())
           || request.resource.data.emailVerified == request.auth.token.email_verified;
+      }
+
+      /*
+       * ═════════════ البريد الاحتياطي وتغيير البريد الأساسي ═════════════
+       *
+       * حقول العنوان الاحتياطي عمدًا **خارج** studentSelfEditable و
+       * adminEditable: لها فرعان خاصان أدناه بشرطين مختلفين تمامًا. لو
+       * دخلت القائمة العامة لأمكن رفع "موثَّق" مع أي تعديل ملف عادي.
+       */
+      function secondaryEmailKeys() {
+        return ['secondaryEmail', 'secondaryEmailVerified',
+                'secondaryEmailUpdatedAt', 'pendingPrimaryEmail', 'updatedAt'];
+      }
+
+      /*
+       * إدارة العنوان الاحتياطي: الطالب يكتب العنوان، ولا يكتب أبدًا
+       * ادّعاءً بأنه موثَّق.
+       *
+       * 🔴 إدخال عنوان في حقل ليس إثباتًا لملكيته. لذلك يُشترط أن تكون
+       * secondaryEmailVerified إمّا false أو غائبة (عند الحذف). لا يوجد
+       * مسار في التطبيق ولا في هذه القاعدة يرفعها إلى true.
+       */
+      function secondaryEmailEdit() {
+        return changedKeys().hasOnly(secondaryEmailKeys())
+          && ( isAbsent(request.resource.data, 'secondaryEmailVerified')
+               || request.resource.data.secondaryEmailVerified == false );
+      }
+
+      /*
+       * مزامنة تبديل البريد الأساسي — **بعد** أن نفّذته Firebase فعلًا.
+       *
+       * 🔴 مصدر الثقة هنا request.auth.token.email، وهو ادّعاء تضعه Firebase
+       * Authentication في رمز الهوية بعد أن فتح صاحب الحساب رابط التأكيد
+       * المُرسَل إلى العنوان الجديد. العميل لا يستطيع تزويره، فلا يستطيع
+       * انتحال تبديل لم يحدث.
+       *
+       * والشروط مجتمعة تصف تبديلًا واحدًا لا غير:
+       *   - البريد الجديد بالمستند == البريد الذي تشهد به Firebase الآن؛
+       *   - وهو مختلف عن المخزَّن (تبديل حقيقي لا كتابة عابثة)؛
+       *   - والاحتياطي الجديد == البريد الأساسي القديم بالضبط؛
+       *   - وعندها فقط يصير "موثَّقًا" — وهو موثَّق بحق: كان بريد دخول
+       *     لهذا الحساب، لا عنوانًا ادّعاه أحد.
+       *
+       * أي محاولة لجعل عنوان اعتباطي "موثَّقًا" تفشل على الشرط الثالث.
+       */
+      function primaryEmailSwap() {
+        return changedKeys().hasOnly(['email'].concat(secondaryEmailKeys()))
+          && request.resource.data.email.lower() == request.auth.token.email.lower()
+          && request.resource.data.email.lower() != resource.data.email.lower()
+          && request.resource.data.secondaryEmail.lower() == resource.data.email.lower()
+          && request.resource.data.secondaryEmailVerified == true;
       }
 
       /*
@@ -234,6 +308,14 @@ service cloud.firestore {
           && changedKeys().hasOnly(adminEditable())
           && request.resource.data.status in ['active', 'disabled']
           && request.resource.data.role == resource.data.role
+        )
+        ||
+        // ---- owner managing their own email addresses ----
+        // مقصور على المالك: لا الأدمن ولا المعلّم يديران عنوان بريد غيرهما،
+        // تمامًا كما هو الحال مع رمز الدفع.
+        ( isOwner(userId)
+          && isActiveUser()
+          && ( secondaryEmailEdit() || primaryEmailSwap() )
         );
 
       allow delete: if false;
@@ -1276,6 +1358,7 @@ service cloud.firestore {
           && request.resource.data.commentsCount is int
           && request.resource.data.commentsCount == currentComments() + 1;
       }
+
       allow update: if isActiveUser()
         && (
           request.auth.uid == resource.data.authorId
@@ -1346,20 +1429,35 @@ service cloud.firestore {
     // ===================================================================
     //  notifications/{notificationId} — إشعارات داخل التطبيق (In-App)
     //
-    //  لا Cloud Functions هنا (خطة Spark المجانية): كل مستند تكتبه أداة
-    //  العميل نفسها مباشرة بعد نشر منشور بنجاح (NotificationService.
-    //  notifyCourseClassmatesOfNewPost)، لا خادم وسيط. القاعدة تسمح لأي
-    //  مستخدم فعّال بالكتابة لصالح مستلم آخر تحديدًا لهذا السبب — الناشر
-    //  هو من يكتب إشعار زميله، لا زميله لنفسه.
+    //  لا Cloud Functions (خطة Spark المجانية)، والنموذج انقلب رأسًا على
+    //  عقب: لم يعد الناشر يكتب إشعارات زملائه، بل **كل طالب يكتب إشعار
+    //  نفسه** حين يرصد تطبيقُه حدثًا يخصّه في بيانات هو مخوَّل بقراءتها
+    //  أصلًا (منشورات مساقاته، واجبات شُعبه).
+    //
+    //  ولهذا ضاقت قاعدة الإنشاء: كانت تسمح لأي مستخدم فعّال بالكتابة
+    //  لمستلم آخر — وهي صلاحية لم تعد لها حاجة، وكانت تعني أن بإمكان أي
+    //  حساب إغراق أي حساب آخر بإشعارات ينتحل فيها أي عنوان ونص.
     // ===================================================================
     match /notifications/{notificationId} {
       // المستلم فقط يقرأ إشعاراته — لا أحد يطّلع على إشعارات غيره،
       // ولا حتى الأدمن (لا حاجة إدارية لذلك هنا).
       allow read: if isOwner(resource.data.recipientId);
 
+      /*
+       * 🔴 لنفسه فقط.
+       *
+       * recipientId يجب أن يساوي هوية الكاتب المصادَقة. مصدر الثقة هو
+       * request.auth.uid الذي تضعه Firebase، فلا يستطيع العميل انتحاله.
+       *
+       * ولأن الإنشاء وحده مسموح (لا إنشاء فوق مستند قائم)، فالمعرّفات
+       * الحتمية آمنة: إعادة المحاولة على معرّف موجود تصير تحديثًا، وقاعدة
+       * التحديث أدناه لا تسمح إلا بـ isRead — فلا يُعاد ضبط إشعار مقروء
+       * ولا يُعاد كتابة عنوانه أو نصه.
+       */
       allow create: if isActiveUser()
-        && isNonEmptyString(request.resource.data.recipientId)
+        && request.resource.data.recipientId == request.auth.uid
         && isNonEmptyString(request.resource.data.type)
+        && isNonEmptyString(request.resource.data.title)
         && request.resource.data.isRead == false;
 
       // الحقل الوحيد القابل للتغيير بعد الإنشاء هو isRead، وبواسطة

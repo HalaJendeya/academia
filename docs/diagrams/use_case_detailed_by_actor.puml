@@ -1,0 +1,255 @@
+@startuml use_case_student
+' ============================================================================
+'  المخطط التفصيلي — الطالب
+'  كل حالة استخدام هنا لها شاشة مسجَّلة في app_routes.dart وخدمة تكتب أو
+'  تقرأ من Cloud Firestore. لا حالة استخدام مأخوذة من المقترح دون تنفيذ.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam usecase { BorderColor #002B80 BackgroundColor #E8EEFA }
+skinparam actor { BorderColor #002B80 }
+left to right direction
+
+actor "الطالب" as S
+
+rectangle "نظام Academia — واجهة الطالب" {
+  package "الحساب والملف الشخصي" {
+    usecase "إنشاء حساب جديد"            as S1
+    usecase "تأكيد البريد الإلكتروني"    as S2
+    usecase "تسجيل الدخول"               as S3
+    usecase "استعادة كلمة المرور"        as S4
+    usecase "ضبط التفضيلات الأولية"      as S5
+    usecase "عرض وتعديل الملف الشخصي"    as S6
+    usecase "إضافة بريد احتياطي"         as S7
+    usecase "طلب تبديل البريد الأساسي"   as S8
+    usecase "ضبط تفضيلات المذاكرة"       as S9
+    usecase "إرسال طلب دعم"              as S10
+    usecase "تسجيل الخروج"               as S11
+  }
+  package "المساقات والملفات" {
+    usecase "عرض المساقات المسجَّلة"      as S12
+    usecase "عرض تفاصيل المساق"          as S13
+    usecase "عرض سجل المساقات السابقة"   as S14
+    usecase "تصفح ملفات المساق"          as S15
+    usecase "معاينة ملف"                 as S16
+  }
+  package "الواجبات والمهام" {
+    usecase "عرض الشاشة الموحّدة\nللمهام والواجبات" as S17
+    usecase "عرض تفاصيل واجب أكاديمي"    as S18
+    usecase "تعليم الواجب كمنجَز"        as S19
+    usecase "إنشاء مهمة شخصية"           as S20
+    usecase "تعديل مهمة شخصية"           as S21
+    usecase "حذف مهمة شخصية"             as S22
+    usecase "إنجاز مهمة شخصية"           as S23
+  }
+  package "إدارة المذاكرة" {
+    usecase "إنشاء جلسة مذاكرة"          as S24
+    usecase "تنفيذ الجلسة الجارية"       as S25
+    usecase "حفظ نتيجة الجلسة"           as S26
+    usecase "عرض سجل الجلسات"            as S27
+    usecase "عرض الملخص الأسبوعي"        as S28
+    usecase "عرض لوحة التحليلات"         as S29
+  }
+  package "المساحة التشاركية" {
+    usecase "عرض منشورات المساق"         as S30
+    usecase "نشر منشور"                  as S31
+    usecase "إرفاق ملف بالمنشور"         as S32
+    usecase "التعليق على منشور"          as S33
+    usecase "الإعجاب بمنشور"             as S34
+    usecase "الإبلاغ عن منشور"           as S35
+  }
+  package "الإشعارات" {
+    usecase "عرض مركز الإشعارات"         as S36
+    usecase "تعليم الإشعار كمقروء"       as S37
+    usecase "ضبط تفضيلات الإشعارات"      as S38
+  }
+}
+
+S --> S1
+S --> S3
+S --> S4
+S --> S5
+S --> S6
+S --> S7
+S --> S9
+S --> S10
+S --> S11
+S --> S12
+S --> S13
+S --> S14
+S --> S15
+S --> S17
+S --> S18
+S --> S19
+S --> S20
+S --> S21
+S --> S22
+S --> S23
+S --> S24
+S --> S27
+S --> S28
+S --> S29
+S --> S30
+S --> S31
+S --> S33
+S --> S34
+S --> S35
+S --> S36
+S --> S38
+
+S1  ..> S2  : <<include>>
+S24 ..> S25 : <<include>>
+S25 ..> S26 : <<include>>
+S13 ..> S15 : <<include>>
+S15 ..> S16 : <<extend>>
+S7  ..> S8  : <<extend>>
+S31 ..> S32 : <<extend>>
+S30 ..> S35 : <<extend>>
+S36 ..> S37 : <<include>>
+@enduml
+
+
+@startuml use_case_teacher
+' ============================================================================
+'  المخطط التفصيلي — عضو هيئة التدريس
+'  كل عملية مقيَّدة بملكية الطرح الدراسي (courseOfferings.teacherId)،
+'  وهو الشرط الذي تفرضه قاعدة teacherOwnsOffering في firestore.rules.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam usecase { BorderColor #0F766E BackgroundColor #E4F1EF }
+skinparam actor { BorderColor #0F766E }
+left to right direction
+
+actor "عضو هيئة التدريس" as T
+
+rectangle "نظام Academia — واجهة عضو هيئة التدريس" {
+  package "الحساب" {
+    usecase "تسجيل الدخول"                as T1
+    usecase "استعادة كلمة المرور"         as T2
+    usecase "عرض الملف الشخصي"            as T3
+    usecase "تسجيل الخروج"                as T4
+  }
+  package "الطروحات المسندة" {
+    usecase "عرض لوحة المؤشرات"           as T5
+    usecase "عرض الطروحات المسندة إليّ"    as T6
+    usecase "عرض تفاصيل الطرح"            as T7
+    usecase "عرض قائمة الطلبة المسجّلين"   as T8
+  }
+  package "الواجبات الأكاديمية" {
+    usecase "عرض قائمة واجباتي"           as T9
+    usecase "إنشاء واجب أكاديمي"          as T10
+    usecase "تعديل واجب"                  as T11
+    usecase "عرض تفاصيل الواجب"           as T12
+    usecase "أرشفة واجب"                  as T13
+  }
+  package "ملفات الطرح" {
+    usecase "رفع ملف للطرح"               as T14
+    usecase "تعديل بيانات ملف"            as T15
+    usecase "أرشفة ملف"                   as T16
+  }
+}
+
+T --> T1
+T --> T2
+T --> T3
+T --> T4
+T --> T5
+T --> T6
+T --> T7
+T --> T9
+T --> T10
+T --> T11
+T --> T12
+T --> T13
+T --> T14
+T --> T15
+T --> T16
+
+T7  ..> T8  : <<include>>
+T12 ..> T13 : <<extend>>
+@enduml
+
+
+@startuml use_case_admin
+' ============================================================================
+'  المخطط التفصيلي — المشرف
+'  المشرف يملك البنية الأكاديمية وحالة الحسابات، ولا يؤلّف محتوى أكاديميًا:
+'  إنشاء الواجبات ممنوع عليه بالقواعد، وتدخّله فيها مقصور على الأرشفة.
+'  كما أن تعديل حقل الدور (role) محظور على كل العملاء بمن فيهم المشرف.
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam usecase { BorderColor #B4460B BackgroundColor #FBEDE3 }
+skinparam actor { BorderColor #B4460B }
+left to right direction
+
+actor "المشرف" as A
+
+rectangle "نظام Academia — واجهة الإدارة" {
+  package "الحساب" {
+    usecase "تسجيل الدخول"                    as A1
+    usecase "عرض الملف الشخصي"                as A2
+    usecase "تسجيل الخروج"                    as A3
+  }
+  package "البنية الأكاديمية" {
+    usecase "إدارة الأقسام"                   as A4
+    usecase "إدارة التخصصات"                  as A5
+    usecase "إدارة الخطة الدراسية"            as A6
+    usecase "إدارة الفصول الدراسية"           as A7
+    usecase "إدارة كتالوج المساقات"           as A8
+  }
+  package "الطروحات والتسجيل" {
+    usecase "إدارة الطروحات الدراسية"          as A9
+    usecase "إسناد عضو هيئة تدريس إلى طرح"     as A10
+    usecase "تسجيل الطلبة في الطروحات"         as A11
+    usecase "عرض قوائم التسجيل ورصد النتائج"   as A12
+  }
+  package "الحسابات" {
+    usecase "عرض قائمة الطلبة وتفاصيلهم"       as A13
+    usecase "إدارة حسابات أعضاء هيئة التدريس"  as A14
+    usecase "تفعيل أو تعطيل حساب"              as A15
+  }
+  package "المحتوى والإشراف" {
+    usecase "إدارة ملفات المساقات"             as A16
+    usecase "الإشراف على الواجبات"             as A17
+    usecase "أرشفة واجب"                       as A18
+    usecase "مراجعة بلاغات المنشورات"          as A19
+    usecase "أرشفة منشور مخالف"                as A20
+    usecase "تجاهل بلاغ"                       as A21
+    usecase "مراجعة طلبات الدعم"               as A22
+  }
+  package "لوحة المؤشرات" {
+    usecase "عرض مؤشرات النظام"                as A23
+  }
+}
+
+A --> A1
+A --> A2
+A --> A3
+A --> A4
+A --> A5
+A --> A6
+A --> A7
+A --> A8
+A --> A9
+A --> A11
+A --> A12
+A --> A13
+A --> A14
+A --> A16
+A --> A17
+A --> A19
+A --> A22
+A --> A23
+
+A9  ..> A10 : <<include>>
+A14 ..> A15 : <<extend>>
+A13 ..> A15 : <<extend>>
+A17 ..> A18 : <<extend>>
+A19 ..> A20 : <<extend>>
+A19 ..> A21 : <<extend>>
+@enduml

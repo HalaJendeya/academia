@@ -27,6 +27,8 @@ class NotificationCard extends StatelessWidget {
     switch (notification.type) {
       case AppNotification.typeNewSharedSpacePost:
         return Icons.forum_outlined;
+      case AppNotification.typeNewAssignment:
+        return Icons.assignment_outlined;
       default:
         return Icons.notifications_outlined;
     }

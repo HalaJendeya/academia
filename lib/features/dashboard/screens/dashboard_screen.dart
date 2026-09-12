@@ -51,14 +51,18 @@ class DashboardScreen extends StatelessWidget {
        * صورة الحساب تفتح الملف الشخصي. كانت ظاهرة بلا وجهة، فتبدو قابلة
        * للضغط ولا تفعل شيئًا.
        *
-       * جرس التنبيهات ما زال بلا وجهة: لا شاشة تنبيهات بعد، وربطه بشيء
-       * الآن يعني اختراع وجهة لا وجود لها.
+       * والجرس كان مثلها تمامًا: ظاهرًا منذ البداية بلا
+       * onNotificationsPressed — أي onPressed: null، فزرّ معطَّل لا يستجيب
+       * للضغط. شاشة الإشعارات موجودة منذ حينها، لكنها لم تكن مسجَّلة في
+       * جدول المسارات ولا يفتحها شيء في الواجهة. هذه هي وجهته.
        */
       appBar: AcademiaMainAppBar(
         title: AppStrings.appName,
         showProfile: true,
         showSearch: false,
         showNotifications: true,
+        onNotificationsPressed: () =>
+            Navigator.pushNamed(context, AppRoutes.notifications),
         onProfilePressed: () =>
             Navigator.pushNamed(context, AppRoutes.profile),
       ),

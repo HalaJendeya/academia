@@ -1916,5 +1916,80 @@ abstract final class AppStrings {
   static const String studyGeneralSession = 'مذاكرة عامة';
   static const String sessionStatusCompletedShort = 'مكتملة';
   static const String sessionStatusCancelledShort = 'ملغاة';
+
+  // ---------------------------------------------------------------------
+  //  إدارة البريد الإلكتروني (أساسي + احتياطي)
+  // ---------------------------------------------------------------------
+  static const String emailSettingsTitle = 'إدارة البريد الإلكتروني';
+  static const String emailSettingsSubtitle =
+      'بريد الدخول والبريد الاحتياطي';
+
+  static const String primaryEmailLabel = 'البريد الإلكتروني الأساسي';
+  static const String primaryEmailBadge = 'بريد الدخول';
+  static const String primaryEmailHint =
+      'هذا هو البريد الذي تسجّلين الدخول به.';
+
+  static const String secondaryEmailLabel = 'البريد الإلكتروني الاحتياطي';
+  static const String secondaryEmailEmpty = 'لم تتم إضافة بريد احتياطي';
+  static const String secondaryEmailAdd = 'إضافة بريد احتياطي';
+  static const String secondaryEmailChange = 'تغيير البريد الاحتياطي';
+  static const String secondaryEmailRemove = 'إزالة البريد الاحتياطي';
+  static const String secondaryEmailPromote = 'تعيين كبريد أساسي';
+
+  static const String secondaryEmailUnverifiedBadge = 'لم يتم تأكيده بعد';
+  static const String secondaryEmailVerifiedBadge = 'مؤكَّد';
+
+  static const String secondaryEmailFieldLabel = 'البريد الاحتياطي';
+  static const String secondaryEmailFieldHint = 'name@example.com';
+
+  static const String secondaryEmailRequired = 'أدخلي البريد الاحتياطي.';
+  static const String secondaryEmailInvalid = 'صيغة البريد غير صحيحة.';
+  static const String secondaryEmailSameAsPrimary =
+      'هذا هو بريدك الأساسي بالفعل.';
+  static const String secondaryEmailSaved = 'تم حفظ البريد الاحتياطي.';
+  static const String secondaryEmailRemoved = 'تم إزالة البريد الاحتياطي.';
+  static const String secondaryEmailSaveError =
+      'تعذر حفظ البريد الاحتياطي، حاولي مرة أخرى.';
+
+  /// الشرح الصادق لما يحدث فعلًا عند التعيين كأساسي.
+  static const String secondaryEmailPromoteExplanation =
+      'سنرسل رابط تأكيد إلى بريدك الاحتياطي. لن يتغيّر بريد الدخول إلا بعد '
+      'فتحك ذلك الرابط من داخل البريد الاحتياطي نفسه.';
+
+  /// لماذا لا يوجد زر "تحقق" مستقل — تُعرض للطالبة بلغة مفهومة.
+  static const String secondaryEmailVerificationNote =
+      'يُؤكَّد البريد الاحتياطي عند تعيينه بريدًا أساسيًا، لأن رابط التأكيد '
+      'يصل إليه ولا يُفتح إلا من صاحبه.';
+
+  static const String primaryEmailChangePendingTitle = 'بانتظار التأكيد';
+  static const String primaryEmailChangePendingBody =
+      'أرسلنا رابط التأكيد. افتحي الرابط من بريدك الاحتياطي ثم عودي إلى هذه '
+      'الشاشة.';
+  static const String primaryEmailChangeSent =
+      'تم إرسال رابط التأكيد إلى بريدك الاحتياطي.';
+  static const String primaryEmailChangeCompleted =
+      'تم تغيير بريد الدخول بنجاح.';
+  static const String primaryEmailSyncError =
+      'تم تغيير بريد الدخول، لكن تعذّر تحديث بياناتك. أعيدي فتح الشاشة.';
+  static const String primaryEmailRefresh = 'تحديث الحالة';
+
+  static const String currentPasswordLabel = 'كلمة المرور الحالية';
+  static const String currentPasswordHint = 'أدخلي كلمة المرور للتأكيد';
+  static const String currentPasswordRequired = 'أدخلي كلمة المرور.';
+  static const String reauthRequiredTitle = 'تأكيد الهوية';
+  static const String reauthRequiredBody =
+      'لحمايتك، أدخلي كلمة المرور الحالية قبل تغيير بريد الدخول.';
+
+  static const String emailChangeErrorInUse =
+      'هذا البريد مستخدم في حساب آخر.';
+  static const String emailChangeErrorRecentLogin =
+      'انتهت صلاحية الجلسة. أدخلي كلمة المرور من جديد.';
+  static const String emailChangeErrorGeneric =
+      'تعذر تغيير بريد الدخول، حاولي مرة أخرى.';
+
+  /// حدّ معروف يُذكر صراحة في الواجهة والتوثيق.
+  static const String secondaryEmailRecoveryLimitation =
+      'لا يمكن حاليًا استخدام البريد الاحتياطي لاستعادة الحساب قبل تسجيل '
+      'الدخول.';
   static const String ofSeparator = 'من';
 }

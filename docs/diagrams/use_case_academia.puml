@@ -1,0 +1,123 @@
+@startuml use_case_academia
+' ============================================================================
+'  مخطط حالات الاستخدام على مستوى النظام — Academia
+'  مشتق من التنفيذ الفعلي في المستودع (app_routes.dart، الشاشات، الخدمات،
+'  و firestore.rules)، لا من المقترح الأصلي.
+'
+'  ملاحظة عن الخط: PlantUML يحتاج خطًّا يدعم العربية. إن ظهرت الحروف
+'  مقطّعة فأضف عند التوليد:  -DPLANTUML_FONT="Segoe UI"
+'  والنسخة المعتمدة للتقرير هي ملف SVG المرسوم يدويًا:
+'  use_case_diagram.svg
+' ============================================================================
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 14
+skinparam ArrowColor #525A6B
+skinparam actor {
+  BorderColor #002B80
+  BackgroundColor #FFFFFF
+}
+skinparam usecase {
+  BorderColor #002B80
+  BackgroundColor #E8EEFA
+  FontColor #1A1B22
+}
+skinparam rectangle {
+  BorderColor #002B80
+  FontColor #002B80
+  FontStyle bold
+}
+skinparam package {
+  BorderColor #C4C6D6
+  BackgroundColor #F7F8FB
+  FontColor #002B80
+}
+left to right direction
+
+actor "مستخدم النظام" as U
+actor "الطالب" as S
+actor "عضو هيئة التدريس" as T
+actor "المشرف" as A
+
+S   --|> U
+T   --|> U
+A   --|> U
+
+rectangle "نظام Academia" {
+
+  package "الحساب والملف الشخصي" {
+    usecase "تسجيل الدخول والخروج"                 as UC1
+    usecase "استعادة كلمة المرور"                   as UC2
+    usecase "إنشاء حساب جديد"                       as UC3
+    usecase "تأكيد البريد الإلكتروني"               as UC4
+    usecase "إدارة الملف الشخصي والبريد\nوالتفضيلات الدراسية" as UC5
+    usecase "إرسال طلب دعم"                         as UC6
+  }
+
+  package "المساقات والمحتوى الأكاديمي" {
+    usecase "عرض المساقات المسجَّلة وملفاتها"        as UC7
+    usecase "عرض الطروحات المسندة وقوائم الطلبة"     as UC8
+    usecase "إدارة ملفات الطرح"                      as UC9
+  }
+
+  package "الواجبات والمهام" {
+    usecase "متابعة الواجبات الأكاديمية\nوتعليم إنجازها" as UC10
+    usecase "إدارة المهام الشخصية"                   as UC11
+    usecase "إنشاء وإدارة الواجبات الأكاديمية"        as UC12
+  }
+
+  package "إدارة المذاكرة" {
+    usecase "إدارة جلسات المذاكرة"                   as UC13
+    usecase "عرض التحليلات والملخص الأسبوعي"          as UC14
+  }
+
+  package "المساحة التشاركية" {
+    usecase "المشاركة في ساحة المساق"                as UC15
+    usecase "الإبلاغ عن منشور"                       as UC16
+  }
+
+  package "الإشعارات" {
+    usecase "متابعة الإشعارات وضبط تفضيلاتها"        as UC17
+  }
+
+  package "الإدارة" {
+    usecase "إدارة البنية الأكاديمية"                 as UC18
+    usecase "إدارة الطروحات وإسناد أعضاء هيئة التدريس" as UC19
+    usecase "إدارة تسجيلات الطلبة والنتائج"           as UC20
+    usecase "إدارة حسابات الطلبة وأعضاء هيئة التدريس" as UC21
+    usecase "إدارة ملفات المساقات والإشراف على الواجبات" as UC22
+    usecase "مراجعة البلاغات وطلبات الدعم"            as UC23
+  }
+}
+
+U --> UC1
+U --> UC2
+
+S --> UC3
+S --> UC5
+S --> UC6
+S --> UC7
+S --> UC10
+S --> UC11
+S --> UC13
+S --> UC14
+S --> UC15
+S --> UC16
+S --> UC17
+
+T --> UC8
+T --> UC9
+T --> UC12
+
+A --> UC18
+A --> UC19
+A --> UC20
+A --> UC21
+A --> UC22
+A --> UC23
+
+UC3 ..> UC4  : <<include>>
+UC16 ..> UC15 : <<extend>>
+
+@enduml

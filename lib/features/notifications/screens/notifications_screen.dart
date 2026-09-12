@@ -3,8 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/app_routes.dart';
 import '../../../core/navigation/main_navigation.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_bottom_navigation.dart';
 import '../../../core/widgets/app_loading_state.dart';
@@ -12,6 +12,7 @@ import '../../../core/widgets/app_top_bar.dart';
 import '../../../core/widgets/authenticated_page_scaffold.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_state.dart';
+import '../../courses/screens/student_course_detail_screen.dart';
 import '../models/app_notification.dart';
 import '../providers/notification_provider.dart';
 import '../widgets/notification_card.dart';
@@ -26,17 +27,35 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  /*
+   * مرجع محفوظ للمزوّد.
+   *
+   * 🔴 لا يجوز البحث عن مزوّد من الشجرة داخل dispose: الوِدجِت حينها
+   * مفصولة، فيرمي Flutter «Looking up a deactivated widget's ancestor is
+   * unsafe» — وهو العطل نفسه الذي أُصلح في شاشة تفاصيل المنشور.
+   *
+   * المرجع يُلتقط في didChangeDependencies حيث الشجرة ما زالت قائمة.
+   */
+  NotificationProvider? _provider;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<NotificationProvider>().listenToNotifications();
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _provider = context.read<NotificationProvider>();
+  }
+
+  @override
   void dispose() {
-    context.read<NotificationProvider>().stopListening();
+    _provider?.stopListening();
     super.dispose();
   }
 
@@ -48,27 +67,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  /// عند الضغط: تحديد الإشعار كمقروء، ثم الانتقال لسياقه إن كان معروفًا
-  /// (منشور ساحة مشاركة حاليًا؛ أنواع مستقبلية قد لا تحمل وجهة، فتبقى
-  /// الشاشة كما هي وقتها بدل ملاحة فارغة).
+  /// عند الضغط: تحديد الإشعار كمقروء، ثم الانتقال إلى سياقه.
+  ///
+  /// الوجهة هي شاشة المساق لكلا النوعين، وهي مسار قائم بحجّة قائمة
+  /// ([StudentCourseDetailArgs])، وتبويباتها تضمّ ساحة المشاركة والواجبات
+  /// معًا.
+  ///
+  /// 🔴 لا نمرّ بـ assignmentDetails رغم وجوده: ذلك المسار يشترط
+  /// CourseAssignmentModel كاملًا في حجّته، والإشعار لا يحمل سوى
+  /// المعرّفات. فتحه بحجّة ناقصة يعرض «الواجب غير متاح» — رابط مكسور لا
+  /// ملاحة. وكذلك المنشور: لا PostModel هنا.
+  ///
+  /// إشعار بلا courseId (نوع لاحق مثلًا) يُعلَّم مقروءًا وتبقى الشاشة
+  /// مكانها — أصدق من ملاحة إلى لا شيء.
   Future<void> _openNotification(AppNotification notification) async {
     await context.read<NotificationProvider>().markAsRead(notification.id);
     if (!mounted) return;
 
-    if (notification.type == AppNotification.typeNewSharedSpacePost &&
-        notification.postId != null) {
-      // لا نملك هنا نسخة PostModel كاملة ولا عنوان المساق — الإشعار يحمل
-      // فقط معرّفات السياق (courseId, postId)، لا بيانات المنشور نفسه.
-      // فتح المنشور مباشرة يتطلب استعلامًا لا تملكه هذه الشاشة؛ يبقى
-      // نطاق هذه النسخة الانتقال المباشر مؤجَّلًا لتفادي استعلام مكرر أو
-      // تمرير بيانات غير موثوقة عبر التنقّل.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('افتحي المساق من صفحة مساقاتك لمتابعة المنشور'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
-    }
+    final courseId = notification.courseId;
+    if (courseId == null || courseId.trim().isEmpty) return;
+
+    final hasDestination =
+        notification.type == AppNotification.typeNewSharedSpacePost ||
+            notification.type == AppNotification.typeNewAssignment;
+    if (!hasDestination) return;
+
+    Navigator.pushNamed(
+      context,
+      AppRoutes.courseDetail,
+      arguments: StudentCourseDetailArgs(courseId: courseId),
+    );
   }
 
   @override
@@ -98,7 +126,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (provider.notifications.isEmpty) {
       return const AppEmptyState(
         title: 'لا توجد إشعارات بعد',
-        description: 'ستظهر هنا إشعارات المنشورات الجديدة في مساقاتك.',
+        description: 'ستظهر هنا إشعارات المنشورات والواجبات الجديدة في مساقاتك.',
         icon: Icons.notifications_none_rounded,
       );
     }

@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 1780" width="1760" height="1780" font-family="'Segoe UI',Tahoma,Arial,sans-serif">
+<defs>
+ <marker id="aOpen" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+   <path d="M1,1 L11,6 L1,11" fill="none" stroke="#525A6B" stroke-width="1.7"/></marker>
+ <marker id="aGen" viewBox="0 0 14 14" refX="13" refY="7" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+   <path d="M1,1 L13,7 L1,13 Z" fill="#FFFFFF" stroke="#525A6B" stroke-width="1.7"/></marker>
+</defs>
+<rect width="1760" height="1780" fill="#FFFFFF"/>
+<rect x="340" y="60" width="1120" height="1440" rx="18" fill="none" stroke="#002B80" stroke-width="2.6"/>
+<text x="900" y="106" text-anchor="middle" font-size="27" font-weight="700" fill="#002B80" direction="rtl">نظام Academia</text>
+<rect x="390" y="140" width="340" height="600" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="560" y="167" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">الحساب والملف الشخصي</text>
+<rect x="390" y="764" width="340" height="232" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="560" y="791" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">إدارة المذاكرة</text>
+<rect x="390" y="1020" width="340" height="232" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="560" y="1047" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">المساحة التشاركية</text>
+<rect x="390" y="1276" width="340" height="140" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="560" y="1303" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">الإشعارات</text>
+<rect x="1010" y="140" width="340" height="324" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="1180" y="167" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">المساقات والمحتوى الأكاديمي</text>
+<rect x="1010" y="488" width="340" height="324" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="1180" y="515" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">الواجبات والمهام</text>
+<rect x="1010" y="836" width="340" height="600" rx="12" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.4" stroke-dasharray="7 5"/>
+<text x="1180" y="863" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">الإدارة</text>
+<path d="M 165 250 Q 286.5 239.2 408 226" fill="none" stroke="#525A6B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 250 Q 286.5 280.6 408 318" fill="none" stroke="#525A6B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 569.5 408 410" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 652.3 408 594" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 693.7 408 686" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 767.5 408 850" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 808.9 408 942" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 882.7 408 1106" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 924.1 408 1198" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 Q 286.5 997.9 408 1362" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 C 470 748 880 748 1028 226" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 C 470 748 880 748 1028 574" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 700 C 470 748 880 748 1028 666" fill="none" stroke="#002B80" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 320 Q 1466 319.1 1332 318" fill="none" stroke="#0F766E" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 320 Q 1466 360.5 1332 410" fill="none" stroke="#0F766E" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 320 Q 1466 517.1 1332 758" fill="none" stroke="#0F766E" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1052.9 1332 922" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1094.3 1332 1014" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1135.7 1332 1106" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1177.1 1332 1198" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1218.5 1332 1290" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 1600 1160 Q 1466 1259.9 1332 1382" fill="none" stroke="#B4460B" stroke-width="1.6" opacity="0.75"/>
+<path d="M 165 640 L 258 640 L 258 208" fill="none" stroke="#525A6B" stroke-width="1.4" opacity="0.55" stroke-linejoin="round"/>
+<path d="M 1600 258 L 1600 26 L 258 26 L 258 208" fill="none" stroke="#525A6B" stroke-width="1.4" opacity="0.55" stroke-linejoin="round"/>
+<path d="M 1600 1222 L 1600 1712 L 258 1712 L 258 208" fill="none" stroke="#525A6B" stroke-width="1.4" opacity="0.55" stroke-linejoin="round"/>
+<path d="M 258 208 L 199 202" fill="none" stroke="#525A6B" stroke-width="1.6" marker-end="url(#aGen)" opacity="0.9"/>
+<ellipse cx="560" cy="226" rx="152" ry="33" fill="#EFF0F4" stroke="#525A6B" stroke-width="1.9"/>
+<text x="560" y="232" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">تسجيل الدخول والخروج</text>
+<ellipse cx="560" cy="318" rx="152" ry="33" fill="#EFF0F4" stroke="#525A6B" stroke-width="1.9"/>
+<text x="560" y="324" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">استعادة كلمة المرور</text>
+<ellipse cx="560" cy="410" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="416" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إنشاء حساب جديد</text>
+<ellipse cx="560" cy="502" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="508" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">تأكيد البريد الإلكتروني</text>
+<ellipse cx="560" cy="594" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="590" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة الملف الشخصي والبريد</text>
+<text x="560" y="611" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">والتفضيلات الدراسية</text>
+<ellipse cx="560" cy="686" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="692" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إرسال طلب دعم</text>
+<ellipse cx="560" cy="850" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="856" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة جلسات المذاكرة</text>
+<ellipse cx="560" cy="942" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="938" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">عرض التحليلات والملخص</text>
+<text x="560" y="959" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">الأسبوعي</text>
+<ellipse cx="560" cy="1106" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="1112" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">المشاركة في ساحة المساق</text>
+<ellipse cx="560" cy="1198" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="1204" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">الإبلاغ عن منشور</text>
+<ellipse cx="560" cy="1362" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="560" y="1358" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">متابعة الإشعارات وضبط</text>
+<text x="560" y="1379" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">تفضيلاتها</text>
+<ellipse cx="1180" cy="226" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="1180" y="222" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">عرض المساقات المسجَّلة</text>
+<text x="1180" y="243" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">وملفاتها</text>
+<ellipse cx="1180" cy="318" rx="152" ry="33" fill="#E4F1EF" stroke="#0F766E" stroke-width="1.9"/>
+<text x="1180" y="314" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">عرض الطروحات المسندة</text>
+<text x="1180" y="335" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">وقوائم الطلبة</text>
+<ellipse cx="1180" cy="410" rx="152" ry="33" fill="#E4F1EF" stroke="#0F766E" stroke-width="1.9"/>
+<text x="1180" y="416" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة ملفات الطرح</text>
+<ellipse cx="1180" cy="574" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="1180" y="570" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">متابعة الواجبات الأكاديمية</text>
+<text x="1180" y="591" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">وتعليم إنجازها</text>
+<ellipse cx="1180" cy="666" rx="152" ry="33" fill="#E8EEFA" stroke="#002B80" stroke-width="1.9"/>
+<text x="1180" y="672" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة المهام الشخصية</text>
+<ellipse cx="1180" cy="758" rx="152" ry="33" fill="#E4F1EF" stroke="#0F766E" stroke-width="1.9"/>
+<text x="1180" y="754" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إنشاء وإدارة الواجبات</text>
+<text x="1180" y="775" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">الأكاديمية</text>
+<ellipse cx="1180" cy="922" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="928" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة البنية الأكاديمية</text>
+<ellipse cx="1180" cy="1014" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="1010" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة الطروحات وإسناد</text>
+<text x="1180" y="1031" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">أعضاء هيئة التدريس</text>
+<ellipse cx="1180" cy="1106" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="1102" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة تسجيلات الطلبة</text>
+<text x="1180" y="1123" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">والنتائج</text>
+<ellipse cx="1180" cy="1198" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="1194" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة حسابات الطلبة</text>
+<text x="1180" y="1215" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">وأعضاء هيئة التدريس</text>
+<ellipse cx="1180" cy="1290" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="1286" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">إدارة ملفات المساقات</text>
+<text x="1180" y="1307" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">والإشراف على الواجبات</text>
+<ellipse cx="1180" cy="1382" rx="152" ry="33" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.9"/>
+<text x="1180" y="1378" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">مراجعة البلاغات وطلبات</text>
+<text x="1180" y="1399" text-anchor="middle" font-size="15" fill="#1A1B22" direction="rtl">الدعم</text>
+<path d="M 704 422 Q 808 456 704 490" fill="none" stroke="#525A6B" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#aOpen)"/>
+<text x="816" y="461" text-anchor="start" font-size="14" font-style="italic" fill="#525A6B" direction="ltr">«include»</text>
+<path d="M 704 1210 Q 808 1152 704 1094" fill="none" stroke="#525A6B" stroke-width="1.6" stroke-dasharray="7 5" marker-end="url(#aOpen)"/>
+<text x="816" y="1157" text-anchor="start" font-size="14" font-style="italic" fill="#525A6B" direction="ltr">«extend»</text>
+<rect x="340" y="1544" width="1120" height="132" rx="12" fill="#FFFFFF" stroke="#C4C6D6" stroke-width="1.3"/>
+<text x="1438" y="1576" text-anchor="start" font-size="16" font-weight="700" fill="#002B80" direction="rtl">وسيلة الإيضاح</text>
+<ellipse cx="1420" cy="1607" rx="16" ry="9" fill="#E8EEFA" stroke="#002B80" stroke-width="1.8"/>
+<text x="1396" y="1612" text-anchor="start" font-size="14" fill="#1A1B22" direction="rtl">حالة استخدام يقوم بها الطالب</text>
+<ellipse cx="860" cy="1607" rx="16" ry="9" fill="#E4F1EF" stroke="#0F766E" stroke-width="1.8"/>
+<text x="836" y="1612" text-anchor="start" font-size="14" fill="#1A1B22" direction="rtl">حالة استخدام يقوم بها عضو هيئة التدريس</text>
+<ellipse cx="1420" cy="1641" rx="16" ry="9" fill="#FBEDE3" stroke="#B4460B" stroke-width="1.8"/>
+<text x="1396" y="1646" text-anchor="start" font-size="14" fill="#1A1B22" direction="rtl">حالة استخدام يقوم بها المشرف</text>
+<ellipse cx="860" cy="1641" rx="16" ry="9" fill="#EFF0F4" stroke="#525A6B" stroke-width="1.8"/>
+<text x="836" y="1646" text-anchor="start" font-size="14" fill="#1A1B22" direction="rtl">حالة استخدام مشتركة بين الأدوار الثلاثة</text>
+<circle cx="165" cy="202" r="16" fill="#FFFFFF" stroke="#525A6B" stroke-width="2.6"/>
+<line x1="165" y1="218" x2="165" y2="260" stroke="#525A6B" stroke-width="2.6"/>
+<line x1="139" y1="232" x2="191" y2="232" stroke="#525A6B" stroke-width="2.6"/>
+<line x1="165" y1="260" x2="144" y2="294" stroke="#525A6B" stroke-width="2.6"/>
+<line x1="165" y1="260" x2="186" y2="294" stroke="#525A6B" stroke-width="2.6"/>
+<text x="165" y="320" text-anchor="middle" font-size="17" font-weight="700" fill="#525A6B" direction="rtl">مستخدم النظام</text>
+<text x="165" y="341" text-anchor="middle" font-size="13" font-style="italic" fill="#525A6B" direction="ltr">{abstract}</text>
+<circle cx="165" cy="652" r="16" fill="#FFFFFF" stroke="#002B80" stroke-width="2.6"/>
+<line x1="165" y1="668" x2="165" y2="710" stroke="#002B80" stroke-width="2.6"/>
+<line x1="139" y1="682" x2="191" y2="682" stroke="#002B80" stroke-width="2.6"/>
+<line x1="165" y1="710" x2="144" y2="744" stroke="#002B80" stroke-width="2.6"/>
+<line x1="165" y1="710" x2="186" y2="744" stroke="#002B80" stroke-width="2.6"/>
+<text x="165" y="770" text-anchor="middle" font-size="17" font-weight="700" fill="#002B80" direction="rtl">الطالب</text>
+<circle cx="1600" cy="272" r="16" fill="#FFFFFF" stroke="#0F766E" stroke-width="2.6"/>
+<line x1="1600" y1="288" x2="1600" y2="330" stroke="#0F766E" stroke-width="2.6"/>
+<line x1="1574" y1="302" x2="1626" y2="302" stroke="#0F766E" stroke-width="2.6"/>
+<line x1="1600" y1="330" x2="1579" y2="364" stroke="#0F766E" stroke-width="2.6"/>
+<line x1="1600" y1="330" x2="1621" y2="364" stroke="#0F766E" stroke-width="2.6"/>
+<text x="1600" y="390" text-anchor="middle" font-size="17" font-weight="700" fill="#0F766E" direction="rtl">عضو هيئة التدريس</text>
+<circle cx="1600" cy="1112" r="16" fill="#FFFFFF" stroke="#B4460B" stroke-width="2.6"/>
+<line x1="1600" y1="1128" x2="1600" y2="1170" stroke="#B4460B" stroke-width="2.6"/>
+<line x1="1574" y1="1142" x2="1626" y2="1142" stroke="#B4460B" stroke-width="2.6"/>
+<line x1="1600" y1="1170" x2="1579" y2="1204" stroke="#B4460B" stroke-width="2.6"/>
+<line x1="1600" y1="1170" x2="1621" y2="1204" stroke="#B4460B" stroke-width="2.6"/>
+<text x="1600" y="1230" text-anchor="middle" font-size="17" font-weight="700" fill="#B4460B" direction="rtl">المشرف</text>
+</svg>

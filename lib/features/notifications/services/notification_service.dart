@@ -1,10 +1,14 @@
 // lib/features/notifications/services/notification_service.dart
 
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import '../../../core/constants/notification_preference_keys.dart';
 import '../models/app_notification.dart';
+import 'fcm_gateway.dart';
 
 class NotificationException implements Exception {
   final String message;
@@ -14,29 +18,43 @@ class NotificationException implements Exception {
   String toString() => message;
 }
 
-/// إشعارات داخل التطبيق (In-App) — بلا Cloud Functions وبلا Push حقيقي،
-/// بما يتوافق مع خطة Firebase الحالية (Spark). كل الكتابة تصدر من جهاز
-/// الطالب الناشر مباشرة (لا وسيط خادم)، وهذا يعني: الإشعار لن يظهر لأي
-/// طالب إلا بعد أن يفتح التطبيق ويستمع للمجموعة، لا فور حدوثه فعليًا على
-/// جهاز مغلق.
+/// إشعارات المستخدم: القراءة من مجموعة notifications، ودورة حياة رمز
+/// الدفع (FCM).
+///
+/// ما لم يعد من مسؤوليته: إنشاء إشعارات لمستخدمين آخرين. ذلك يجري الآن في
+/// Cloud Functions موثوقة تُشغَّل بأحداث Firestore وتعمل بـ Admin SDK —
+/// فالإشعار يصل حتى والتطبيق مغلق، ولا يحتاج العميل أي صلاحية على بيانات
+/// زملائه.
 class NotificationService {
-  NotificationService({FirebaseFirestore? firestore, FirebaseAuth? auth})
-      : _db = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  NotificationService({
+    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
+    FcmGateway? fcmGateway,
+  })  : _injectedDb = firestore,
+        _injectedAuth = auth,
+        _injectedFcm = fcmGateway;
 
-  final FirebaseFirestore _db;
-  final FirebaseAuth _auth;
+  final FirebaseFirestore? _injectedDb;
+  final FirebaseAuth? _injectedAuth;
+  final FcmGateway? _injectedFcm;
+
+  /*
+   * حقول كسولة (late final) لا تُبنى إلا عند أول استعمال فعلي.
+   *
+   * بناؤها في قائمة التهيئة كان يستدعي FirebaseFirestore.instance لكل نسخة
+   * من الخدمة، فيتعذّر اختبار دورة حياة الرمز أصلًا: أي اختبار يبني الخدمة
+   * — ولو حقن بديل [FcmGateway] كاملًا — كان يسقط بـ «No Firebase App».
+   * الآن اختبار يمسّ رمز الدفع وحده لا يلمس Firestore ولا Auth إطلاقًا.
+   */
+  late final FirebaseFirestore _db = _injectedDb ?? FirebaseFirestore.instance;
+  late final FirebaseAuth _auth = _injectedAuth ?? FirebaseAuth.instance;
+
+  /// كل تعامل مع رمز الدفع يمرّ من هنا — انظر [FcmGateway].
+  late final FcmGateway _fcm = _injectedFcm ??
+      FirebaseFcmGateway(firestore: _injectedDb, auth: _injectedAuth);
 
   CollectionReference<Map<String, dynamic>> get _notifications =>
       _db.collection('notifications');
-
-  String get _requireUserId {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw const NotificationException('يجب تسجيل الدخول أولًا.');
-    }
-    return uid;
-  }
 
   /// إشعارات المستخدم الحالي، الأحدث أولًا.
   Stream<List<AppNotification>> watchMyNotifications() {
@@ -64,67 +82,234 @@ class NotificationService {
     }
   }
 
-  /// إشعار كل زملاء الطالب في مساق واحد بمنشور جديد، باستثناء الناشر
-  /// نفسه، وبشرط تفعيلهم صراحةً "تنبيهات المساحة المشتركة"
-  /// (sharedSpaceNotifications — الافتراضي false، فغياب التفضيل يعني عدم
-  /// الإرسال، لا إرسالًا افتراضيًا).
-  ///
-  /// لا تُستدعى من الشاشة مباشرة — PostService.createPost تستدعيها بعد
-  /// نجاح إنشاء المنشور، وتُبتلع أخطاؤها هناك حتى لا يفشل نشر منشور
-  /// صحيح بسبب عطل في إرسال إشعار ثانوي.
-  Future<void> notifyCourseClassmatesOfNewPost({
-    required String courseId,
-    required String postId,
-    required String authorName,
-  }) async {
-    final authorId = _requireUserId;
+  /* ═══════════════════════════════════════════════════════════════════
+   * حُذف من هنا notifyCourseClassmatesOfNewPost.
+   *
+   * كان يستعلم enrollments بـ courseId ثم يقرأ مستند كل زميل ليفحص
+   * تفضيله — وكلاهما ممنوع على الطالب بقواعد Firestore، فكان يفشل دائمًا
+   * ويُبتلع خطؤه في PostService: المنشور ينجح ولا إشعار يُنشأ.
+   *
+   * التوزيع صار في Cloud Function موثوقة (onSharedSpacePostCreated) تعمل
+   * بـ Admin SDK وتتجاوز القواعد، فلا حاجة لمنح الطالب أي صلاحية إضافية.
+   * ما بقي هنا للعميل: قراءة إشعاراته هو، وتحديدها مقروءة، ودورة حياة
+   * رمز الدفع.
+   * ═══════════════════════════════════════════════════════════════════ */
 
-    // من هم المسجَّلون في هذا المساق؟ نفس مجموعة enrollments المستخدَمة
-    // بميزة المساقات والملفات — لا مصدر بيانات جديد.
-    final enrollmentsSnapshot = await _db
-        .collection('enrollments')
-        .where('courseId', isEqualTo: courseId)
-        .where('status', isEqualTo: 'active')
-        .get();
+  // ===========================================================================
+  //  FCM (Real Push) Phase 1
+  // ===========================================================================
 
-    final classmateIds = enrollmentsSnapshot.docs
-        .map((doc) => doc.data()['userId'] as String?)
-        .whereType<String>()
-        .where((uid) => uid != authorId)
-        .toSet();
+  StreamSubscription<String>? _tokenRefreshSub;
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-    if (classmateIds.isEmpty) return;
+  /*
+   * الحساب الذي تخصّه جلسة الرمز الحالية.
+   *
+   * 🔴 هذا ما يمنع رمزًا من الوصول إلى مستند الحساب الخطأ.
+   *
+   * onTokenRefresh بثّ طويل العمر، وردّ النداء عليه غير متزامن: قد يصل
+   * حدث تجديد متأخر بعد أن خرج صاحب الجلسة ودخل غيره، فيُكتب الرمز على
+   * مستند من يصادف أنه مسجَّل الآن. إلغاء الاشتراك وحده لا يكفي — حدث
+   * كان في الطريق أصلًا قد يكمل تنفيذه بعد الإلغاء.
+   *
+   * لذلك كل كتابة تتحقق من أمرين معًا: أن الجلسة لم تُغلق (_sessionUid
+   * ليس null)، وأن المستخدم المصادَق الآن هو نفسه صاحب الجلسة. إن اختلّ
+   * أحدهما، تُهمَل الكتابة بصمت — الجلسة التي طلبتها لم تعد قائمة.
+   */
+  String? _sessionUid;
 
-    // فلترة حسب تفعيل التفضيل فرديًا — قراءة مستند كل زميل ضرورية هنا
-    // لأن التفضيل مخزَّن داخل مستند المستخدم نفسه، لا في enrollments.
-    final batch = _db.batch();
-    var hasAnyWrite = false;
+  /// اشتراك واحد لا أكثر — للاختبار والتشخيص.
+  @visibleForTesting
+  bool get hasTokenRefreshListener => _tokenRefreshSub != null;
 
-    for (final uid in classmateIds) {
-      final userDoc = await _db.collection('users').doc(uid).get();
-      final prefs = userDoc.data()?['notificationPreferences'] as Map?;
-      final wantsSharedSpaceNotifications =
-          prefs?[NotificationPreferenceKeys.sharedSpaceNotifications] == true;
+  @visibleForTesting
+  String? get sessionUid => _sessionUid;
 
-      if (!wantsSharedSpaceNotifications) continue;
+  static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
+    'academia_notifications',
+    'إشعارات أكاديميا',
+    importance: Importance.max,
+  );
 
-      final notification = AppNotification(
-        id: '',
-        recipientId: uid,
-        type: AppNotification.typeNewSharedSpacePost,
-        title: 'منشور جديد في المساحة المشتركة',
-        body: '$authorName نشر منشورًا جديدًا في مساقك.',
-        courseId: courseId,
-        postId: postId,
-        createdAt: DateTime.now(),
+  StreamSubscription<RemoteMessage>? _foregroundMessageSub;
+
+  /*
+   * تهيئة الدفع — "أفضل جهد"، ولا ترمي أبدًا.
+   *
+   * 🔴 هذه الدالة تُستدعى من مسار تسجيل الدخول بلا await. لذلك أي استثناء
+   * يخرج منها يصير Future غير معالَج: لا مكان يلتقطه، ويُبلَّغ عنه كخطأ
+   * غير ملتقَط قد يُسقط الجلسة في وضع التصحيح. فكل خطوة هنا محروسة.
+   *
+   * والأهم: الخطوات **مستقلة**. كانت كلها متسلسلة داخل شرط واحد، فأي فشل
+   * في إعداد الإشعارات المحلية (وهو وارد جدًا على أجهزة MIUI:
+   * MissingPluginException) كان يقفز فوق تسجيل الرمز فلا يُكتب fcmToken
+   * إطلاقًا — يبدو الدخول ناجحًا والدفع لا يعمل ولا رسالة خطأ. صارت
+   * جلسة الرمز مستقلة عن إعداد العرض المحلي: فشل العرض لا يمنع التسجيل.
+   */
+  Future<void> initializePushNotifications() async {
+    if (!await _requestPermission()) {
+      // رفض الإذن قرار مشروع للمستخدم، لا عطل: لا رمز يُسجَّل ولا رسالة
+      // خطأ تُعرض.
+      debugPrint('FCM: notification permission not granted; push stays off.');
+      return;
+    }
+
+    // إعداد العرض المحلي لرسائل المقدّمة. فشله لا يوقف ما بعده.
+    await _setUpLocalNotifications();
+
+    // جلسة الرمز — الجزء الذي يجعل الدفع يصل أصلًا.
+    try {
+      await startTokenSession();
+    } catch (e) {
+      debugPrint('FCM: could not start the token session for this account.');
+    }
+  }
+
+  Future<bool> _requestPermission() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
       );
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
+    } catch (e) {
+      debugPrint('FCM: permission request failed.');
+      return false;
+    }
+  }
 
-      batch.set(_notifications.doc(), notification.toFirestore());
-      hasAnyWrite = true;
+  Future<void> _setUpLocalNotifications() async {
+    try {
+      const initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+      await _localNotificationsPlugin.initialize(settings: initializationSettings);
+
+      await _localNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(_channel);
+
+      // إلغاء ثم استبدال: كل تهيئة كانت تضيف مستمعًا جديدًا لرسائل
+      // المقدّمة دون إزالة سابقه، فمع كل دخول/خروج/دخول يتضاعف عدد
+      // الإشعارات المحلية المعروضة عن الرسالة الواحدة.
+      await _foregroundMessageSub?.cancel();
+      _foregroundMessageSub =
+          FirebaseMessaging.onMessage.listen(_showForegroundMessage);
+    } catch (e) {
+      debugPrint('FCM: local notification setup failed; push still registers.');
+    }
+  }
+
+  void _showForegroundMessage(RemoteMessage message) {
+    final notification = message.notification;
+    final android = notification?.android;
+    if (notification == null || android == null) return;
+
+    try {
+      _localNotificationsPlugin.show(
+        id: notification.hashCode,
+        title: notification.title,
+        body: notification.body,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channel.id,
+            _channel.name,
+            icon: '@mipmap/ic_launcher',
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('FCM: could not display a foreground notification.');
+    }
+  }
+
+  /// يبدأ جلسة رمز للمستخدم المصادَق حاليًا: يسجّل رمز الجهاز على مستنده
+  /// ثم يتابع تجديدات الرمز حتى تُغلق الجلسة عند تسجيل الخروج.
+  ///
+  /// إعادة الاستدعاء آمنة: الاشتراك السابق يُلغى قبل إنشاء غيره، فلا
+  /// يتراكم مستمعون مع تكرار دخول/خروج.
+  Future<void> startTokenSession() async {
+    final uid = _fcm.currentUid;
+    if (uid == null) return;
+
+    await _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = null;
+    _sessionUid = uid;
+
+    await _saveTokenForSession(await _readDeviceToken());
+
+    _tokenRefreshSub = _fcm.onTokenRefresh.listen((newToken) {
+      // بلا await: المستمع لا ينتظر الكتابة، والكتابة نفسها تتحقق من
+      // الجلسة قبل أن تلمس أي مستند.
+      _saveTokenForSession(newToken);
+    });
+  }
+
+  Future<String?> _readDeviceToken() async {
+    try {
+      return await _fcm.getToken();
+    } catch (e) {
+      debugPrint('FCM: could not read the device token.');
+      return null;
+    }
+  }
+
+  /// يكتب الرمز على مستند صاحب الجلسة، وعلى مستنده وحده.
+  Future<void> _saveTokenForSession(String? token) async {
+    if (token == null) return;
+
+    final owner = _sessionUid;
+    // الجلسة أُغلقت (تسجيل خروج)، أو تبدّل المستخدم بينما كان هذا الحدث
+    // في الطريق — الكتابة لم تعد تخصّ أحدًا.
+    if (owner == null || _fcm.currentUid != owner) return;
+
+    try {
+      await _fcm.saveToken(uid: owner, token: token);
+    } catch (e) {
+      debugPrint('FCM: could not store the device token for the current account.');
+    }
+  }
+
+  /// ينهي جلسة الرمز قبل تسجيل الخروج مباشرة.
+  ///
+  /// 🔴 يجب أن يُستدعى والمستخدم ما زال مصادَقًا — انظر [runSignOutSequence].
+  ///
+  /// الخطوات الثلاث مستقلة عمدًا، كلٌّ بـ try خاص به: كان المسح ونزع الرمز
+  /// المحلي داخل try واحد، فكان فشل الكتابة على Firestore يقفز فوق
+  /// deleteToken فلا يُبطَل رمز الجهاز إطلاقًا. فشل خطوة لا يلغي ما بعدها.
+  Future<void> clearTokenForSignOut() async {
+    // 1) إيقاف المتابعة أولًا: بعد هذه اللحظة لا يستطيع أي حدث تجديد أن
+    //    يعيد كتابة رمز على الحساب الذي نغادره.
+    await _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = null;
+    final owner = _sessionUid ?? _fcm.currentUid;
+    _sessionUid = null;
+
+    if (owner == null) return;
+
+    // 2) حذف الحقلين من مستند المستخدم — بينما المصادقة قائمة.
+    try {
+      await _fcm.clearToken(uid: owner);
+    } catch (e) {
+      debugPrint('FCM: could not clear the stored token for the signing-out account.');
     }
 
-    if (hasAnyWrite) {
-      await batch.commit();
+    // 3) إبطال رمز الجهاز محليًا، حتى لا تصل رسائل معلّقة لحساب غادر.
+    try {
+      await _fcm.deleteToken();
+    } catch (e) {
+      debugPrint('FCM: could not delete the local device token.');
     }
+  }
+
+  void dispose() {
+    _tokenRefreshSub?.cancel();
+    _tokenRefreshSub = null;
+    _foregroundMessageSub?.cancel();
+    _foregroundMessageSub = null;
+    _sessionUid = null;
   }
 }

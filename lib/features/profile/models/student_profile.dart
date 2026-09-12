@@ -14,6 +14,24 @@ class StudentProfile {
 
   final String? photoUrl;
 
+  /// عنوان بديل يحفظه الطالب للتواصل/الاسترجاع مستقبلًا.
+  ///
+  /// ليس بريد دخول: Firebase Authentication لا تعرفه إطلاقًا، وتخزينه هنا
+  /// لا يجعله صالحًا لتسجيل الدخول.
+  final String? secondaryEmail;
+
+  /// هل أُثبتت ملكية العنوان الاحتياطي فعلًا؟
+  ///
+  /// 🔴 لا يصير true إلا بطريق واحد: أن يكون هذا العنوان بريدَ دخولٍ سابقًا
+  /// لهذا الحساب نزل احتياطيًا بعد تغيير ناجح. لا زر في التطبيق يرفعها،
+  /// وقاعدة Firestore ترفض رفعها من العميل.
+  final bool secondaryEmailVerified;
+
+  /// عنوان طُلب جعله أساسيًا وما زال بانتظار نقر الرابط المُرسَل إليه.
+  ///
+  /// حالة حقيقية لا تجميلية: Firebase لم تغيّر البريد بعد.
+  final String? pendingPrimaryEmail;
+
   const StudentProfile({
     required this.uid,
     required this.fullName,
@@ -22,6 +40,9 @@ class StudentProfile {
     this.major,
     this.academicLevel,
     this.photoUrl,
+    this.secondaryEmail,
+    this.secondaryEmailVerified = false,
+    this.pendingPrimaryEmail,
   });
 
   /// قراءة متسامحة للمستوى الأكاديمي.
@@ -58,6 +79,9 @@ class StudentProfile {
       major: data['major'] as String?,
       academicLevel: parseAcademicLevel(data['academicLevel']),
       photoUrl: data['photoUrl'] as String?,
+      secondaryEmail: data['secondaryEmail'] as String?,
+      secondaryEmailVerified: data['secondaryEmailVerified'] as bool? ?? false,
+      pendingPrimaryEmail: data['pendingPrimaryEmail'] as String?,
     );
   }
 
@@ -84,6 +108,9 @@ class StudentProfile {
       major: major ?? this.major,
       academicLevel: academicLevel ?? this.academicLevel,
       photoUrl: photoUrl ?? this.photoUrl,
+      secondaryEmail: secondaryEmail,
+      secondaryEmailVerified: secondaryEmailVerified,
+      pendingPrimaryEmail: pendingPrimaryEmail,
     );
   }
 }

@@ -220,6 +220,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           AppMenuTile(
+            icon: Icons.alternate_email_rounded,
+            iconBackgroundColor: AppColors.primary.withValues(alpha: 0.08),
+            iconColor: AppColors.primary,
+            title: AppStrings.emailSettingsTitle,
+            subtitle: AppStrings.emailSettingsSubtitle,
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.emailSettings);
+            },
+          ),
+          AppMenuTile(
             icon: Icons.notifications_none_rounded,
             iconBackgroundColor: AppColors.secondary.withValues(alpha: 0.08),
             iconColor: AppColors.secondary,

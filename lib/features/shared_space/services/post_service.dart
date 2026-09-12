@@ -3,7 +3,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../notifications/services/notification_service.dart';
 import '../models/comment_model.dart';
 import '../models/post_attachment.dart';
 import '../models/post_model.dart';
@@ -35,17 +34,12 @@ class PostsPage {
 /// الآن كل مستخدم له مستند إعجاب واحد بالضبط، ومستحيل تكراره أو نقصانه
 /// دون وجوده أصلًا.
 class PostService {
-  PostService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-    NotificationService? notificationService,
-  })  : _db = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance,
-        _notificationService = notificationService ?? NotificationService();
+  PostService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+      : _db = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _db;
   final FirebaseAuth _auth;
-  final NotificationService _notificationService;
 
   CollectionReference<Map<String, dynamic>> get _posts => _db.collection('posts');
   CollectionReference<Map<String, dynamic>> get _postReports =>
@@ -200,7 +194,6 @@ class PostService {
     required String content,
     PostAttachment? attachment,
   }) async {
-    late final String postId;
     // يُقرأ قبل الكتابة: فشل قراءة الاسم يجب ألا يترك منشورًا بلا صاحب.
     final authorName = await _requireAuthorName();
     try {
@@ -214,26 +207,26 @@ class PostService {
         attachment: attachment,
         createdAt: DateTime.now(),
       );
-      final docRef = await _posts.add(model.toFirestore());
-      postId = docRef.id;
+      await _posts.add(model.toFirestore());
     } on PostException {
       rethrow;
     } catch (e) {
       throw const PostException('تعذر نشر المنشور، حاول مرة أخرى.');
     }
 
-    // إشعار الزملاء بعد نجاح النشر فعليًا، لا قبله — منشور محفوظ بلا
-    // إشعار أهون بكثير من إشعار عن منشور لم يُحفظ. فشل هذه الخطوة لا يجعل
-    // النشر نفسه يبدو فاشلًا للطالب.
-    try {
-      await _notificationService.notifyCourseClassmatesOfNewPost(
-        courseId: courseId,
-        postId: postId,
-        authorName: authorName,
-      );
-    } catch (e) {
-      // يُبتلَع عمدًا: إشعار ثانوي، لا يستحق إفشال تجربة نشر منشور ناجح.
-    }
+    /*
+     * 🔴 لا توزيع إشعارات من العميل.
+     *
+     * كان هنا نداء يحاول أن يعرف زملاء المساق ثم يكتب لهم إشعارات، وكان
+     * يفشل دائمًا: قاعدة enrollments لا تسمح للطالب بصفوف غيره، وقاعدة
+     * users لا تسمح له بقراءة مستند زميله. الخطأ كان يُبتلع هنا، فينجح
+     * النشر ولا يصل إشعار واحد — بلا أثر ظاهر.
+     *
+     * صار التوزيع في Cloud Function موثوقة (onSharedSpacePostCreated)
+     * تُشغَّل بإنشاء مستند المنشور وتعمل بـ Admin SDK، فلا حاجة لتوسيع
+     * صلاحيات الطالب أصلًا. النشر هنا ينتهي بإنشاء المنشور، وهذا كل ما
+     * يملكه العميل من حق.
+     */
   }
 
   /// تعديل محتوى منشور موجود (النص والمرفق). لا تُعدَّل بقية الحقول

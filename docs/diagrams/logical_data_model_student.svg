@@ -1,0 +1,197 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2010 1190" width="2010" height="1190" font-family="'Segoe UI',Tahoma,Arial,sans-serif">
+<defs><marker id="crow" viewBox="0 0 14 14" refX="1" refY="7" markerWidth="13" markerHeight="13" orient="auto">
+    <path d="M13,1 L1,7 L13,13" fill="none" stroke="#525A6B" stroke-width="1.6"/></marker>
+   <marker id="one" viewBox="0 0 10 14" refX="9" refY="7" markerWidth="9" markerHeight="13" orient="auto">
+    <path d="M4,2 L4,12" fill="none" stroke="#525A6B" stroke-width="1.8"/></marker></defs>
+<rect width="2010" height="1190" fill="#FFFFFF"/>
+<text x="1005" y="46" text-anchor="middle" font-size="24" font-weight="700" fill="#002B80" direction="rtl">النموذج المنطقي لبيانات Firestore — بيانات الطالب والمساحة التشاركية</text>
+<path d="M 390 320 L 414 320 L 414 200 L 450 200" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="387.6" y="160" width="52.8" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="414" y="172" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">userId</text>
+<path d="M 390 360 L 426 360 L 426 500 L 450 500" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="399.6" y="524" width="52.8" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="426" y="536" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">userId</text>
+<path d="M 390 420 L 438 420 L 438 800 L 450 800" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="401.4" y="826" width="73.19999999999999" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="438" y="838" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">studentId</text>
+<path d="M 225 270 L 225 72 L 1020 72 L 1020 110" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="596.6" y="52" width="86.8" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="640" y="64" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">recipientId</text>
+<path d="M 390 386 L 820 386 L 820 470 L 840 470" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="623.8" y="366" width="32.4" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="640" y="378" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">uid</text>
+<path d="M 290 270 L 290 90 L 1400 90 L 1400 110" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="1146.8" y="70" width="66.4" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="1180" y="82" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">authorId</text>
+<path d="M 225 458 L 225 968 L 1320 968 L 1320 677" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="760" y="948" width="80" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="800" y="960" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">reporterId</text>
+<path d="M 1400 374 L 1400 470" fill="none" stroke="#525A6B" stroke-width="1.5" stroke-linejoin="round" marker-start="url(#one)" marker-end="url(#crow)" opacity="0.85"/>
+<rect x="1373.6" y="416" width="52.8" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="1400" y="428" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">postId</text>
+<path d="M 1560 190 L 1620 190" fill="none" stroke="#525A6B" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 4" opacity="0.9"/>
+<circle cx="1560" cy="190" r="5" fill="#525A6B"/>
+<rect x="1543.2" y="166" width="93.6" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="1590" y="178" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">مجموعة فرعية</text>
+<path d="M 1560 300 L 1590 300 L 1590 400 L 1620 400" fill="none" stroke="#525A6B" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 4" opacity="0.9"/>
+<circle cx="1560" cy="300" r="5" fill="#525A6B"/>
+<rect x="1543.2" y="344" width="93.6" height="17" rx="4" fill="#FFFFFF" opacity="0.92"/>
+<text x="1590" y="356" text-anchor="middle" font-size="11.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">مجموعة فرعية</text>
+<g>
+<rect x="60" y="270" width="330" height="207" rx="9" fill="#FFFFFF" stroke="#3B3F51" stroke-width="1.8"/>
+<path d="M 60 279 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#3B3F51"/>
+<text x="72" y="298" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">users</text>
+<rect x="61" y="314" width="328" height="20" fill="#EFF0F4"/>
+<text x="380" y="328" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="72" y="328" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">Firebase Auth UID</text>
+<text x="72" y="349" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">fullName, email</text>
+<text x="72" y="368" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">role (student|teacher|admin)</text>
+<text x="72" y="387" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">status (active|disabled)</text>
+<text x="72" y="406" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">notificationPreferences</text>
+<text x="72" y="425" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">fcmToken, fcmTokenUpdatedAt</text>
+<text x="72" y="444" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">المستند نفسه المعروض في</text>
+<text x="72" y="463" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">شكل البنية الأكاديمية</text>
+</g>
+<g>
+<rect x="450" y="110" width="330" height="226" rx="9" fill="#FFFFFF" stroke="#B4460B" stroke-width="1.8"/>
+<path d="M 450 119 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#B4460B"/>
+<text x="462" y="138" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">tasks</text>
+<rect x="451" y="154" width="328" height="20" fill="#FBEDE3"/>
+<text x="770" y="168" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="462" y="168" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="462" y="189" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">title, description</text>
+<text x="462" y="208" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">type, priority</text>
+<text x="462" y="227" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">status, dueAt, completedAt</text>
+<text x="462" y="246" font-size="12.5" fill="#B4460B" font-family="Consolas,'Courier New',monospace" font-weight="700"> userId  ↦ users</text>
+<text x="462" y="265" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">courseId, offeringId,</text>
+<text x="462" y="284" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">enrollmentId  (اختيارية)</text>
+<text x="462" y="303" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt, updatedAt</text>
+<text x="462" y="322" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">مهمة شخصية يملكها الطالب وحده</text>
+</g>
+<g>
+<rect x="450" y="410" width="330" height="226" rx="9" fill="#FFFFFF" stroke="#B4460B" stroke-width="1.8"/>
+<path d="M 450 419 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#B4460B"/>
+<text x="462" y="438" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">studySessions</text>
+<rect x="451" y="454" width="328" height="20" fill="#FBEDE3"/>
+<text x="770" y="468" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="462" y="468" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="462" y="489" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">sessionName, goal</text>
+<text x="462" y="508" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">reflection</text>
+<text x="462" y="527" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">plannedMinutes, actualMinutes</text>
+<text x="462" y="546" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">startedAt, endedAt</text>
+<text x="462" y="565" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">status</text>
+<text x="462" y="584" font-size="12.5" fill="#B4460B" font-family="Consolas,'Courier New',monospace" font-weight="700"> userId  ↦ users</text>
+<text x="462" y="603" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">courseId, offeringId (اختيارية)</text>
+<text x="462" y="622" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt, updatedAt</text>
+</g>
+<g>
+<rect x="450" y="710" width="330" height="188" rx="9" fill="#FFFFFF" stroke="#B4460B" stroke-width="1.8"/>
+<path d="M 450 719 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#B4460B"/>
+<text x="462" y="738" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">assignmentProgress</text>
+<rect x="451" y="754" width="328" height="20" fill="#FBEDE3"/>
+<text x="770" y="768" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="462" y="768" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">{studentId}_{assignmentId}</text>
+<text x="462" y="789" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">isCompleted, completedAt</text>
+<text x="462" y="808" font-size="12.5" fill="#B4460B" font-family="Consolas,'Courier New',monospace" font-weight="700"> studentId     ↦ users</text>
+<text x="462" y="827" font-size="12.5" fill="#B4460B" font-family="Consolas,'Courier New',monospace" font-weight="700"> assignmentId  ↦ assignments</text>
+<text x="462" y="846" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">updatedAt</text>
+<text x="462" y="865" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">علامة إنجاز يملكها الطالب،</text>
+<text x="462" y="884" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">ولا تلمس مستند الواجب نفسه</text>
+</g>
+<g>
+<rect x="840" y="110" width="330" height="207" rx="9" fill="#FFFFFF" stroke="#B4460B" stroke-width="1.8"/>
+<path d="M 840 119 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#B4460B"/>
+<text x="852" y="138" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">notifications</text>
+<rect x="841" y="154" width="328" height="20" fill="#FBEDE3"/>
+<text x="1160" y="168" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="852" y="168" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">{type}_{sourceId}_{uid}</text>
+<text x="852" y="189" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">type, title, body</text>
+<text x="852" y="208" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">isRead</text>
+<text x="852" y="227" font-size="12.5" fill="#B4460B" font-family="Consolas,'Courier New',monospace" font-weight="700"> recipientId  ↦ users</text>
+<text x="852" y="246" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">courseId, postId,</text>
+<text x="852" y="265" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">assignmentId  (سياق الفتح)</text>
+<text x="852" y="284" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt</text>
+<text x="852" y="303" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">المعرّف الحتمي يمنع التكرار</text>
+</g>
+<g>
+<rect x="840" y="400" width="330" height="188" rx="9" fill="#FFFFFF" stroke="#3B3F51" stroke-width="1.8"/>
+<path d="M 840 409 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#3B3F51"/>
+<text x="852" y="428" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">supportRequests</text>
+<rect x="841" y="444" width="328" height="20" fill="#EFF0F4"/>
+<text x="1160" y="458" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="852" y="458" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="852" y="479" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">subject, message</text>
+<text x="852" y="498" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">source, status</text>
+<text x="852" y="517" font-size="12.5" fill="#3B3F51" font-family="Consolas,'Courier New',monospace" font-weight="700"> uid  ↦ users</text>
+<text x="852" y="536" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">fullName, email</text>
+<text x="852" y="555" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">(نسخ عرض لشاشة المشرف)</text>
+<text x="852" y="574" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt, updatedAt</text>
+</g>
+<g>
+<rect x="1230" y="110" width="330" height="264" rx="9" fill="#FFFFFF" stroke="#7A2E8E" stroke-width="1.8"/>
+<path d="M 1230 119 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#7A2E8E"/>
+<text x="1242" y="138" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">posts</text>
+<rect x="1231" y="154" width="328" height="20" fill="#F3E9F6"/>
+<text x="1550" y="168" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="1242" y="168" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="1242" y="189" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">content</text>
+<text x="1242" y="208" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">attachment { fileName,</text>
+<text x="1242" y="227" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">  fileExtension, fileUrl,</text>
+<text x="1242" y="246" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">  sizeLabel }</text>
+<text x="1242" y="265" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">status</text>
+<text x="1242" y="284" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">likesCount, commentsCount</text>
+<text x="1242" y="303" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> authorId  ↦ users</text>
+<text x="1242" y="322" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">authorName, authorRole</text>
+<text x="1242" y="341" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">(نسخ عرض)</text>
+<text x="1242" y="360" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> courseId  ↦ courses</text>
+</g>
+<g>
+<rect x="1230" y="470" width="330" height="207" rx="9" fill="#FFFFFF" stroke="#7A2E8E" stroke-width="1.8"/>
+<path d="M 1230 479 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#7A2E8E"/>
+<text x="1242" y="498" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">postReports</text>
+<rect x="1231" y="514" width="328" height="20" fill="#F3E9F6"/>
+<text x="1550" y="528" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="1242" y="528" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="1242" y="549" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">reason, notes</text>
+<text x="1242" y="568" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">status</text>
+<text x="1242" y="587" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> postId      ↦ posts</text>
+<text x="1242" y="606" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> reporterId  ↦ users</text>
+<text x="1242" y="625" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> courseId    ↦ courses</text>
+<text x="1242" y="644" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">reporterName (نسخة عرض)</text>
+<text x="1242" y="663" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt</text>
+</g>
+<g>
+<rect x="1620" y="110" width="330" height="150" rx="9" fill="#FFFFFF" stroke="#7A2E8E" stroke-width="1.8"/>
+<path d="M 1620 119 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#7A2E8E"/>
+<text x="1632" y="138" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">posts/{postId}/comments</text>
+<rect x="1621" y="154" width="328" height="20" fill="#F3E9F6"/>
+<text x="1940" y="168" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="1632" y="168" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">تلقائي</text>
+<text x="1632" y="189" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">content</text>
+<text x="1632" y="208" font-size="12.5" fill="#7A2E8E" font-family="Consolas,'Courier New',monospace" font-weight="700"> authorId  ↦ users</text>
+<text x="1632" y="227" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">authorName (نسخة عرض)</text>
+<text x="1632" y="246" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt</text>
+</g>
+<g>
+<rect x="1620" y="330" width="330" height="131" rx="9" fill="#FFFFFF" stroke="#7A2E8E" stroke-width="1.8"/>
+<path d="M 1620 339 a 9 9 0 0 1 9 -9 h 312 a 9 9 0 0 1 9 9 v 35 h -330 z" fill="#7A2E8E"/>
+<text x="1632" y="358" font-size="17" font-weight="700" fill="#FFFFFF" font-family="Consolas,'Courier New',monospace">posts/{postId}/likes</text>
+<rect x="1621" y="374" width="328" height="20" fill="#F3E9F6"/>
+<text x="1940" y="388" text-anchor="start" font-size="10.5" fill="#525A6B" direction="rtl">المعرّف</text>
+<text x="1632" y="388" font-size="10.5" fill="#525A6B" font-family="Consolas,'Courier New',monospace">uid المستخدم</text>
+<text x="1632" y="409" font-size="12.5" fill="#1A1B22" font-family="Consolas,'Courier New',monospace">createdAt</text>
+<text x="1632" y="428" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">وجود المستند نفسه هو الإعجاب،</text>
+<text x="1632" y="447" font-size="12.5" fill="#747685" font-family="Consolas,'Courier New',monospace" font-style="italic">فلا يمكن تكراره لنفس الحساب</text>
+</g>
+<rect x="60" y="1000" width="900" height="149" rx="9" fill="#F7F8FB" stroke="#C4C6D6" stroke-width="1.2"/>
+<text x="946" y="1024" text-anchor="start" font-size="14" font-weight="700" fill="#002B80" direction="rtl">وسيلة الإيضاح</text>
+<rect x="930" y="1037" width="16" height="12" rx="3" fill="#B4460B"/>
+<text x="922" y="1048" text-anchor="start" font-size="12.5" fill="#1A1B22" direction="rtl">بيانات يملكها الطالب وحده — لا يقرأها زميل ولا عضو هيئة تدريس</text>
+<rect x="930" y="1060" width="16" height="12" rx="3" fill="#7A2E8E"/>
+<text x="922" y="1071" text-anchor="start" font-size="12.5" fill="#1A1B22" direction="rtl">المساحة التشاركية والبلاغات</text>
+<rect x="930" y="1083" width="16" height="12" rx="3" fill="#3B3F51"/>
+<text x="922" y="1094" text-anchor="start" font-size="12.5" fill="#1A1B22" direction="rtl">الهوية وقنوات التواصل مع الإدارة</text>
+<text x="946" y="1117" text-anchor="start" font-size="12.5" fill="#1A1B22" direction="rtl">الخط المتقطّع ذو النقطة يعني «مجموعة فرعية (Subcollection) داخل مستند الأب»، لا علاقة مرجعية.</text>
+<text x="946" y="1140" text-anchor="start" font-size="12.5" fill="#1A1B22" direction="rtl">المجموعتان ‎courses‎ و‎assignments‎ معروضتان في شكل البنية الأكاديمية ولم تُكرَّرا هنا.</text>
+<text x="1005" y="1168" text-anchor="middle" font-size="13.5" fill="#525A6B" direction="rtl">العلاقات المعروضة روابط منطقية بين مستندات Firestore عبر حقول المعرّفات، وليست قيود مفاتيح أجنبية (Foreign Key) في قاعدة بيانات علائقية.</text>
+</svg>

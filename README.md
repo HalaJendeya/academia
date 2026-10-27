@@ -338,7 +338,19 @@ The following demo accounts can be used to test the application roles:
 
 ## APK Status
 
-A release APK is available. Build it locally with:
+A release APK is published on GitHub Releases:
+
+**[Download academia-v1.0.0.apk](https://github.com/HalaJendeya/academia/releases/download/v1.0.0/academia-v1.0.0.apk)** (62.6 MB)
+
+| | |
+|---|---|
+| Release | [v1.0.0](https://github.com/HalaJendeya/academia/releases/tag/v1.0.0) |
+| SHA-256 | `6f9f81480292e9593654749cbdc67eb33918c917c61f637c3f782fc64cc37c3b` |
+
+To install, allow installation from unknown sources when Android prompts, then open
+the downloaded file.
+
+Alternatively, build it locally with:
 
 ```bash
 flutter build apk --release

@@ -141,7 +141,6 @@ The following features are planned as future work and are not fully implemented 
 - Full Offline-First support
 - Global Search
 - Moodle API Integration
-- APK release
 
 ---
 
@@ -339,8 +338,19 @@ The following demo accounts can be used to test the application roles:
 
 ## APK Status
 
-An APK file is not available yet.  
-The team is still finalizing notification-related adjustments before preparing the final APK release.
+A release APK is available. Build it locally with:
+
+```bash
+flutter build apk --release
+```
+
+Output: `build/app/outputs/flutter-apk/app-release.apk` — a universal APK
+(all ABIs), approximately 63 MB.
+
+> **Signing:** the release build is currently signed with the Android debug key
+> (see `android/app/build.gradle.kts`). The APK installs and runs normally, which
+> is sufficient for sideloading and academic evaluation. A dedicated upload
+> keystore is required before the app can be published to Google Play.
 
 ---
 
@@ -360,7 +370,7 @@ https://www.figma.com/design/yIejzasmbVz4p8KNK9RQOW/%D8%A3%D9%83%D8%A7%D8%AF%D9%
 
 The current version is a working Flutter mobile application connected to Firebase. It supports multiple user roles and includes implemented student, teacher, and admin modules.
 
-Some advanced features are still under development or planned for future releases, including Moodle integration, AI academic assistance, academic calendar, study schedule, global search, full offline-first support, and APK release.
+Some advanced features are still under development or planned for future releases, including Moodle integration, AI academic assistance, academic calendar, study schedule, global search, and full offline-first support.
 
 ---
 
@@ -375,7 +385,7 @@ Future improvements may include:
 - Adding smart study plan generation.
 - Enhancing offline-first functionality.
 - Implementing global search.
-- Preparing the final APK release.
+- Publishing to Google Play using a dedicated release keystore.
 - Improving testing coverage and documentation.
 
 ---
